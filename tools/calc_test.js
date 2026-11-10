@@ -3,8 +3,8 @@ const fs = require('fs');
 const html = fs.readFileSync('index.html', 'utf8');
 const src = html.match(/<script>\n'use strict';([\s\S]*?)<\/script>/)[1];
 const store = {};
-const stub = { localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
-  document: { addEventListener() {}, getElementById: () => ({ innerHTML: '' }), querySelectorAll: () => [], querySelector: () => null, body: { appendChild() {} }, createElement: () => ({ remove() {} }) },
+const stub = { sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
+  document: { documentElement: { classList: { contains: () => true, add() {} } }, addEventListener() {}, getElementById: () => ({ innerHTML: '', addEventListener() {}, remove() {} }), querySelectorAll: () => [], querySelector: () => null, body: { appendChild() {} }, createElement: () => ({ remove() {} }) },
   window: { scrollTo() {}, scrollY: 0, addEventListener() {} }, navigator: { userAgent: '' }, fetch: async () => ({ ok: false }), setTimeout, clearTimeout, console, Date, Math, JSON };
 const fn = new Function(...Object.keys(stub), src + '\nreturn {S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
 const A = fn(...Object.values(stub));

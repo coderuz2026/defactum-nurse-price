@@ -140,6 +140,20 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 .install>div{width:100%;max-width:520px;background:#fff;border-radius:26px 26px 0 0;padding:22px 20px calc(20px + var(--safe-b));display:flex;flex-direction:column;gap:14px;box-shadow:0 -10px 40px rgba(15,23,42,.2)}
 .install .step{display:flex;align-items:center;gap:12px;font-size:15px;line-height:1.4}
 .install .n{width:28px;height:28px;border-radius:14px;background:var(--tint);color:var(--brand-deep);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#splash{position:fixed;inset:0;z-index:500;background:linear-gradient(160deg,#F6FBEF 0%,#FFFFFF 45%,#E6F5F8 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;animation:spOut .7s ease 2.9s forwards}
+.nosplash #splash{display:none}
+#splash svg{width:132px;height:auto;overflow:visible}
+#splash .glow{position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(47,169,140,.22),rgba(47,169,140,0) 68%);animation:spGlow 3.2s ease-in-out both}
+#splash .b{transform-box:fill-box;transform-origin:center;opacity:0;animation:spBlob 1.5s cubic-bezier(.16,1,.3,1) forwards}
+#splash .b1{animation-delay:.15s}#splash .b2{animation-delay:.5s}#splash .b3{animation-delay:.85s}
+#splash .wordmark{font-size:44px;opacity:0;animation:spUp 1.3s cubic-bezier(.16,1,.3,1) 1.35s forwards}
+#splash .tag{font-size:11.5px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:var(--brand-deep);opacity:0;animation:spUp 1.2s cubic-bezier(.16,1,.3,1) 1.75s forwards}
+@keyframes spBlob{0%{opacity:0;transform:scale(.35) rotate(-18deg)}60%{opacity:1}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes spUp{from{opacity:0;transform:translateY(16px);filter:blur(6px)}to{opacity:1;transform:none;filter:blur(0)}}
+@keyframes spGlow{0%{opacity:0;transform:scale(.5)}45%{opacity:1;transform:scale(1.15)}100%{opacity:.7;transform:scale(1)}}
+@keyframes spOut{to{opacity:0;visibility:hidden;transform:scale(1.04)}}
+@media (prefers-reduced-motion:reduce){#splash,#splash *{animation-duration:.01s!important;animation-delay:0s!important}#splash{animation:spOut .3s ease .9s forwards!important}}
+@media print{#splash{display:none}}
 @media print{
   body *{visibility:hidden}
   .print-area,.print-area *{visibility:visible}
@@ -149,6 +163,18 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 </style>
 </head>
 <body>
+<script>try{if(sessionStorage.getItem('df_splash'))document.documentElement.classList.add('nosplash');else sessionStorage.setItem('df_splash','1')}catch(e){}</script>
+<div id="splash" aria-hidden="true">
+  <div class="glow"></div>
+  <svg viewBox="30 40 500 480"><defs><linearGradient id="dfs" gradientUnits="userSpaceOnUse" x1="250" y1="60" x2="470" y2="470"><stop offset="0" stop-color="#A9D046"/><stop offset=".5" stop-color="#2FA98C"/><stop offset="1" stop-color="#0A93B2"/></linearGradient></defs>
+    <g fill="url(#dfs)" stroke="url(#dfs)" stroke-width="66" stroke-linecap="round">
+      <g class="b b1"><circle cx="285" cy="125" r="62" stroke="none"/><circle cx="195" cy="275" r="46" stroke="none"/><path d="M285 125L195 275"/></g>
+      <g class="b b2"><circle cx="362" cy="255" r="45" stroke="none"/><circle cx="445" cy="402" r="62" stroke="none"/><path d="M362 255L445 402"/></g>
+      <g class="b b3"><circle cx="125" cy="410" r="62" stroke="none"/><circle cx="296" cy="410" r="45" stroke="none"/><path d="M125 410L296 410"/></g>
+    </g></svg>
+  <span class="wordmark">de factum<sup>®</sup></span>
+  <span class="tag">Прайс для медсестёр</span>
+</div>
 <div class="app" id="app"></div>
 <div id="install"></div>
 <script>
@@ -637,11 +663,12 @@ document.addEventListener('click', async (e) => {
 });
 
 /* ---------- Старт ---------- */
+{ const sp = document.getElementById('splash'); if (sp) sp.addEventListener('animationend', (e) => { if (e.animationName === 'spOut') sp.remove(); }); setTimeout(() => { if (sp) sp.remove(); }, 4500); }
 S.visits.forEach((v) => { v.homeFee = 0; }); // поле «Выезд на дом» убрано
 if (S.me) UI.view = 'visit';
 render();
 loadPrices(false);
-setTimeout(() => showInstall(), 1200); // iPhone: события нет — показываем инструкцию; Android: окно появится по событию или подсказкой
+setTimeout(() => showInstall(), document.documentElement.classList.contains('nosplash') ? 1200 : 3800); // iPhone: события нет — показываем инструкцию; Android: окно появится по событию или подсказкой
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
