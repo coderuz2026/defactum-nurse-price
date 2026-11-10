@@ -38,14 +38,32 @@ eq('неизвестный id = 0 сум', A.pSum(p2), s2);
 // 4. перебор: сумма всех 618 услуг
 const all = { id: 'c', items: prices.items.map((x) => x.id) };
 eq('сумма всего прайса', A.pSum(all), prices.items.reduce((s, x) => s + x.price, 0));
-// 5. пробирки
+// 5. пробирки: одинаковый контейнер у пациента = один штрихкод
+const prl = id(/^Пролактин/), lh = id(/^Лютеинизирующий/);
 const g = A.groupTubes(p1);
-eq('6 анализов → 4 пробирки', g.length, 4);
-eq('ТТГ и Т4 в одной пробирке (02)', g.find((x) => x.no === 2).tests.filter((n) => /ТТГ|Т4/.test(n)).length, 2);
-eq('HOMA в двух пробирках (02 и 35)', g.filter((x) => x.tests.some((n) => /^HOMA/.test(n))).map((x) => x.no).sort(), [2, 35]);
+eq('6 анализов → 4 пробирки', g.map((x) => x.no), [1, 2, 7, 35]);
+eq('Т4 свободный, АЛТ и HOMA — одна пробирка (35)', g.find((x) => x.no === 35).tests.length, 3);
+eq('ТТГ и HOMA — одна пробирка (02)', g.find((x) => x.no === 2).tests.length, 2);
+eq('HOMA в двух пробирках (02 и 35)', g.filter((x) => x.tests.some((n) => /^HOMA/.test(n))).map((x) => x.no), [2, 35]);
 eq('штрихкоды уникальны', new Set(g.map((x) => x.code)).size, g.length);
+eq('штрихкод = заказ + номер контейнера', g.map((x) => x.code), [1, 2, 7, 35].map((n) => String(p1.order) + String(n).padStart(2, '0')));
+eq('штрихкод 8 цифр', g.every((x) => /^\d{8}$/.test(x.code)), true);
 eq('штрихкод не меняется при повторе', A.groupTubes(p1).map((x) => x.code), g.map((x) => x.code));
-eq('у другого пациента свои штрихкоды', A.groupTubes(p2).some((x) => g.map((y) => y.code).includes(x.code)), false);
+const before = g.find((x) => x.no === 2).code;
+p1.items.push(prl.id, lh.id);
+const g2 = A.groupTubes(p1);
+eq('+2 гормона: пробирок по-прежнему 4', g2.length, 4);
+eq('+2 гормона: штрихкод (02) тот же', g2.find((x) => x.no === 2).code, before);
+eq('+2 гормона: в (02) теперь 4 анализа', g2.find((x) => x.no === 2).tests.length, 4);
+p1.items = p1.items.filter((x) => x !== oak.id);
+eq('убрали ОАК: пробирка (01) исчезла', A.groupTubes(p1).map((x) => x.no), [2, 7, 35]);
+p1.items.push(oak.id);
+eq('вернули ОАК: штрихкод (01) прежний', A.groupTubes(p1).find((x) => x.no === 1).code, g.find((x) => x.no === 1).code);
+p1.items.push(oak.id);
+eq('у другого пациента свои штрихкоды', A.groupTubes(p2).some((x) => A.groupTubes(p1).map((y) => y.code).includes(x.code)), false);
+// каждая услуга прайса попадает хотя бы в один известный контейнер
+eq('у всех 618 услуг есть контейнер', prices.items.every((it) => { const k = A.tubesFor(it, A.P.catById[it.cat].name); return k.length && k.every((x) => A.TUBES[x]); }), true);
+eq('номера контейнеров не повторяются', new Set(Object.values(A.TUBES).map((x) => x.no)).size, Object.keys(A.TUBES).length);
 // 6. формат
 eq('формат 855000', A.fmt(855000), '855 000 сум');
 eq('формат 1234567', A.fmt(1234567), '1 234 567 сум');
