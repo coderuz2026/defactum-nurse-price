@@ -6,7 +6,7 @@ const store = {};
 const stub = { sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
   document: { documentElement: { classList: { contains: () => true, add() {} } }, addEventListener() {}, getElementById: () => ({ innerHTML: '', addEventListener() {}, remove() {} }), querySelectorAll: () => [], querySelector: () => null, body: { appendChild() {} }, createElement: () => ({ remove() {} }) },
   window: { scrollTo() {}, scrollY: 0, addEventListener() {} }, navigator: { userAgent: '' }, fetch: async () => ({ ok: false }), setTimeout, clearTimeout, console, Date, Math, JSON };
-const fn = new Function(...Object.keys(stub), src + '\nreturn {S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
+const fn = new Function(...Object.keys(stub), src + '\nreturn {formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
 const A = fn(...Object.values(stub));
 const prices = JSON.parse(fs.readFileSync('data/prices.json', 'utf8'));
 A.setPrices(prices);
@@ -64,6 +64,11 @@ eq('у другого пациента свои штрихкоды', A.groupTube
 // каждая услуга прайса попадает хотя бы в один известный контейнер
 eq('у всех 618 услуг есть контейнер', prices.items.every((it) => { const k = A.tubesFor(it, A.P.catById[it.cat].name); return k.length && k.every((x) => A.TUBES[x]); }), true);
 eq('номера контейнеров не повторяются', new Set(Object.values(A.TUBES).map((x) => x.no)).size, Object.keys(A.TUBES).length);
+// адрес из ответа геокодера
+eq('адрес: улица, дом, район', A.formatAddress({ address: { road: 'улица Авлиё-Ота', house_number: '1', city_district: 'Мирабадский район', city: 'Ташкент' } }), 'улица Авлиё-Ота, 1, Мирабадский район');
+eq('адрес: только махалля', A.formatAddress({ address: { neighbourhood: 'махалля Олмазор', city: 'Ташкент' } }), 'махалля Олмазор');
+eq('адрес: только город', A.formatAddress({ address: { city: 'Ташкент' } }), 'Ташкент');
+eq('адрес: пустой ответ', A.formatAddress({}), '');
 // 6. формат
 eq('формат 855000', A.fmt(855000), '855 000 сум');
 eq('формат 1234567', A.fmt(1234567), '1 234 567 сум');

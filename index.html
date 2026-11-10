@@ -153,6 +153,8 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 @keyframes spGlow{0%{opacity:0;transform:scale(.5)}45%{opacity:1;transform:scale(1.15)}100%{opacity:.7;transform:scale(1)}}
 @keyframes spOut{to{opacity:0;visibility:hidden;transform:scale(1.04)}}
 @media (prefers-reduced-motion:reduce){#splash,#splash *{animation-duration:.01s!important;animation-delay:0s!important}#splash{animation:spOut .3s ease .9s forwards!important}}
+.spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 @media print{#splash{display:none}}
 @media print{
   body *{visibility:hidden}
@@ -371,7 +373,9 @@ function vVisit() {
       <div><div class="sub">Выезд №${v.no} · ${dt(v.created)}</div><h1 class="h1">Пациенты выезда</h1></div>
       <span class="chip" style="background:var(--okbg);color:var(--ok);font-weight:600;padding:0 10px"><span style="width:7px;height:7px;border-radius:4px;background:#22A55B"></span>${P.version ? 'Прайс ' + esc(P.version.split('-').reverse().slice(0, 2).join('.')) : 'Загрузка…'}</span>
     </div>
-    <label class="phone" style="height:46px;border-radius:14px;background:#F6F7F9"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><input data-input="addr" value="${esc(v.addr)}" placeholder="Адрес выезда (необязательно)" style="font-size:14.5px"></label>
+    <div class="phone" style="height:48px;border-radius:14px;background:#F6F7F9;padding:0 4px 0 14px;gap:6px"><input data-input="addr" aria-label="Адрес выезда" value="${esc(v.addr)}" placeholder="Адрес выезда (необязательно)" style="font-size:14.5px">
+      <button data-act="geo" aria-label="Определить адрес по геолокации" ${UI.geoBusy ? 'disabled' : ''} style="width:40px;height:40px;border-radius:12px;border:0;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0;${UI.geoBusy ? 'opacity:.55' : ''}">${UI.geoBusy ? '<span class="spin"></span>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>'}</button></div>
+    ${v.geo ? `<a href="https://yandex.uz/maps/?pt=${v.geo.lon},${v.geo.lat}&z=17&l=map" target="_blank" rel="noopener" class="sub" style="text-decoration:none;color:var(--brand-deep);font-weight:600;margin-top:-4px">Точка на карте: ${v.geo.lat.toFixed(5)}, ${v.geo.lon.toFixed(5)} · ±${v.geo.acc} м ›</a>` : ''}
   </div>
   <div class="body" style="padding-bottom:240px">
     ${v.patients.map((p) => {
@@ -582,6 +586,7 @@ document.addEventListener('click', (e) => {
     case 'disc': vis.discount = +v; save(); UI._keepScroll = true; render(); break;
     case 'newVisit': if (confirm('Завершить текущий выезд и начать новый?')) { newVisit(); go('visit'); } break;
     case 'reloadPrices': loadPrices(true); break;
+    case 'geo': locate(); break;
     case 'logout': S.me = null; save(); UI.authMode = 'login'; go('auth'); break;
   }
 });
@@ -625,6 +630,42 @@ document.addEventListener('submit', (e) => {
   }
   function fail(m) { UI.err = m; keepForm(); }
 });
+
+/* ---------- Адрес по геолокации ---------- */
+function formatAddress(d) {
+  const a = (d && d.address) || {};
+  const street = a.road || a.pedestrian || a.residential || a.neighbourhood || a.quarter || '';
+  const parts = [];
+  const area = a.city_district || a.suburb || a.borough || '';
+  if (street) parts.push(street + (a.house_number ? ', ' + a.house_number : ''));
+  else if (a.house_number) parts.push('дом ' + a.house_number);
+  if (a.neighbourhood && a.neighbourhood !== street) parts.push(a.neighbourhood);
+  if (area) parts.push(area);
+  const city = a.city || a.town || a.village || '';
+  if (city && !parts.length) parts.push(city);
+  return parts.join(', ') || (d && d.display_name ? d.display_name.split(', ').slice(0, 3).join(', ') : '');
+}
+function locate() {
+  const v = visit(); if (!v || UI.geoBusy) return;
+  if (!navigator.geolocation) { toast('Телефон не поддерживает геолокацию'); return; }
+  UI.geoBusy = true; UI._keepScroll = true; render();
+  const done = (msg) => { UI.geoBusy = false; save(); UI._keepScroll = true; if (UI.view === 'visit') render(); if (msg) toast(msg); };
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lat = pos.coords.latitude, lon = pos.coords.longitude;
+    v.geo = { lat, lon, acc: Math.round(pos.coords.accuracy || 0) };
+    const coords = lat.toFixed(5) + ', ' + lon.toFixed(5);
+    try {
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 8000);
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=ru&lat=${lat}&lon=${lon}`, { signal: ctl.signal, headers: { Accept: 'application/json' } });
+      clearTimeout(t);
+      const text = r.ok ? formatAddress(await r.json()) : '';
+      v.addr = text || coords;
+      done(text ? (v.geo.acc > 100 ? 'Адрес найден, но точность низкая (±' + v.geo.acc + ' м) — проверьте' : 'Адрес определён — проверьте и поправьте при необходимости') : 'Адрес не найден — записал координаты');
+    } catch (e) { v.addr = coords; done('Нет интернета — записал координаты'); }
+  }, (err) => {
+    done(err.code === 1 ? 'Разрешите доступ к геолокации в настройках браузера' : err.code === 3 ? 'Не удалось определить место — выйдите на открытое место и повторите' : 'Геолокация недоступна — включите GPS');
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+}
 
 /* ---------- Установка на телефон (PWA) ---------- */
 const INST = { evt: null, key: LS + '_install' };
