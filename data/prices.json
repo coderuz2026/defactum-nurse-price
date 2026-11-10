@@ -167,3708 +167,4326 @@
  "items": [
   {
    "id": 720,
+   "ext": "__export__.product_product_720_9fb10a8f",
    "name": "17-гидроксипрогестерон (17-ОПГ)",
    "cat": 1,
    "price": 150000
   },
   {
    "id": 10656,
+   "ext": "__export__.product_product_10656_c3466bd1",
    "name": "Антимюллеровский гормон (AMH)",
    "cat": 1,
    "price": 392000
   },
   {
    "id": 487,
+   "ext": "__export__.product_product_487_2e81f152",
    "name": "Ассоциированный с беременностью протеин-А плазмы ПАББ-А (PAPP-A)",
    "cat": 1,
    "price": 150000
   },
   {
    "id": 485,
+   "ext": "__export__.product_product_485_4d33f700",
    "name": "Глобулин, связывающий половые гормоны ГСПГ (SHBG)",
    "cat": 1,
    "price": 150000
   },
   {
    "id": 486,
+   "ext": "__export__.product_product_486_5e6818a8",
    "name": "Дегидроэпиандростерон-сульфат ДГЕА-Сульфат (DHEA-S)",
    "cat": 1,
    "price": 100000
   },
   {
    "id": 488,
+   "ext": "__export__.product_product_488_fc17321b",
    "name": "Лютеинизирующий гормон ЛГ (LH)",
    "cat": 1,
    "price": 110000
   },
   {
    "id": 10821,
+   "ext": "__export__.product_product_10821_03fc82a2",
    "name": "Неинвазивное пренатальное тестирование (НИПТ расширенное)",
    "cat": 1,
    "price": 4800000
   },
   {
    "id": 491,
+   "ext": "__export__.product_product_491_7da0a7ed",
    "name": "Неконъюгированный Эстриол (unconjugated Estriol)",
    "cat": 1,
    "price": 100000
   },
   {
    "id": 898,
+   "ext": "__export__.product_product_898_fda38b86",
    "name": "Пренатальный скрининг 1 триместра (PRISCA-1)",
    "cat": 1,
    "price": 440000
   },
   {
    "id": 1016,
+   "ext": "__export__.product_product_1016_60aa4a14",
    "name": "Пренатальный скрининг 1 триместра (PRISCA-1) при двойне",
    "cat": 1,
    "price": 500000
   },
   {
    "id": 900,
+   "ext": "__export__.product_product_900_348f49bd",
    "name": "Пренатальный скрининг 2 триместра (PRISCA-2)",
    "cat": 1,
    "price": 480000
   },
   {
    "id": 1017,
+   "ext": "__export__.product_product_1017_606df580",
    "name": "Пренатальный скрининг 2 триместра (PRISCA-2) при двойне",
    "cat": 1,
    "price": 530000
   },
   {
    "id": 492,
+   "ext": "__export__.product_product_492_dd920675",
    "name": "Прогестерон (Progesterone)",
    "cat": 1,
    "price": 100000
   },
   {
    "id": 490,
+   "ext": "__export__.product_product_490_5e2f3ef5",
    "name": "Пролактин (Prolaсtin)",
    "cat": 1,
    "price": 100000
   },
   {
    "id": 10653,
+   "ext": "__export__.product_product_10653_c996f2be",
    "name": "Свободный бета-ХГЧ (Free b-HCG)",
    "cat": 1,
    "price": 150000
   },
   {
    "id": 10815,
+   "ext": "__export__.product_product_10815_a0654405",
    "name": "Свободный тестостерон (Free testosterone)",
    "cat": 1,
    "price": 150000
   },
   {
    "id": 489,
+   "ext": "__export__.product_product_489_863dc71e",
    "name": "Тестостерон общий (Total Testosterone)",
    "cat": 1,
    "price": 100000
   },
   {
    "id": 714,
+   "ext": "__export__.product_product_714_3eaf9b68",
    "name": "Фолликулостимулирующий гормон ФСГ (FSH)",
    "cat": 1,
    "price": 110000
   },
   {
    "id": 717,
+   "ext": "__export__.product_product_717_90d908b1",
    "name": "ХГЧ (HCG)",
    "cat": 1,
    "price": 100000
   },
   {
    "id": 718,
+   "ext": "__export__.product_product_718_3f7e585e",
    "name": "Эстрадиол (Estradiol)",
    "cat": 1,
    "price": 100000
   },
   {
    "id": 429,
+   "ext": "__export__.product_product_429_e9c6d1ab",
    "name": "Aнтитела к антигену Е вируса гепатита В, Анти - HBE (Anti-HBE)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 427,
+   "ext": "__export__.product_product_427_780ed96f",
    "name": "Авидность к ВПГ ½",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 410,
+   "ext": "__export__.product_product_410_05cadf04",
    "name": "Авидность К ВЭБ",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 428,
+   "ext": "__export__.product_product_428_1956618e",
    "name": "Авидность к ЦМВ",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 432,
+   "ext": "__export__.product_product_432_a5b61458",
    "name": "Антиген Е вируса гепатита В, НВЕ-антиген (HBEAg)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 383,
+   "ext": "__export__.product_product_383_a4b29c0c",
    "name": "Антитела к Bordetella pertussis IgG",
    "cat": 2,
    "price": 200000
   },
   {
    "id": 382,
+   "ext": "__export__.product_product_382_175b2ff1",
    "name": "Антитела к Bordetella pertussis IgM",
    "cat": 2,
    "price": 200000
   },
   {
    "id": 414,
+   "ext": "__export__.product_product_414_d1979081",
    "name": "Антитела к H.Pylori IgG (Anti-Helicobacter pylori IgG)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 413,
+   "ext": "__export__.product_product_413_669f4bc8",
    "name": "Антитела к Treponema pallidum (сифилис)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 406,
+   "ext": "__export__.product_product_406_5db5d812",
    "name": "Антитела к аскаридам IgG (Anti-Аscaris lumbricoides, IgG)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 408,
+   "ext": "__export__.product_product_408_c331c8bf",
    "name": "Антитела к бруцеллам (суммарные иммуноглобулины (А,М,G)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 424,
+   "ext": "__export__.product_product_424_b063ded4",
    "name": "Антитела к вирусу гепатита D, Анти-HDV (HDV Ab)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 362,
+   "ext": "__export__.product_product_362_d67ebaf4",
    "name": "Антитела к вирусу гепатита E IgG (HEV IgG)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 409,
+   "ext": "__export__.product_product_409_cdfa349a",
    "name": "Антитела к вирусу гепатита E IgM (HEV IgM)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 423,
+   "ext": "__export__.product_product_423_13d1e22e",
    "name": "Антитела к вирусу гепатита А (Anti-HAV IgG)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 422,
+   "ext": "__export__.product_product_422_8f1363b6",
    "name": "Антитела к вирусу гепатита А (Anti-HAV IgМ)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 444,
+   "ext": "__export__.product_product_444_ace230b0",
    "name": "Антитела к вирусу гепатита С (Anti-HCV)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 415,
+   "ext": "__export__.product_product_415_0c034499",
    "name": "Антитела к Вирусу Эпштейна-Барра IgG (EBV-EBNA IGG)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 416,
+   "ext": "__export__.product_product_416_7a731859",
    "name": "Антитела к Вирусу Эпштейна-Барра VCA IgG (EBV-VCA IgG)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 417,
+   "ext": "__export__.product_product_417_279e4388",
    "name": "Антитела к Вирусу Эпштейна-Барра VCA IgM (EBV-VCA IgM)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 411,
+   "ext": "__export__.product_product_411_ea2e91a1",
    "name": "Антитела к ВПГ 1/2 тип IgM (Anti-Herpes simplex 1/2 IgM)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 412,
+   "ext": "__export__.product_product_412_82459c38",
    "name": "Антитела к ВПГ 1/2 типа IgG (Anti-Herpes simplex 1/2 IgG)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 993,
+   "ext": "__export__.product_product_993_9685127c",
    "name": "Антитела к гельминтам IgG",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 407,
+   "ext": "__export__.product_product_407_3aa390e0",
    "name": "Антитела к кандидам IgG (Anti-Candida albicans IgG)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 387,
+   "ext": "__export__.product_product_387_b5658dcc",
    "name": "Антитела к Кори Ig G",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 388,
+   "ext": "__export__.product_product_388_d9d91c10",
    "name": "Антитела к Кори Ig M",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 425,
+   "ext": "__export__.product_product_425_b107e6d0",
    "name": "Антитела к краснухе IgG (Anti-Rubella IgG)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 426,
+   "ext": "__export__.product_product_426_64cca9b0",
    "name": "Антитела к краснухе IgM (Anti-Rubella IgM)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 405,
+   "ext": "__export__.product_product_405_a2ad884f",
    "name": "Антитела к лямблиям (суммарные иммуноглобулины A,M,G)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 10734,
+   "ext": "__export__.product_product_10734_38afa1a4",
    "name": "Антитела к Микобактерии туберкулеза (суммарные иммуноглобулины A,M,G)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 400,
+   "ext": "__export__.product_product_400_02626d52",
    "name": "Антитела к микоплазме пневмония IgG (Anti- Mycoplasma pneumonia IgG)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 10733,
+   "ext": "__export__.product_product_10733_1ee9f336",
    "name": "Антитела к микоплазме пневмония IgМ (Anti- Mycoplasma pneumonia IgМ)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 398,
+   "ext": "__export__.product_product_398_244c5bb3",
    "name": "Антитела к микоплазме хоминис IgG (Anti-Mycoplasma hominis IgG)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 399,
+   "ext": "__export__.product_product_399_d04cd543",
    "name": "Антитела к микоплазме хоминис IgА (Anti-Mycoplasma hominis IgА)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 439,
+   "ext": "__export__.product_product_439_d32a9d21",
    "name": "Антитела к поверхностному антигену вируса гепатита В, Анти-HBs (Anti-HBs)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 445,
+   "ext": "__export__.product_product_445_35015f2f",
    "name": "Антитела к токсоплазме гондии IgG (Anti-Toxoplasma gondii IgG)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 431,
+   "ext": "__export__.product_product_431_381ec5bb",
    "name": "Антитела к токсоплазме гондии IgM (Anti-Toxoplasma gondii IgM)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 404,
+   "ext": "__export__.product_product_404_81e0873e",
    "name": "Антитела к уреаплазме уреалитикум IgG (Anti-Ureaplasma urealiticum IgG)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 403,
+   "ext": "__export__.product_product_403_80b58735",
    "name": "Антитела к уреаплазме уреалитикум IgА (Anti-Ureaplasma urealiticum IgА)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 396,
+   "ext": "__export__.product_product_396_2502c2cc",
    "name": "Антитела к хламидии пневмония IgG (Anti- Chlamydia pneumonia IgG)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 401,
+   "ext": "__export__.product_product_401_a5f2d270",
    "name": "Антитела к хламидии пневмония IgМ (Anti- Chlamydia pneumonia IgМ)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 397,
+   "ext": "__export__.product_product_397_8413ed0f",
    "name": "Антитела к хламидии трахоматис IgG (Anti-Chlamydia trachomatis IgG)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 402,
+   "ext": "__export__.product_product_402_20c91969",
    "name": "Антитела к хламидии трахоматис IgМ (Anti-Chlamydia trachomatis IgМ)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 430,
+   "ext": "__export__.product_product_430_fc0329a9",
    "name": "Антитела к ЦМВ IgG (Anti-CMV IgG)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 434,
+   "ext": "__export__.product_product_434_47199611",
    "name": "Антитела к ЦМВ IgM (Anti-CMV IgM)",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 433,
+   "ext": "__export__.product_product_433_097fa09f",
    "name": "Антитела к ядерному антигену вируса гепатита В, Анти- HBcor IgТ (Anti-HBc IgТ)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 369,
+   "ext": "__export__.product_product_369_7e12a914",
    "name": "Антитела класса IgG+ к SARS-CoV-2 (подтверждающий тест)",
    "cat": 2,
    "price": 650000
   },
   {
    "id": 376,
+   "ext": "__export__.product_product_376_d2a73d14",
    "name": "Антитела класса IgM к SARS-COV-2",
    "cat": 2,
    "price": 200000
   },
   {
    "id": 418,
+   "ext": "__export__.product_product_418_ef849089",
    "name": "ВИЧ– подтверждающий тест (HIVAg+Ab)",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 385,
+   "ext": "__export__.product_product_385_5d5262c8",
    "name": "Квантифероновый тест QuantiFeron-TB",
    "cat": 2,
    "price": 1100000
   },
   {
    "id": 896,
+   "ext": "__export__.product_product_896_d922504e",
    "name": "Комплекс TORCH инфекций – острая фаза (ВПГ 1/2, ЦМВ, Токсоплазма гондии, Уреаплазма уреалитикум, Хламидия трахоматис, Микоплазма хоминис)",
    "cat": 2,
    "price": 450000
   },
   {
    "id": 895,
+   "ext": "__export__.product_product_895_f3fb5ad9",
    "name": "Комплекс TORCH инфекций –хроническая фаза (ВПГ 1/2, ЦМВ, Токсоплазма гондии, Уреаплазма уреалитикум, Хламидия трахоматис, Микоплазма хоминис)",
    "cat": 2,
    "price": 450000
   },
   {
    "id": 436,
+   "ext": "__export__.product_product_436_702dac5c",
    "name": "Поверхностный антиген вируса гепатита В, HBsAg",
    "cat": 2,
    "price": 90000
   },
   {
    "id": 360,
+   "ext": "__export__.product_product_360_6c28c7f6",
    "name": "Реакция Райта на бруцеллез",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 361,
+   "ext": "__export__.product_product_361_7289eb44",
    "name": "Реакция Хедельсона на бруцеллез",
    "cat": 2,
    "price": 100000
   },
   {
    "id": 10735,
+   "ext": "__export__.product_product_10735_3fdefab1",
    "name": "Тест, подтверждающий наличие антигена вируса гепатита С (HCV Ag+Ab)",
    "cat": 2,
    "price": 130000
   },
   {
    "id": 747,
+   "ext": "__export__.product_product_747_50adfc75",
    "name": "CYFRA-21-1 (Фрагмент Цитокератина 19)",
    "cat": 3,
    "price": 210000
   },
   {
    "id": 710,
+   "ext": "__export__.product_product_710_feee0def",
    "name": "Альфафетопротеин (AFP)",
    "cat": 3,
    "price": 120000
   },
   {
    "id": 700,
+   "ext": "__export__.product_product_700_26c7a88f",
    "name": "Белок HE4 (секреторный белок 4 эпидермиса, маркер рака яичника)",
    "cat": 3,
    "price": 300000
   },
   {
    "id": 746,
+   "ext": "__export__.product_product_746_c4539867",
    "name": "Белок S-100 (маркер меланомы и повреждения мозга)",
    "cat": 3,
    "price": 350000
   },
   {
    "id": 928,
+   "ext": "__export__.product_product_928_445752b5",
    "name": "Индекс ROMA (оценка риска рака яичников по алгоритму ROMA)",
    "cat": 3,
    "price": 400000
   },
   {
    "id": 745,
+   "ext": "__export__.product_product_745_d9b5051f",
    "name": "Нейронспецифическая энолаза- NSE",
    "cat": 3,
    "price": 230000
   },
   {
    "id": 918,
+   "ext": "__export__.product_product_918_cb1fc742",
    "name": "Онкопрофилактика для мужчин (ПСА общий + ПСА свободный)",
    "cat": 3,
    "price": 260000
   },
   {
    "id": 716,
+   "ext": "__export__.product_product_716_53c38d10",
    "name": "Простатспецифический антиген общий (tPSA)",
    "cat": 3,
    "price": 120000
   },
   {
    "id": 713,
+   "ext": "__export__.product_product_713_3234950b",
    "name": "Простатспецифический антиген свободный (fPSA)",
    "cat": 3,
    "price": 120000
   },
   {
    "id": 722,
+   "ext": "__export__.product_product_722_6461e3d2",
    "name": "Раковый антиген CA 125 II",
    "cat": 3,
    "price": 120000
   },
   {
    "id": 709,
+   "ext": "__export__.product_product_709_1a4fda9e",
    "name": "Раковый антиген CA 15-3",
    "cat": 3,
    "price": 120000
   },
   {
    "id": 715,
+   "ext": "__export__.product_product_715_d178602a",
    "name": "Раковый антиген CA 19-9",
    "cat": 3,
    "price": 120000
   },
   {
    "id": 711,
+   "ext": "__export__.product_product_711_17c144d8",
    "name": "РЭА – раковый эмбриональный антиген (CEA)",
    "cat": 3,
    "price": 120000
   },
   {
    "id": 145,
+   "ext": "__export__.product_product_145_e6659f0e",
    "name": "D-димер (D-dimer)",
    "cat": 4,
    "price": 180000
   },
   {
    "id": 160,
+   "ext": "__export__.product_product_160_186170b2",
    "name": "Анти-Ха",
    "cat": 4,
    "price": 480000
   },
   {
    "id": 156,
+   "ext": "__export__.product_product_156_47e7f65a",
    "name": "Антитромбин III (Antithrombin III)",
    "cat": 4,
    "price": 150000
   },
   {
    "id": 891,
+   "ext": "__export__.product_product_891_f82b4092",
    "name": "Волчаночный антикоагулянт (отношение скрининговых коэффициентов)",
    "cat": 4,
    "price": 280000
   },
   {
    "id": 157,
+   "ext": "__export__.product_product_157_465913ad",
    "name": "Коагулограмма базовая (протромбиновый индекс, МНО, фибриноген, АЧТВ, тромбиновое время)",
    "cat": 4,
    "price": 220000
   },
   {
    "id": 158,
+   "ext": "__export__.product_product_158_17fba22b",
    "name": "Коагулограмма развернутая(протромбин, МНО, фибриноген, АЧТВ, антитромбин 3, D-димер, тромбиновое время)",
    "cat": 4,
    "price": 500000
   },
   {
    "id": 159,
+   "ext": "__export__.product_product_159_4af1db55",
    "name": "Международное нормализованное отношение МНО (International Normalized Ratio INR)",
    "cat": 4,
    "price": 50000
   },
   {
    "id": 161,
+   "ext": "__export__.product_product_161_46c7d709",
    "name": "Протеин S (Protein S)",
    "cat": 4,
    "price": 600000
   },
   {
    "id": 162,
+   "ext": "__export__.product_product_162_bbd2bc36",
    "name": "Протеин С (Protein C)",
    "cat": 4,
    "price": 380000
   },
   {
    "id": 206,
+   "ext": "__export__.product_product_206_ef75e40e",
    "name": "Helicobacter pylori, антиген в кале",
    "cat": 5,
    "price": 400000
   },
   {
    "id": 211,
+   "ext": "__export__.product_product_211_e162523c",
    "name": "Анализ кала на гельминтоз методом PARASEP",
    "cat": 5,
    "price": 160000
   },
   {
    "id": 209,
+   "ext": "__export__.product_product_209_ec260556",
    "name": "Анализ кала на яйца гельминтов и цисты простейших",
    "cat": 5,
    "price": 100000
   },
   {
    "id": 210,
+   "ext": "__export__.product_product_210_3d6d0e56",
    "name": "Анализ на скрытую кровь в кале- FOB",
    "cat": 5,
    "price": 100000
   },
   {
    "id": 208,
+   "ext": "__export__.product_product_208_16eb6d1d",
    "name": "Общий анализ кала",
    "cat": 5,
    "price": 80000
   },
   {
    "id": 205,
+   "ext": "__export__.product_product_205_733256d1",
    "name": "Фекальная эластаза",
    "cat": 5,
    "price": 400000
   },
   {
    "id": 207,
+   "ext": "__export__.product_product_207_ccb8a6b9",
    "name": "Фекальный кальпротектин",
    "cat": 5,
    "price": 320000
   },
   {
    "id": 905,
+   "ext": "__export__.product_product_905_7b41639e",
    "name": "HOMA Оценка инсулинорезистентности: глюкоза (натощак), инсулин (натощак), расчет индекса HOMA-IR",
    "cat": 6,
    "price": 180000
   },
   {
    "id": 460,
+   "ext": "__export__.product_product_460_b4c7645f",
    "name": "Insulin (Инсулин)",
    "cat": 6,
    "price": 135000
   },
   {
    "id": 466,
+   "ext": "__export__.product_product_466_d473a37c",
    "name": "Адипонектин",
    "cat": 6,
    "price": 500000
   },
   {
    "id": 468,
+   "ext": "__export__.product_product_468_5e9785c9",
    "name": "Гликированный гемоглобин (Glycated Haemoglobin)",
    "cat": 6,
    "price": 150000
   },
   {
    "id": 10945,
+   "ext": "__export__.product_product_10945_5acdaae5",
    "name": "Глюкагон",
    "cat": 6,
    "price": 400000
   },
   {
    "id": 925,
+   "ext": "__export__.product_product_925_1cd0edfe",
    "name": "Глюкозотолерантный тест (Glucose tolerance test (GTT)",
    "cat": 6,
    "price": 100000
   },
   {
    "id": 10951,
+   "ext": "__export__.product_product_10951_3ee81c0e",
    "name": "Инкретин (глюкозозависимый инсулинотропный пептид- ГИП)",
    "cat": 6,
    "price": 400000
   },
   {
    "id": 467,
+   "ext": "__export__.product_product_467_9367b783",
    "name": "Лептин",
    "cat": 6,
    "price": 500000
   },
   {
    "id": 10940,
+   "ext": "__export__.product_product_10940_b2eb8e28",
    "name": "Проинсулин (Proinsulin)",
    "cat": 6,
    "price": 400000
   },
   {
    "id": 455,
+   "ext": "__export__.product_product_455_2e79f4d7",
    "name": "С-Пептид (С-Peptid)",
    "cat": 6,
    "price": 135000
   },
   {
    "id": 10941,
+   "ext": "__export__.product_product_10941_1c048a4b",
    "name": "Свободные жирные кислоты",
    "cat": 6,
    "price": 400000
   },
   {
    "id": 221,
+   "ext": "__export__.product_product_221_21c5b5f4",
    "name": "ImmunoCAP (C74) Желатин говяжий",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 222,
+   "ext": "__export__.product_product_222_769b3983",
    "name": "ImmunoCAP (D1) Клещ домашней пыли (dermatophagoides pteronyssinus)",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 196,
+   "ext": "__export__.product_product_196_1c2b1d1c",
    "name": "ImmunoCAP (D202) Клещ домашней пыли rDer p1, (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 197,
+   "ext": "__export__.product_product_197_b4ead2c1",
    "name": "ImmunoCAP (D203) Клещ домашней пыли rDer p 2 (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 223,
+   "ext": "__export__.product_product_223_3d6dc065",
    "name": "ImmunoCAP (D205) Тропомиозин (Клещ домашней пыли) rDer p10 (R)",
    "cat": 7,
    "price": 426000
   },
   {
    "id": 224,
+   "ext": "__export__.product_product_224_e831be33",
    "name": "ImmunoCAP (D209) Клещ домашней пыли, rDer p 23",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 225,
+   "ext": "__export__.product_product_225_36eaf45e",
    "name": "ImmunoCAP (E101) Собака rCan f1 (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 226,
+   "ext": "__export__.product_product_226_759e01ff",
    "name": "ImmunoCAP (E227) Лошадь rEqu c 1(R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 249,
+   "ext": "__export__.product_product_249_cb3b1996",
    "name": "ImmunoCAP (E94) Кошка rFel d1 (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 227,
+   "ext": "__export__.product_product_227_845603f5",
    "name": "ImmunoCAP (F20) Миндаль",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 228,
+   "ext": "__export__.product_product_228_1c90f29f",
    "name": "ImmunoCAP (F204) Форель (рыба)",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 229,
+   "ext": "__export__.product_product_229_76c26c74",
    "name": "ImmunoCAP (F218) Паприка (сладкий перец)",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 230,
+   "ext": "__export__.product_product_230_dfbe5180",
    "name": "ImmunoCAP (F24) Креветка",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 253,
+   "ext": "__export__.product_product_253_d4f63953",
    "name": "ImmunoCAP (F25) Помидор",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 231,
+   "ext": "__export__.product_product_231_6e4dfe08",
    "name": "ImmunoCAP (F256) Фундук (лесной орех)",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 232,
+   "ext": "__export__.product_product_232_4fd09e8c",
    "name": "ImmunoCAP (F3) Треска (рыба)",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 254,
+   "ext": "__export__.product_product_254_b5f9b318",
    "name": "ImmunoCAP (F350) Картофель",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 198,
+   "ext": "__export__.product_product_198_31f6ce13",
    "name": "ImmunoCAP (F351) Тропомиозин (Креветки), rPen a 1; (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 255,
+   "ext": "__export__.product_product_255_fa75b9dd",
    "name": "ImmunoCAP (F352) Арахис, rAra h 8, (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 256,
+   "ext": "__export__.product_product_256_4e7abb5d",
    "name": "ImmunoCAP (F353) Бета-конглицинин (Соя), rGly m 4, PR-10 (R)",
    "cat": 7,
    "price": 426000
   },
   {
    "id": 199,
+   "ext": "__export__.product_product_199_951ce997",
    "name": "ImmunoCAP (F416) Omega-5 Глиадин (Пшеница), rTri a 19; (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 257,
+   "ext": "__export__.product_product_257_7ca6e29d",
    "name": "ImmunoCAP (F419) Персик, rPru p 1, PR-10 (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 233,
+   "ext": "__export__.product_product_233_0e740508",
    "name": "ImmunoCAP (F420) Персик, rPru p 3, LTP (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 200,
+   "ext": "__export__.product_product_200_ba517ae2",
    "name": "ImmunoCAP (F421) Профилин (Персик), rPru p 4 (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 258,
+   "ext": "__export__.product_product_258_84c0d841",
    "name": "ImmunoCAP (F422) Арахис, rAra h 1, (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 259,
+   "ext": "__export__.product_product_259_127c2bab",
    "name": "ImmunoCAP (F427) Арахис, rAra h 9, LTP (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 234,
+   "ext": "__export__.product_product_234_3f948253",
    "name": "ImmunoCAP (F430) Киви rAct d 8 PR-10 (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 235,
+   "ext": "__export__.product_product_235_8e4f9366",
    "name": "ImmunoCAP (F433) Пшеница rTri a 14, LTP (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 260,
+   "ext": "__export__.product_product_260_dba886bf",
    "name": "ImmunoCAP (F434) Яблоко, rMal d 1 PR-10",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 236,
+   "ext": "__export__.product_product_236_ac201a98",
    "name": "ImmunoCAP (F435) Яблоко, rMal d 3 LTP",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 261,
+   "ext": "__export__.product_product_261_3b898e89",
    "name": "ImmunoCAP (F440) Лещина (фундук), rCor a 9 (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 262,
+   "ext": "__export__.product_product_262_50c43970",
    "name": "ImmunoCAP (F441) Грецкий орех, rJug r 1",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 201,
+   "ext": "__export__.product_product_201_5349d595",
    "name": "ImmunoCAP (F442) Грецкий орех, rJug r 3 LTP",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 263,
+   "ext": "__export__.product_product_263_5a593173",
    "name": "ImmunoCAP (F443) Кешью rAna о 3 (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 264,
+   "ext": "__export__.product_product_264_3e25bf22",
    "name": "ImmunoCAP (F447) Арахис, rAra h 6, (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 237,
+   "ext": "__export__.product_product_237_8c94752d",
    "name": "ImmunoCAP (F45) Дрожжи (Saccharomyces cerevisiae)",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 265,
+   "ext": "__export__.product_product_265_ea7901d3",
    "name": "ImmunoCAP (F49) Яблоко",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 266,
+   "ext": "__export__.product_product_266_e4361c9d",
    "name": "ImmunoCAP (F76) Альфа-лактальбумин (Молоко), nBos d4 (N)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 267,
+   "ext": "__export__.product_product_267_65caaf5a",
    "name": "ImmunoCAP (F77) Бета-лактоглобулин (Молоко), nBos d5 (N)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 220,
+   "ext": "__export__.product_product_220_7d5fa8d8",
    "name": "ImmunoCAP (F79) Глютен",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 238,
+   "ext": "__export__.product_product_238_4ce4f6aa",
    "name": "ImmunoCAP (F88) Баранина",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 239,
+   "ext": "__export__.product_product_239_6f151619",
    "name": "ImmunoCAP (F98) Глиадин (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 268,
+   "ext": "__export__.product_product_268_15650de9",
    "name": "ImmunoCAP (G12) Рожь",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 202,
+   "ext": "__export__.product_product_202_e43c0051",
    "name": "ImmunoCAP (G213) Тимофеевка луговая, rPhl pl,rPhl p5b (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 203,
+   "ext": "__export__.product_product_203_92fb9bb6",
    "name": "ImmunoCAP (G214) Тимофеевка луговая rPhl p7,rPhl pl2 (R)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 240,
+   "ext": "__export__.product_product_240_09802d0b",
    "name": "ImmunoCAP (H2) Пыль (Hollister Stier Labs)",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 269,
+   "ext": "__export__.product_product_269_51b0b6fd",
    "name": "ImmunoCAP (I205) Шмель",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 241,
+   "ext": "__export__.product_product_241_a3e9c2c2",
    "name": "ImmunoCAP (I3) Яд осы обыкновенной (Vespula spp)",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 242,
+   "ext": "__export__.product_product_242_20e7d7fe",
    "name": "ImmunoCAP (I5) Обыкновенный желтый шершень (Dolichovespula arena)",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 270,
+   "ext": "__export__.product_product_270_de074dff",
    "name": "ImmunoCAP (K80) Формальдегид (формалин)",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 243,
+   "ext": "__export__.product_product_243_ed434900",
    "name": "ImmunoCAP (M2) Грибковая плесень (Cladosporium herbarum)",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 244,
+   "ext": "__export__.product_product_244_a7b489d5",
    "name": "ImmunoCAP (M227) Дрожжевые грибы (Malassezia spp)",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 245,
+   "ext": "__export__.product_product_245_c7cc0f4e",
    "name": "ImmunoCAP (O215) Альфа-Gal (говядина)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 271,
+   "ext": "__export__.product_product_271_971a2ccb",
    "name": "ImmunoCAP (T3) Береза",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 272,
+   "ext": "__export__.product_product_272_ffb1ed4a",
    "name": "ImmunoCAP (W206) Ромашка",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 246,
+   "ext": "__export__.product_product_246_f8cff92d",
    "name": "ImmunoCAP (W233) Полынь обыкновенная n Art v 3 LTP (N)",
    "cat": 7,
    "price": 430000
   },
   {
    "id": 273,
+   "ext": "__export__.product_product_273_59088b3f",
    "name": "ImmunoCAP (W8) Одуванчик",
    "cat": 7,
    "price": 300000
   },
   {
    "id": 247,
+   "ext": "__export__.product_product_247_23f0ecac",
    "name": "ImmunoCAP Phadiatop (скрининг для взрослых)",
    "cat": 7,
    "price": 200000
   },
   {
    "id": 248,
+   "ext": "__export__.product_product_248_dbe6bb55",
    "name": "ImmunoCAP Phadiatop infant (скрининг детский)",
    "cat": 7,
    "price": 400000
   },
   {
    "id": 684,
+   "ext": "__export__.product_product_684_ebf0d94b",
    "name": "Автоматизированный развернутый общий анализ мочи",
    "cat": 8,
    "price": 80000
   },
   {
    "id": 685,
+   "ext": "__export__.product_product_685_9260438b",
    "name": "Исследования мочи по Нечипоренко",
    "cat": 8,
    "price": 70000
   },
   {
    "id": 678,
+   "ext": "__export__.product_product_678_f03273ab",
    "name": "Общий белок в суточной моче",
    "cat": 8,
    "price": 80000
   },
   {
    "id": 1015,
+   "ext": "__export__.product_product_1015_fe7f47af",
    "name": "Проба по Meares-Stamey",
    "cat": 8,
    "price": 220000
   },
   {
    "id": 303,
+   "ext": "__export__.product_product_303_d3ab9ab1",
    "name": "Адренокортикотропный гормон (АКТГ)",
    "cat": 9,
    "price": 180000
   },
   {
    "id": 276,
+   "ext": "__export__.product_product_276_b9407f2f",
    "name": "Альдостерон (Aldosterone)",
    "cat": 9,
    "price": 220000
   },
   {
    "id": 284,
+   "ext": "__export__.product_product_284_3f87a7b3",
    "name": "Гистамин (Histamine)",
    "cat": 9,
    "price": 325000
   },
   {
    "id": 285,
+   "ext": "__export__.product_product_285_b8e7cc37",
    "name": "Диаминоксидаза (Diamino oxidase, DAO)",
    "cat": 9,
    "price": 325000
   },
   {
    "id": 295,
+   "ext": "__export__.product_product_295_9ed30b92",
    "name": "Кортизол (Cortisol)",
    "cat": 9,
    "price": 125000
   },
   {
    "id": 11007,
+   "ext": "__export__.product_product_11007_1823396e",
    "name": "Кортизол в слюне.",
    "cat": 9,
    "price": 250000
   },
   {
    "id": 280,
+   "ext": "__export__.product_product_280_6aeb5e19",
    "name": "Ренин (Renin)- Ренин плазмы прямое определение, Direct Renin",
    "cat": 9,
    "price": 180000
   },
   {
    "id": 332,
+   "ext": "__export__.product_product_332_495458cd",
    "name": "Аланин-аминотрансфераза (Alanine aminotransferase)",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 323,
+   "ext": "__export__.product_product_323_302f85b6",
    "name": "Альбумин (Albumin )",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 345,
+   "ext": "__export__.product_product_345_7b5fe045",
    "name": "Альфа-Амилаза (Alpha-Amylase)",
    "cat": 10,
    "price": 65000
   },
   {
    "id": 10652,
+   "ext": "__export__.product_product_10652_c2d4cec6",
    "name": "Аммиак (Ammonia)",
    "cat": 10,
    "price": 80000
   },
   {
    "id": 10937,
+   "ext": "__export__.product_product_10937_974acd57",
    "name": "Анионный промежуток",
    "cat": 10,
    "price": 150000
   },
   {
    "id": 22,
+   "ext": "__export__.product_product_22_243bb55e",
    "name": "Аполипопротеин A I (Apolipoprotein A I )",
    "cat": 10,
    "price": 210000
   },
   {
    "id": 11045,
+   "ext": "__export__.product_product_11045_2184adbe",
    "name": "Аполипопротеин В (Apolipoprotein B)",
    "cat": 10,
    "price": 210000
   },
   {
    "id": 326,
+   "ext": "__export__.product_product_326_84ca7930",
    "name": "Аспартат-аминотрансфераза (Aspartate aminotransferase)",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 10938,
+   "ext": "__export__.product_product_10938_f329659e",
    "name": "Бикарбонат (Enzymatic Carbonate)",
    "cat": 10,
    "price": 60000
   },
   {
    "id": 893,
+   "ext": "__export__.product_product_893_86cc8d0c",
    "name": "Билирубин и его фракции (Bilirubin)",
    "cat": 10,
    "price": 100000
   },
   {
    "id": 903,
+   "ext": "__export__.product_product_903_0f8162c9",
    "name": "Биохимический анализ крови базовый (13 показателей)",
    "cat": 10,
    "price": 400000
   },
   {
    "id": 941,
+   "ext": "__export__.product_product_941_254d0bca",
    "name": "Биохимический анализ крови при заболеваниях ЖКТ (19 показателей: Общий белок; Альбумин, Билирубин общий; Билирубин непрямой; Билирубин прямой; Креатинин; Холестерин общий; Мочевина; АСТ; АЛТ; Мочевая кислота; Триглицериды; Лактатдегидрогена",
    "cat": 10,
    "price": 600000
   },
   {
    "id": 1013,
+   "ext": "__export__.product_product_1013_d086498b",
    "name": "Биохимический анализ крови при почечной патологии (12 показателей: Общий белок; Билирубин общий; Билирубин непрямой; Билирубин прямой; Креатинин; Холестерин общий; Мочевина; Мочевая кислота; АСТ; АЛТ;Альбумин)",
    "cat": 10,
    "price": 500000
   },
   {
    "id": 1014,
+   "ext": "__export__.product_product_1014_26f9ef37",
    "name": "Биохимический анализ крови при сердечно-сосудистых заболеваниях (18 показателей: белок; Билирубин общий; Молочная кислота; Билирубин прямой; Билирубин непрямой; Креатинин; Холестерин общий; Триглицериды; Мочевина; Мочевая кислота; Кр",
    "cat": 10,
    "price": 600000
   },
   {
    "id": 921,
+   "ext": "__export__.product_product_921_fd238cc5",
    "name": "Биохимический анализ крови развернутый (20 показателей)",
    "cat": 10,
    "price": 600000
   },
   {
    "id": 347,
+   "ext": "__export__.product_product_347_8dfbbc06",
    "name": "Гамма глутамилтрансфераза (Gamma Glutamyl Transferase)",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 330,
+   "ext": "__export__.product_product_330_4cb8ea0e",
    "name": "Глобулин (Globulin)",
    "cat": 10,
    "price": 80000
   },
   {
    "id": 342,
+   "ext": "__export__.product_product_342_3b02f3b4",
    "name": "Глюкоза (Glucose)",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 11000,
+   "ext": "__export__.product_product_11000_1ab0f6c3",
    "name": "Глюкоза (Glucose) через час",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 10862,
+   "ext": "__export__.product_product_10862_3e880fd2",
    "name": "Глюкоза постпрандиальная (Postprandial glucose)",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 10633,
+   "ext": "__export__.product_product_10633_7daa936c",
    "name": "Железо (Iron)",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 329,
+   "ext": "__export__.product_product_329_1facbc0f",
    "name": "Индекс атерогенности",
    "cat": 10,
    "price": 20000
   },
   {
    "id": 337,
+   "ext": "__export__.product_product_337_5c77cd3a",
    "name": "Калий (Potassium)",
    "cat": 10,
    "price": 65000
   },
   {
    "id": 341,
+   "ext": "__export__.product_product_341_6e54f4ed",
    "name": "Кальций (Calcium)",
    "cat": 10,
    "price": 65000
   },
   {
    "id": 10939,
+   "ext": "__export__.product_product_10939_54920bba",
    "name": "Кальций ионизированный",
    "cat": 10,
    "price": 140000
   },
   {
    "id": 318,
+   "ext": "__export__.product_product_318_0cb11f95",
    "name": "Кислая Фосфотаза (Acid Phosphatase)",
    "cat": 10,
    "price": 65000
   },
   {
    "id": 348,
+   "ext": "__export__.product_product_348_9749b272",
    "name": "Креатинин (Creatinine )",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 316,
+   "ext": "__export__.product_product_316_9455be67",
    "name": "Креатинкиназа (Creatine Kinase )",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 319,
+   "ext": "__export__.product_product_319_1b311076",
    "name": "Креатинкиназа изофермента MB (Creatine Kinase Isoenzyme MB)",
    "cat": 10,
    "price": 100000
   },
   {
    "id": 322,
+   "ext": "__export__.product_product_322_84241d69",
    "name": "Лактатдегидрогеназа (Lactate Dehydrogenase)",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 317,
+   "ext": "__export__.product_product_317_e2e9d60c",
    "name": "Липаза (Lipase)",
    "cat": 10,
    "price": 100000
   },
   {
    "id": 906,
+   "ext": "__export__.product_product_906_15efe6ed",
    "name": "Липидный профиль(Триглицериды; Холестерин общий ; ЛПВП; ЛПНП; индекс атерогенности) коплекс",
    "cat": 10,
    "price": 250000
   },
   {
    "id": 10863,
+   "ext": "__export__.product_product_10863_5a2a091a",
    "name": "Липопротеин (а)",
    "cat": 10,
    "price": 100000
   },
   {
    "id": 321,
+   "ext": "__export__.product_product_321_4eb15894",
    "name": "Липопротеины высокой плотности (AHDL)",
    "cat": 10,
    "price": 100000
   },
   {
    "id": 10634,
+   "ext": "__export__.product_product_10634_ab675664",
    "name": "Липопротеины низкой плотности (ALDL)",
    "cat": 10,
    "price": 100000
   },
   {
    "id": 333,
+   "ext": "__export__.product_product_333_9ff8d5c8",
    "name": "Магний (Magnesium )",
    "cat": 10,
    "price": 80000
   },
   {
    "id": 338,
+   "ext": "__export__.product_product_338_fa3a2697",
    "name": "Микроальбумин в моче (Microalbumin)",
    "cat": 10,
    "price": 100000
   },
   {
    "id": 1012,
+   "ext": "__export__.product_product_1012_afd86629",
    "name": "Микроэлементы крови (Кальций; Железо; Магний; Фосфор)",
    "cat": 10,
    "price": 220000
   },
   {
    "id": 320,
+   "ext": "__export__.product_product_320_8c007980",
    "name": "Молочная кислота (Lactic Acid)",
    "cat": 10,
    "price": 65000
   },
   {
    "id": 328,
+   "ext": "__export__.product_product_328_5d92d519",
    "name": "Мочевая кислота (Uric Acid)",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 325,
+   "ext": "__export__.product_product_325_93e68dac",
    "name": "Мочевина (urea)",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 335,
+   "ext": "__export__.product_product_335_67ddacf6",
    "name": "Натрий (Sodium)",
    "cat": 10,
    "price": 60000
   },
   {
    "id": 339,
+   "ext": "__export__.product_product_339_5f298da0",
    "name": "Общий белок (Total Protein)",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 331,
+   "ext": "__export__.product_product_331_64cfdc04",
    "name": "Панкреатическая амилаза (Pancreatic Amylase)",
    "cat": 10,
    "price": 150000
   },
   {
    "id": 10942,
+   "ext": "__export__.product_product_10942_c0eb8ae0",
    "name": "рСКФ",
    "cat": 10,
    "price": 60000
   },
   {
    "id": 11083,
+   "ext": "__export__.product_product_11083_db8e7a2c",
    "name": "тест для Бахрома",
    "cat": 10,
    "price": 10000
   },
   {
    "id": 11085,
+   "ext": "__export__.product_product_11085_ff7b3f5e",
    "name": "тест лаборатория",
    "cat": 10,
    "price": 45000
   },
   {
    "id": 349,
+   "ext": "__export__.product_product_349_f1c9146c",
    "name": "Триглицериды (Triglyceride)",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 346,
+   "ext": "__export__.product_product_346_854824c0",
    "name": "Фосфор (Phosphorus )",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 336,
+   "ext": "__export__.product_product_336_1a026142",
    "name": "Хлор (Chloride)",
    "cat": 10,
    "price": 60000
   },
   {
    "id": 344,
+   "ext": "__export__.product_product_344_8ba24787",
    "name": "Холестерин (Total Cholesterol)",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 696,
+   "ext": "__export__.product_product_696_96ed5274",
    "name": "Цинк (Zinc)",
    "cat": 10,
    "price": 110000
   },
   {
    "id": 11020,
+   "ext": "__export__.product_product_11020_df163ad5",
    "name": "Цистатин С",
    "cat": 10,
    "price": 130000
   },
   {
    "id": 340,
+   "ext": "__export__.product_product_340_68d74024",
    "name": "Щелочная фосфотаза (Alkaline Phosphatase)",
    "cat": 10,
    "price": 50000
   },
   {
    "id": 610,
+   "ext": "__export__.product_product_610_088c91cb",
    "name": "Аллерген C70 Инсулин свиной (Insulin, porcine)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 612,
+   "ext": "__export__.product_product_612_f03bb0e9",
    "name": "Аллерген C74 Желатин свиной (Gelatin porcine)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 642,
+   "ext": "__export__.product_product_642_edbfedc5",
    "name": "Аллерген E1 Кошачья шерсть-эпителий (Cat dander-epithelium)",
    "cat": 11,
    "price": 120000
   },
   {
    "id": 644,
+   "ext": "__export__.product_product_644_f7f8db64",
    "name": "Аллерген E2 Эпителий собак (Dog epithelium)",
    "cat": 11,
    "price": 120000
   },
   {
    "id": 544,
+   "ext": "__export__.product_product_544_30a56e8f",
    "name": "Аллерген E201 Перья канарейки (Canary feathers)",
    "cat": 11,
    "price": 250000
   },
   {
    "id": 545,
+   "ext": "__export__.product_product_545_c8833075",
    "name": "Аллерген E3 Эпителий лошади",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 668,
+   "ext": "__export__.product_product_668_decdfb58",
    "name": "Аллерген F1 Яичный белок (Egg White)",
    "cat": 11,
    "price": 150000
   },
   {
    "id": 581,
+   "ext": "__export__.product_product_581_aba9d820",
    "name": "Аллерген F11 Гречка (Buckwheat)",
    "cat": 11,
    "price": 150000
   },
   {
    "id": 580,
+   "ext": "__export__.product_product_580_8004dac9",
    "name": "Аллерген F14 Соя (Soybean)",
    "cat": 11,
    "price": 150000
   },
   {
    "id": 582,
+   "ext": "__export__.product_product_582_cc56369c",
    "name": "Аллерген F2 Молоко (Milk)",
    "cat": 11,
    "price": 150000
   },
   {
    "id": 573,
+   "ext": "__export__.product_product_573_5c1ce5ea",
    "name": "Аллерген F205 Сельдь (Herring)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 576,
+   "ext": "__export__.product_product_576_369cc52d",
    "name": "Аллерген F242 Вишня (Cherry)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 603,
+   "ext": "__export__.product_product_603_28d21f24",
    "name": "Аллерген F26 Свинина (Pork)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 604,
+   "ext": "__export__.product_product_604_1a31081d",
    "name": "Аллерген F262 Баклажаны (Eggplant)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 541,
+   "ext": "__export__.product_product_541_04e1a808",
    "name": "Аллерген F27 Говядина (Beef)",
    "cat": 11,
    "price": 150000
   },
   {
    "id": 579,
+   "ext": "__export__.product_product_579_a0ba844e",
    "name": "Аллерген F280 Черный перец (Black Pepper)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 574,
+   "ext": "__export__.product_product_574_d029d211",
    "name": "Аллерген F303 Палтус (Halibut)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 572,
+   "ext": "__export__.product_product_572_3e74291b",
    "name": "Аллерген F4 Пшеница (Wheat)",
    "cat": 11,
    "price": 150000
   },
   {
    "id": 669,
+   "ext": "__export__.product_product_669_d3f99d7e",
    "name": "Аллерген F75 Яичный желток (Egg volk)",
    "cat": 11,
    "price": 150000
   },
   {
    "id": 602,
+   "ext": "__export__.product_product_602_4b42e542",
    "name": "Аллерген F83 Куриное мясо (Chicken meat)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 607,
+   "ext": "__export__.product_product_607_d79278c6",
    "name": "Аллерген G4 Овсянница луговая (Meadow Fescue)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 639,
+   "ext": "__export__.product_product_639_c57f93dd",
    "name": "Аллерген G6 Тимофеевка (Timothy Grass)",
    "cat": 11,
    "price": 150000
   },
   {
    "id": 641,
+   "ext": "__export__.product_product_641_30c8a794",
    "name": "Аллерген I6 Таракан (Cockroach)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 640,
+   "ext": "__export__.product_product_640_4bb7a334",
    "name": "Аллерген K82 Латекс (Latex)",
    "cat": 11,
    "price": 150000
   },
   {
    "id": 637,
+   "ext": "__export__.product_product_637_c41e9087",
    "name": "Аллерген M6 Альтернария тениус (Alternariya tenius )",
    "cat": 11,
    "price": 150000
   },
   {
    "id": 577,
+   "ext": "__export__.product_product_577_2b5ff7be",
    "name": "Аллерген T10 Ореховая пыльца (Walnut pollen)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 643,
+   "ext": "__export__.product_product_643_71e76cf5",
    "name": "Аллерген T201 Ель (Spruce)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 606,
+   "ext": "__export__.product_product_606_6388fc3c",
    "name": "Аллерген T7 Дуб (Oak)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 608,
+   "ext": "__export__.product_product_608_a433cd12",
    "name": "Аллерген W10 Марь (Lambs Quarters)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 609,
+   "ext": "__export__.product_product_609_b5daeddd",
    "name": "Аллерген W20 Крапива (Nettle)",
    "cat": 11,
    "price": 100000
   },
   {
    "id": 613,
+   "ext": "__export__.product_product_613_db0e9fcd",
    "name": "Аллерген W6 Полынь (Mugwort)",
    "cat": 11,
    "price": 120000
   },
   {
    "id": 10640,
+   "ext": "__export__.product_product_10640_72aa4f3f",
    "name": "Молекулярная аллергодиагностика",
    "cat": 11,
    "price": 2600000
   },
   {
    "id": 667,
+   "ext": "__export__.product_product_667_d88a3ca3",
    "name": "Общий IgE",
    "cat": 11,
    "price": 150000
   },
   {
    "id": 11006,
+   "ext": "__export__.product_product_11006_a2b64e86",
    "name": "Определение активности ингибитора С1 фактора комплемента (C1 INH)",
    "cat": 11,
    "price": 400000
   },
   {
    "id": 10972,
+   "ext": "__export__.product_product_10972_10138fd1",
    "name": "Панель пищевых аллергенов",
    "cat": 11,
    "price": 1200000
   },
   {
    "id": 10971,
+   "ext": "__export__.product_product_10971_9f8dcb43",
    "name": "Панель респираторных аллергенов",
    "cat": 11,
    "price": 1100000
   },
   {
    "id": 666,
+   "ext": "__export__.product_product_666_5fd1d53a",
    "name": "Скрининговый тест на специфические IgE - общая аллергия (AlaTOP allergy screen)",
    "cat": 11,
    "price": 280000
   },
   {
    "id": 540,
+   "ext": "__export__.product_product_540_d1009f17",
    "name": "Эозинофильный катионный белок (ECP)",
    "cat": 11,
    "price": 300000
   },
   {
    "id": 167,
+   "ext": "__export__.product_product_167_c2d3fb01",
    "name": "Аминокислоты в моче - экспертное количественное исследование (25 показателей )",
    "cat": 12,
    "price": 400000
   },
   {
    "id": 182,
+   "ext": "__export__.product_product_182_c49abd9d",
    "name": "Аминокислоты в плазме крови - экспертное количественное исследование (26 показателей)",
    "cat": 12,
    "price": 950000
   },
   {
    "id": 171,
+   "ext": "__export__.product_product_171_e2b92872",
    "name": "Аминокислоты и ацилкарнитины - скрининговое полуколичественное исследование для диагностики наследственных болезней обмена у новорожденных и детей до 2-х лет (39 показателей)",
    "cat": 12,
    "price": 850000
   },
   {
-   "id": 555,
+   "id": 1000555,
+   "ext": "__import__.product_product_555",
    "name": "Анализ волос на наличие тяжелых металлов и микроэлементов (23 показателей )",
    "cat": 12,
    "price": 700000
   },
   {
    "id": 173,
+   "ext": "__export__.product_product_173_b14062ac",
    "name": "Анализ волос на наличие тяжелых металлов и микроэлементов (40 показателей)",
    "cat": 12,
    "price": 700000
   },
   {
    "id": 10662,
+   "ext": "__export__.product_product_10662_1ac79c7d",
    "name": "Анализ крови на наличие тяжелых металлов и микроэлементов (40 показателей )",
    "cat": 12,
    "price": 700000
   },
   {
    "id": 10663,
+   "ext": "__export__.product_product_10663_3c9d6b72",
    "name": "Анализ крови на токсичные микроэлементы (10 показателей): Al, Ag, Cd, Cr,",
    "cat": 12,
    "price": 500000
   },
   {
    "id": 10661,
+   "ext": "__export__.product_product_10661_e650c4b2",
    "name": "Анализ крови на эссенциальные макро- и микроэлементы (7 показателей)",
    "cat": 12,
    "price": 500000
   },
   {
    "id": 195,
+   "ext": "__export__.product_product_195_fb6199a1",
    "name": "Ацилкарнитины в крови",
    "cat": 12,
    "price": 500000
   },
   {
    "id": 11059,
+   "ext": "__export__.product_product_11059_4041761a",
    "name": "Витамин А (ретинол)",
    "cat": 12,
    "price": 350000
   },
   {
    "id": 11053,
+   "ext": "__export__.product_product_11053_223b6f39",
    "name": "Витамин В1",
    "cat": 12,
    "price": 450000
   },
   {
    "id": 11054,
+   "ext": "__export__.product_product_11054_eda541b6",
    "name": "Витамин В2",
    "cat": 12,
    "price": 450000
   },
   {
    "id": 11055,
+   "ext": "__export__.product_product_11055_b38927d3",
    "name": "Витамин В3",
    "cat": 12,
    "price": 450000
   },
   {
    "id": 11056,
+   "ext": "__export__.product_product_11056_71f1e023",
    "name": "Витамин В5",
    "cat": 12,
    "price": 450000
   },
   {
    "id": 11057,
+   "ext": "__export__.product_product_11057_39c09b57",
    "name": "Витамин В6 (пиридоксаль фосфат)",
    "cat": 12,
    "price": 450000
   },
   {
    "id": 11058,
+   "ext": "__export__.product_product_11058_19d97e6e",
    "name": "Витамин В7",
    "cat": 12,
    "price": 450000
   },
   {
    "id": 11060,
+   "ext": "__export__.product_product_11060_5a5d81f5",
    "name": "Витамин Е (токоферол)",
    "cat": 12,
    "price": 350000
   },
   {
    "id": 11061,
+   "ext": "__export__.product_product_11061_1456f0b2",
    "name": "Витамин К1",
    "cat": 12,
    "price": 450000
   },
   {
    "id": 11062,
+   "ext": "__export__.product_product_11062_2720cff0",
    "name": "Витамин С",
    "cat": 12,
    "price": 450000
   },
   {
    "id": 166,
+   "ext": "__export__.product_product_166_cdb7ce55",
    "name": "Йод в моче",
    "cat": 12,
    "price": 350000
   },
   {
    "id": 181,
+   "ext": "__export__.product_product_181_799b312d",
    "name": "Комплексный анализ крови на аминокислоты (48 показателей)",
    "cat": 12,
    "price": 800000
   },
   {
    "id": 10664,
+   "ext": "__export__.product_product_10664_da46ea7b",
    "name": "Комплексный анализ на витамины (14 показателей)",
    "cat": 12,
    "price": 4000000
   },
   {
    "id": 10665,
+   "ext": "__export__.product_product_10665_7389951f",
    "name": "Комплексный анализ на витамины группы B (B1, B2, B3, B5, B6, B9, B12)",
    "cat": 12,
    "price": 2000000
   },
   {
    "id": 10750,
+   "ext": "__export__.product_product_10750_0edd4b35",
    "name": "Комплексный анализ на водорастворимые витамины (С, B1, B2, B3, B6, B12,",
    "cat": 12,
    "price": 1500000
   },
   {
    "id": 180,
+   "ext": "__export__.product_product_180_ca052496",
    "name": "Комплексный анализ на жирорастворимые витамины (A, D,E,K)",
    "cat": 12,
    "price": 1000000
   },
   {
    "id": 142,
+   "ext": "__export__.product_product_142_e6ffce81",
    "name": "Макро- и микроэлементы в моче (22 показателя)",
    "cat": 12,
    "price": 900000
   },
   {
    "id": 11052,
+   "ext": "__export__.product_product_11052_2858aae4",
    "name": "Омега-3 индекс",
    "cat": 12,
    "price": 950000
   },
   {
    "id": 168,
+   "ext": "__export__.product_product_168_5e7b7ec1",
    "name": "Органические кислоты в моче - выявление функциональных метаболических изменений (60 показателей)",
    "cat": 12,
    "price": 1200000
   },
   {
    "id": 169,
+   "ext": "__export__.product_product_169_307601dd",
    "name": "Органические кислоты в моче - скрининговое выявление лабораторных признаков наследственных болезней обмена у новорожденных и детей до 2-х лет (40 показателей)",
    "cat": 12,
    "price": 1000000
   },
   {
    "id": 670,
+   "ext": "__export__.product_product_670_90561128",
    "name": "Анализ секрета простаты",
    "cat": 13,
    "price": 80000
   },
   {
    "id": 661,
+   "ext": "__export__.product_product_661_b606f0b9",
    "name": "Анализ соскоба на яйца остриц",
    "cat": 13,
    "price": 60000
   },
   {
    "id": 658,
+   "ext": "__export__.product_product_658_e7eb1e58",
    "name": "Анализ урогенитального мазка на микрофлору (на стекле)",
    "cat": 13,
    "price": 80000
   },
   {
    "id": 674,
+   "ext": "__export__.product_product_674_72739990",
    "name": "Гистологическое исследование из нескольких точек (3 и более блоков)",
    "cat": 13,
    "price": 900000
   },
   {
    "id": 673,
+   "ext": "__export__.product_product_673_83c8094c",
    "name": "Гистологическое исследование малого материала (1-2 блоков)",
    "cat": 13,
    "price": 600000
   },
   {
    "id": 11072,
+   "ext": "__export__.product_product_11072_224cb1e1",
    "name": "Гистологическое исследование эндоскопического биопсийного материала с определением H. Pylori (1-4 флакона)",
    "cat": 13,
    "price": 600000
   },
   {
    "id": 11073,
+   "ext": "__export__.product_product_11073_d30d32db",
    "name": "Гистологическое исследование эндоскопического биопсийного материала с определением H. Pylori (5 и более флаконов)",
    "cat": 13,
    "price": 900000
   },
   {
    "id": 11071,
+   "ext": "__export__.product_product_11071_e55bdf28",
    "name": "Гистология по OLGA",
    "cat": 13,
    "price": 900000
   },
   {
    "id": 672,
+   "ext": "__export__.product_product_672_6238b4cf",
    "name": "Демодекоз (Demodex folliculorum)",
    "cat": 13,
    "price": 110000
   },
   {
    "id": 671,
+   "ext": "__export__.product_product_671_2ad73512",
    "name": "Исследование на чесоточный клещ",
    "cat": 13,
    "price": 110000
   },
   {
    "id": 659,
+   "ext": "__export__.product_product_659_865d4d01",
    "name": "Микроскопические исследование мазка из носа",
    "cat": 13,
    "price": 110000
   },
   {
    "id": 660,
+   "ext": "__export__.product_product_660_b4b5d9da",
    "name": "Микроскопические исследование мазка из уретры у мужчин",
    "cat": 13,
    "price": 80000
   },
   {
    "id": 11048,
+   "ext": "__export__.product_product_11048_19882064",
    "name": "Микроскопическое исследование на поверхностные микозы",
    "cat": 13,
    "price": 100000
   },
   {
    "id": 10641,
+   "ext": "__export__.product_product_10641_07c46cab",
    "name": "Пап тест методом жидкостной цитологии",
    "cat": 13,
    "price": 320000
   },
   {
    "id": 655,
+   "ext": "__export__.product_product_655_ec373044",
    "name": "Цитологический мазок шейки матки (ПАП-тест)",
    "cat": 13,
    "price": 270000
   },
   {
    "id": 738,
+   "ext": "__export__.product_product_738_3103bea2",
    "name": "Андрофлор-скрин",
    "cat": 14,
    "price": 550000
   },
   {
    "id": 863,
+   "ext": "__export__.product_product_863_687a4f5a",
    "name": "Вирус зостера (VZV) в ликворе",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 780,
+   "ext": "__export__.product_product_780_d16bff24",
    "name": "Вирус зостера (VZV) в мононуклеарах",
    "cat": 14,
    "price": 210000
   },
   {
    "id": 761,
+   "ext": "__export__.product_product_761_6e46f9b0",
    "name": "Вирус зостера (VZV) в плазме крови",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 836,
+   "ext": "__export__.product_product_836_001b05b6",
    "name": "Вирус папилломы человека 16,31,33,52,58,56,18,39,45,59,6,11,51,68 (HPV) в биоптат количественный",
    "cat": 14,
    "price": 300000
   },
   {
    "id": 849,
+   "ext": "__export__.product_product_849_e956ad5d",
    "name": "Вирус папилломы человека 16,31,33,52,58,56,18,39,45,59,6,11,51,68 (HPV) в моче количественный",
    "cat": 14,
    "price": 300000
   },
   {
    "id": 828,
+   "ext": "__export__.product_product_828_97aeb772",
    "name": "Вирус папилломы человека 16,31,33,52,58,56,18,39,45,59,6,11,51,68 (HPV) в плазме количественный",
    "cat": 14,
    "price": 300000
   },
   {
    "id": 733,
+   "ext": "__export__.product_product_733_05d9c547",
    "name": "Вирус папилломы человека 16,31,33,52,58,56,18,39,45,59,6,11,51,68 (HPV) в сперме количественный",
    "cat": 14,
    "price": 300000
   },
   {
    "id": 814,
+   "ext": "__export__.product_product_814_6cb7072e",
    "name": "Вирус папилломы человека 16,31,33,52,58,56,18,39,45,59,6,11,51,68 (HPV) в у/г мазке количественный",
    "cat": 14,
    "price": 300000
   },
   {
    "id": 758,
+   "ext": "__export__.product_product_758_a98af558",
    "name": "Вирус простого гереса ½ в ликворе",
    "cat": 14,
    "price": 146000
   },
   {
    "id": 776,
+   "ext": "__export__.product_product_776_b4e9de8b",
    "name": "Вирус простого герпеса ½ в мононуклеарах",
    "cat": 14,
    "price": 210000
   },
   {
    "id": 848,
+   "ext": "__export__.product_product_848_953dff5a",
    "name": "Вирус простого герпеса ½ в моче",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 763,
+   "ext": "__export__.product_product_763_10931bcb",
    "name": "Вирус простого герпеса ½ в плазме крови",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 858,
+   "ext": "__export__.product_product_858_1e2adba3",
    "name": "Вирус простого герпеса ½ в слезе",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 822,
+   "ext": "__export__.product_product_822_2cd9c5ef",
    "name": "Вирус простого герпеса ½ в слизистой рта",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 756,
+   "ext": "__export__.product_product_756_3ff54a22",
    "name": "Вирус простого герпеса ½ в слюне",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 875,
+   "ext": "__export__.product_product_875_5870d91f",
    "name": "Вирус простого герпеса ½ в суставной жидкости",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 773,
+   "ext": "__export__.product_product_773_22c20974",
    "name": "Вирус простого герпеса ½ в у/г мазке",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 808,
+   "ext": "__export__.product_product_808_c0729231",
    "name": "Вирус простого герпеса ½ в эякуляте",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 11124,
+   "ext": "__export__.product_product_11124_873d2085",
    "name": "Вирус простого герпеса ½ из раны",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 827,
+   "ext": "__export__.product_product_827_6f195650",
    "name": "Вирус Эпштейна-Барра (EBV) в ликворе",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 779,
+   "ext": "__export__.product_product_779_d2e24b2a",
    "name": "Вирус Эпштейна-Барра (EBV) в мононуклеарах",
    "cat": 14,
    "price": 210000
   },
   {
    "id": 820,
+   "ext": "__export__.product_product_820_7d89b7ef",
    "name": "Вирус Эпштейна-Барра (EBV) в моче",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 771,
+   "ext": "__export__.product_product_771_265f9cd9",
    "name": "Вирус Эпштейна-Барра (EBV) в плазме крови",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 757,
+   "ext": "__export__.product_product_757_19fd2f3c",
    "name": "Вирус Эпштейна-Барра (EBV) в слюне",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 831,
+   "ext": "__export__.product_product_831_602a39a2",
    "name": "Вирус Эпштейна-Барра (EBV) в у/г мазке",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 833,
+   "ext": "__export__.product_product_833_2d8824c1",
    "name": "Вирус Эпштейна-Барра (EBV) в эякуляте",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 872,
+   "ext": "__export__.product_product_872_36fa9ba2",
    "name": "Вирус Эпштейна-Барра (EBV) со слизистой рта",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 749,
+   "ext": "__export__.product_product_749_01c4aaf0",
    "name": "Вирус Эпштейна-Барра в суставной жидкости",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 764,
+   "ext": "__export__.product_product_764_08ef03ed",
    "name": "Вирусный гепатит D (HDV) качественный",
    "cat": 14,
    "price": 180000
   },
   {
    "id": 765,
+   "ext": "__export__.product_product_765_7a822396",
    "name": "Вирусный гепатит D (HDV) количественный",
    "cat": 14,
    "price": 300000
   },
   {
    "id": 866,
+   "ext": "__export__.product_product_866_11fd4f77",
    "name": "Вирусный гепатит D (HDV), в мононуклеарах",
    "cat": 14,
    "price": 210000
   },
   {
    "id": 766,
+   "ext": "__export__.product_product_766_a3c3a37a",
    "name": "Вирусный гепатит В (HBV) качественный",
    "cat": 14,
    "price": 180000
   },
   {
    "id": 767,
+   "ext": "__export__.product_product_767_cccfc112",
    "name": "Вирусный гепатит В (HBV) количественный",
    "cat": 14,
    "price": 300000
   },
   {
    "id": 760,
+   "ext": "__export__.product_product_760_9d6fc7cc",
    "name": "Вирусный гепатит В (HBV), в мононуклеарах",
    "cat": 14,
    "price": 210000
   },
   {
    "id": 768,
+   "ext": "__export__.product_product_768_a45188f1",
    "name": "Вирусный гепатит С (HCV) качественный",
    "cat": 14,
    "price": 179000
   },
   {
    "id": 769,
+   "ext": "__export__.product_product_769_6b360656",
    "name": "Вирусный гепатит С (HCV) количественный",
    "cat": 14,
    "price": 300000
   },
   {
    "id": 777,
+   "ext": "__export__.product_product_777_1267aefc",
    "name": "Вирусный гепатит С (HCV), в мононуклеарах",
    "cat": 14,
    "price": 210000
   },
   {
    "id": 852,
+   "ext": "__export__.product_product_852_359f38b4",
    "name": "Гарднерелла вагиналис (Gardnerella vaginalis) в моче",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 772,
+   "ext": "__export__.product_product_772_a422569a",
    "name": "Гарднерелла вагиналис (Gardnerella vaginalis) в плазме крови",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 774,
+   "ext": "__export__.product_product_774_3c828993",
    "name": "Гарднерелла вагиналис (Gardnerella vaginalis) в у/г мазке",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 834,
+   "ext": "__export__.product_product_834_bba95ad9",
    "name": "Гарднерелла вагиналис (Gardnerella vaginalis) в эякуляте",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 770,
+   "ext": "__export__.product_product_770_f2d56801",
    "name": "Генотипирование вируса гепатита С (1a, 1b, 2a, 2b, 3a)",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 724,
+   "ext": "__export__.product_product_724_d6d51c14",
    "name": "Исследование состава микробиоты толстого кишечника-Энтерофлор-Дети",
    "cat": 14,
    "price": 450000
   },
   {
    "id": 826,
+   "ext": "__export__.product_product_826_e19b623f",
    "name": "Комплекс Вирус простого герпеса 6 типа (HHV6), Цитомегаловирус, Вирус Эпштейна-Барра количественный в ликворе",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 869,
+   "ext": "__export__.product_product_869_0db1b004",
    "name": "Комплекс Вирус простого герпеса 6 типа (HHV6), Цитомегаловирус, Вирус Эпштейна-Барра количественный в мазке",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 855,
+   "ext": "__export__.product_product_855_f8615001",
    "name": "Комплекс Вирус простого герпеса 6 типа (HHV6), Цитомегаловирус, Вирус Эпштейна-Барра количественный в слезе",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 861,
+   "ext": "__export__.product_product_861_d564c154",
    "name": "Комплекс Вирус простого герпеса 6 типа (HHV6), Цитомегаловирус, Вирус Эпштейна-Барра количественный-ликвора",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 843,
+   "ext": "__export__.product_product_843_7194096b",
    "name": "Комплекс Вирус простого герпеса 6 типа (HHV6), Цитомегаловирус, Вирус Эпштейна-Барра количественный-мононуклеары",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 846,
+   "ext": "__export__.product_product_846_fdb514e6",
    "name": "Комплекс Вирус простого герпеса 6 типа (HHV6), Цитомегаловирус, Вирус Эпштейна-Барра количественный-моче",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 732,
+   "ext": "__export__.product_product_732_055dfdd0",
    "name": "Комплекс Вирус простого герпеса 6 типа (HHV6), Цитомегаловирус, Вирус Эпштейна-Барра количественный-плазма",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 825,
+   "ext": "__export__.product_product_825_9d1be770",
    "name": "Комплекс Вирус простого герпеса 6 типа (HHV6), Цитомегаловирус, Вирус Эпштейна-Барра количественный-слюна",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 862,
+   "ext": "__export__.product_product_862_263a4a1b",
    "name": "Комплекс ИППП: Хламидия трахоматис, Микоплазма гениталиум, микоплазма хоминис, уреаплазма уреалитикум (в ликворе)",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 865,
+   "ext": "__export__.product_product_865_aca4afa5",
    "name": "Комплекс ИППП: Хламидия трахоматис, Микоплазма гениталиум, микоплазма хоминис, уреаплазма уреалитикум (в плазме)",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 860,
+   "ext": "__export__.product_product_860_fcc92458",
    "name": "Комплекс ИППП: Хламидия трахоматис, Микоплазма гениталиум, микоплазма хоминис, уреаплазма уреалитикум (в слюне)",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 867,
+   "ext": "__export__.product_product_867_6d50665d",
    "name": "Комплекс ИППП: Хламидия трахоматис, Микоплазма гениталиум, микоплазма хоминис, уреаплазма уреалитикум (в эякуляте)",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 853,
+   "ext": "__export__.product_product_853_21d2c4dc",
    "name": "Комплекс ИППП: Хламидия трахоматис, Микоплазма гениталиум, микоплазма хоминис, уреаплазма уреалитикум (моча)",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 737,
+   "ext": "__export__.product_product_737_1e1fea70",
    "name": "Комплекс ИППП: Хламидия трахоматис, Микоплазма гениталиум, микоплазма хоминис, уреаплазма уреалитикум (у/г мазок)",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 735,
+   "ext": "__export__.product_product_735_bde4367e",
    "name": "Комплекс ИППП: Хламидия трахоматис, Микоплазма гениталиум, Трихомонас вагиналис, гонорея (у/г мазок)",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 782,
+   "ext": "__export__.product_product_782_59490ab7",
    "name": "Комплекс-ОРЗ",
    "cat": 14,
    "price": 450000
   },
   {
    "id": 882,
+   "ext": "__export__.product_product_882_482d8071",
    "name": "Комплекс: Кандиды (Cand.albicans, Cand.glabrata, Cand.krusei) в мокроте",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 818,
+   "ext": "__export__.product_product_818_d897ecad",
    "name": "Комплекс: Кандиды (Cand.albicans, Cand.glabrata, Cand.krusei) в моче",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 829,
+   "ext": "__export__.product_product_829_50c7d57f",
    "name": "Комплекс: Кандиды (Cand.albicans, Cand.glabrata, Cand.krusei) в плазме крови",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 832,
+   "ext": "__export__.product_product_832_98739bc8",
    "name": "Комплекс: Кандиды (Cand.albicans, Cand.glabrata, Cand.krusei) в ротоглотке",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 859,
+   "ext": "__export__.product_product_859_cf5497c8",
    "name": "Комплекс: Кандиды (Cand.albicans, Cand.glabrata, Cand.krusei) в слюне",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 739,
+   "ext": "__export__.product_product_739_5f53d278",
    "name": "Комплекс: Кандиды (Cand.albicans, Cand.glabrata, Cand.krusei) в у/г мазке",
    "cat": 14,
    "price": 350000
   },
   {
    "id": 725,
+   "ext": "__export__.product_product_725_0c98077f",
    "name": "Комплекс: коклюш, паракоклюш, бронхисептикоз",
    "cat": 14,
    "price": 180000
   },
   {
    "id": 11026,
+   "ext": "__export__.product_product_11026_f635b461",
    "name": "Комплекс: Микоплазма пневмония/Хламидия пневмония в плазме крови",
    "cat": 14,
    "price": 170000
   },
   {
    "id": 11027,
+   "ext": "__export__.product_product_11027_684f86f2",
    "name": "Комплекс: Микоплазма пневмония/Хламидия пневмония в слюне",
    "cat": 14,
    "price": 170000
   },
   {
    "id": 11028,
+   "ext": "__export__.product_product_11028_23cc8499",
    "name": "Комплекс: Микоплазма пневмония/Хламидия пневмония в у/г мазке",
    "cat": 14,
    "price": 170000
   },
   {
    "id": 11029,
+   "ext": "__export__.product_product_11029_18927d8e",
    "name": "Комплекс: Микоплазма пневмония/Хламидия пневмония в эякуляте",
    "cat": 14,
    "price": 170000
   },
   {
    "id": 11030,
+   "ext": "__export__.product_product_11030_b5fa9c16",
    "name": "Комплекс: Микоплазма пневмония/Хламидия пневмония из зева",
    "cat": 14,
    "price": 170000
   },
   {
    "id": 783,
+   "ext": "__export__.product_product_783_eb569c4c",
    "name": "Коронавирус COVID-19 (SARS-CoV-2, РНК [реал-тайм ПЦР]) TEST",
    "cat": 14,
    "price": 250000
   },
   {
    "id": 784,
+   "ext": "__export__.product_product_784_be10db35",
    "name": "Микоплазма гениталиум в моче",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 798,
+   "ext": "__export__.product_product_798_13a9e483",
    "name": "Микоплазма гениталиум в плазме крови",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 840,
+   "ext": "__export__.product_product_840_306c3b6a",
    "name": "Микоплазма гениталиум в у/г мазке",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 803,
+   "ext": "__export__.product_product_803_c16f5586",
    "name": "Микоплазма гениталиум в эякуляте",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 795,
+   "ext": "__export__.product_product_795_61fea15f",
    "name": "Микоплазма пневмония в плазме крови",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 789,
+   "ext": "__export__.product_product_789_82a05cf6",
    "name": "Микоплазма пневмония в слюне",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 812,
+   "ext": "__export__.product_product_812_7f652cee",
    "name": "Микоплазма пневмония в у/г мазке",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 804,
+   "ext": "__export__.product_product_804_0ece4cef",
    "name": "Микоплазма пневмония в эякуляте",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 878,
+   "ext": "__export__.product_product_878_8286e886",
    "name": "Микоплазма пневмония из зева",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 786,
+   "ext": "__export__.product_product_786_e44fcae1",
    "name": "Микоплазма хоминимс в моче",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 800,
+   "ext": "__export__.product_product_800_f0e2c845",
    "name": "Микоплазма хоминимс в плазме крови",
    "cat": 14,
    "price": 146000
   },
   {
    "id": 790,
+   "ext": "__export__.product_product_790_d87b779c",
    "name": "Микоплазма хоминимс в слюне",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 813,
+   "ext": "__export__.product_product_813_6dbf2047",
    "name": "Микоплазма хоминимс в у/г мазке",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 805,
+   "ext": "__export__.product_product_805_0cad80c9",
    "name": "Микоплазма хоминимс в эякуляте",
    "cat": 14,
    "price": 146000
   },
   {
    "id": 752,
+   "ext": "__export__.product_product_752_9b9b9b98",
    "name": "Микоплазма хоминис в суставной жидкости",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 851,
+   "ext": "__export__.product_product_851_9638677b",
    "name": "Нейссерия гонорея в моче",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 841,
+   "ext": "__export__.product_product_841_57f37dcf",
    "name": "Нейссерия гонорея в у/г мазке",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 11116,
+   "ext": "__export__.product_product_11116_75ce0450",
    "name": "Нейссерия гонорея из зева",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 815,
+   "ext": "__export__.product_product_815_0ed74a95",
    "name": "Полиомавирусы человека/Human poliomavirusis (JCV,BKV,SV40)",
    "cat": 14,
    "price": 250000
   },
   {
    "id": 759,
+   "ext": "__export__.product_product_759_71a51b5b",
    "name": "Токсоплазма гондии в ликворе",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 870,
+   "ext": "__export__.product_product_870_815ac2a4",
    "name": "Токсоплазма гондии в мононуклеарах",
    "cat": 14,
    "price": 210000
   },
   {
    "id": 842,
+   "ext": "__export__.product_product_842_d25d3f1f",
    "name": "Токсоплазма гондии в отделяемом конъюктивы",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 730,
+   "ext": "__export__.product_product_730_a9056165",
    "name": "Токсоплазма гондии в плазме",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 823,
+   "ext": "__export__.product_product_823_b05661cc",
    "name": "Токсоплазма гондии в слюне",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 874,
+   "ext": "__export__.product_product_874_b1218794",
    "name": "Токсоплазма гондии в суставной жидкости",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 821,
+   "ext": "__export__.product_product_821_dcfaadfd",
    "name": "Токсоплазма гондии в у/г мазке",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 835,
+   "ext": "__export__.product_product_835_88f93d04",
    "name": "Токсоплазма гондии в эякуляте",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 883,
+   "ext": "__export__.product_product_883_f884d192",
    "name": "Трихомонас вагиналис в мокроте",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 850,
+   "ext": "__export__.product_product_850_c1c7ead0",
    "name": "Трихомонас вагиналис в моче",
    "cat": 14,
    "price": 146000
   },
   {
    "id": 794,
+   "ext": "__export__.product_product_794_c8445e68",
    "name": "Трихомонас вагиналис в плазме крови",
    "cat": 14,
    "price": 146000
   },
   {
    "id": 839,
+   "ext": "__export__.product_product_839_8b6fa431",
    "name": "Трихомонас вагиналис в у/г мазке",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 802,
+   "ext": "__export__.product_product_802_23873328",
    "name": "Трихомонас вагиналис в эякуляте",
    "cat": 14,
    "price": 146000
   },
   {
    "id": 728,
+   "ext": "__export__.product_product_728_48bf0f78",
    "name": "Туберкулез (Mycobacterium tuberculosis/bovis ) в ликворе",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 837,
+   "ext": "__export__.product_product_837_ad940a7b",
    "name": "Туберкулез (Mycobacterium tuberculosis/bovis ) в мокроте",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 819,
+   "ext": "__export__.product_product_819_45237354",
    "name": "Туберкулез (Mycobacterium tuberculosis/bovis ) в моче",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 830,
+   "ext": "__export__.product_product_830_cb2897bc",
    "name": "Туберкулез (Mycobacterium tuberculosis/bovis ) в плазме крови",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 857,
+   "ext": "__export__.product_product_857_0d64cfda",
    "name": "Туберкулез (Mycobacterium tuberculosis/bovis ) в слезе",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 824,
+   "ext": "__export__.product_product_824_cc0cf3eb",
    "name": "Туберкулез (Mycobacterium tuberculosis/bovis ) в слюне",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 873,
+   "ext": "__export__.product_product_873_a8101499",
    "name": "Туберкулез (Mycobacterium tuberculosis/bovis ) в суставной жидкости",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 838,
+   "ext": "__export__.product_product_838_0c770e5d",
    "name": "Туберкулез (Mycobacterium tuberculosis/bovis ) в у/г мазке",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 809,
+   "ext": "__export__.product_product_809_33ef8b9a",
    "name": "Туберкулез (Mycobacterium tuberculosis/bovis ) в эякуляте",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 816,
+   "ext": "__export__.product_product_816_eda19b3c",
    "name": "Туберкулез (Mycobacterium tuberculosis/bovis ) из раны",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 787,
+   "ext": "__export__.product_product_787_f2ce3f58",
    "name": "Уреаплазма уреалитикум в моче",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 797,
+   "ext": "__export__.product_product_797_6a7f1186",
    "name": "Уреаплазма уреалитикум в плазме крови",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 792,
+   "ext": "__export__.product_product_792_d1d17734",
    "name": "Уреаплазма уреалитикум в слюне",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 750,
+   "ext": "__export__.product_product_750_a708dd75",
    "name": "Уреаплазма уреалитикум в суставной жидкости",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 788,
+   "ext": "__export__.product_product_788_7fba8f76",
    "name": "Уреаплазма уреалитикум в у/г мазке",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 807,
+   "ext": "__export__.product_product_807_df5cfa1b",
    "name": "Уреаплазма уреалитикум в эякуляте",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 884,
+   "ext": "__export__.product_product_884_f440e0da",
    "name": "Фемофлор - 16",
    "cat": 14,
    "price": 680000
   },
   {
    "id": 10658,
+   "ext": "__export__.product_product_10658_4bbdb381",
    "name": "Фемофлор - скрин",
    "cat": 14,
    "price": 550000
   },
   {
    "id": 10880,
+   "ext": "__export__.product_product_10880_82da3714",
    "name": "Фемофлор II",
    "cat": 14,
    "price": 750000
   },
   {
    "id": 734,
+   "ext": "__export__.product_product_734_0f202fea",
    "name": "Хеликобактериоз в биоптате",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 781,
+   "ext": "__export__.product_product_781_03ecd77e",
    "name": "Хеликобактериоз в желудочном соке",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 762,
+   "ext": "__export__.product_product_762_c152871f",
    "name": "Хеликобактериоз в плазме",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 726,
+   "ext": "__export__.product_product_726_9e2608ed",
    "name": "Хеликобактериоз в слюне",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 868,
+   "ext": "__export__.product_product_868_b19a879c",
    "name": "Хламидия трахоматис в мокроте",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 785,
+   "ext": "__export__.product_product_785_dc6bb860",
    "name": "Хламидия трахоматис в моче",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 796,
+   "ext": "__export__.product_product_796_322b1264",
    "name": "Хламидия трахоматис в плазме крови",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 791,
+   "ext": "__export__.product_product_791_52812575",
    "name": "Хламидия трахоматис в слюне",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 751,
+   "ext": "__export__.product_product_751_3da1535f",
    "name": "Хламидия трахоматис в суставной жидкости",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 736,
+   "ext": "__export__.product_product_736_6222cb5f",
    "name": "Хламидия трахоматис в у/г мазке",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 806,
+   "ext": "__export__.product_product_806_394ac8ec",
    "name": "Хламидия трахоматис в эякуляте",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 11115,
+   "ext": "__export__.product_product_11115_a18fb0eb",
    "name": "Хламидия трахоматис из зева",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 856,
+   "ext": "__export__.product_product_856_4df2bc15",
    "name": "Хламидия трахоматис из конъюктивы",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 729,
+   "ext": "__export__.product_product_729_007607f5",
    "name": "Цитомегаловирус в ликворе",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 778,
+   "ext": "__export__.product_product_778_af45912c",
    "name": "Цитомегаловирус в мононуклеарах",
    "cat": 14,
    "price": 200000
   },
   {
    "id": 847,
+   "ext": "__export__.product_product_847_e8f307e1",
    "name": "Цитомегаловирус в моче",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 731,
+   "ext": "__export__.product_product_731_a337f2b8",
    "name": "Цитомегаловирус в плазме",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 727,
+   "ext": "__export__.product_product_727_86d344e9",
    "name": "Цитомегаловирус в слюне",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 748,
+   "ext": "__export__.product_product_748_a680f4ef",
    "name": "Цитомегаловирус в суставной жидкости",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 775,
+   "ext": "__export__.product_product_775_570ec636",
    "name": "Цитомегаловирус в у/г мазке",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 810,
+   "ext": "__export__.product_product_810_5daf4dd2",
    "name": "Цитомегаловирус в эякуляте",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 871,
+   "ext": "__export__.product_product_871_f4990655",
    "name": "Цитомегаловирус со слизистой рта",
    "cat": 14,
    "price": 150000
   },
   {
    "id": 301,
+   "ext": "__export__.product_product_301_270b4cee",
    "name": "Анти-ЦЦП - Антитела к циклическому цитруллинсодержащему пептиду",
    "cat": 15,
    "price": 270000
   },
   {
    "id": 290,
+   "ext": "__export__.product_product_290_508bcbdb",
    "name": "Антимитохондриальные антитела (АМА)",
    "cat": 15,
    "price": 280000
   },
   {
    "id": 292,
+   "ext": "__export__.product_product_292_0be9d0ab",
    "name": "Антинейтрофильные цитоплазматические антитела ANCAscreen",
    "cat": 15,
    "price": 280000
   },
   {
    "id": 302,
+   "ext": "__export__.product_product_302_74d983a8",
    "name": "Антинуклеарные антитела (АNА)",
    "cat": 15,
    "price": 280000
   },
   {
    "id": 277,
+   "ext": "__export__.product_product_277_57943b81",
    "name": "Антиспермальные антитела (ACA)",
    "cat": 15,
    "price": 300000
   },
   {
    "id": 283,
+   "ext": "__export__.product_product_283_7ddac876",
    "name": "Антитела Ig G к глиадину (Gliadin Ig G)",
    "cat": 15,
    "price": 280000
   },
   {
    "id": 293,
+   "ext": "__export__.product_product_293_f9254e94",
    "name": "Антитела IgG к бета-2-гликопротеину (Anti-Beta-2-Glycoprotein Antibody)",
    "cat": 15,
    "price": 280000
   },
   {
    "id": 291,
+   "ext": "__export__.product_product_291_68c4de39",
    "name": "Антитела IgM к бета-2-гликопротеину (Anti-Beta-2-Glycoprotein Antibody)",
    "cat": 15,
    "price": 280000
   },
   {
    "id": 304,
+   "ext": "__export__.product_product_304_0ce7b1f0",
    "name": "Антитела к двухцепочечной ДНК",
    "cat": 15,
    "price": 280000
   },
   {
    "id": 286,
+   "ext": "__export__.product_product_286_363d330c",
    "name": "Антитела к кардиолипину IgG (Cardiolin antibodies IgG)",
    "cat": 15,
    "price": 210000
   },
   {
    "id": 287,
+   "ext": "__export__.product_product_287_81a34063",
    "name": "Антитела к кардиолипину IgM (Cardiolin antibodies IgM)",
    "cat": 15,
    "price": 210000
   },
   {
    "id": 289,
+   "ext": "__export__.product_product_289_52bd36b0",
    "name": "Антитела к одноцепочечной ДНК",
    "cat": 15,
    "price": 280000
   },
   {
    "id": 288,
+   "ext": "__export__.product_product_288_8b547896",
    "name": "Определение аутоиммунных специфических антитед Ig G против компонентов ядра и цитоплазмы(18 показателей)",
    "cat": 15,
    "price": 700000
   },
   {
    "id": 274,
+   "ext": "__export__.product_product_274_fa5a02a1",
    "name": "Определение аутоиммунных специфических антител при заболеваниях печени и почек(10 показателей)",
    "cat": 15,
    "price": 500000
   },
   {
    "id": 279,
+   "ext": "__export__.product_product_279_929fdc17",
    "name": "Тканевая трансглутаминаза, антитела IgA",
    "cat": 15,
    "price": 280000
   },
   {
    "id": 278,
+   "ext": "__export__.product_product_278_0c81c2b2",
    "name": "Тканевая трансглутаминаза, антитела IgG",
    "cat": 15,
    "price": 280000
   },
   {
    "id": 10638,
+   "ext": "__export__.product_product_10638_f4cb5227",
    "name": "Антистрептолизин О (ASLO)",
    "cat": 16,
    "price": 70000
   },
   {
    "id": 377,
+   "ext": "__export__.product_product_377_e588e472",
    "name": "Гастрин-17 базальный",
    "cat": 16,
    "price": 230000
   },
   {
    "id": 371,
+   "ext": "__export__.product_product_371_7bf2d65b",
    "name": "Миоглобин (Myoglobin)",
    "cat": 16,
    "price": 100000
   },
   {
    "id": 10639,
+   "ext": "__export__.product_product_10639_dee6b70a",
    "name": "Мозговой натрийуретический пептид (NT-proBNP)",
    "cat": 16,
    "price": 280000
   },
   {
    "id": 368,
+   "ext": "__export__.product_product_368_0b46bc16",
    "name": "Пепсиноген I",
    "cat": 16,
    "price": 190000
   },
   {
    "id": 355,
+   "ext": "__export__.product_product_355_02409ab7",
    "name": "Пепсиноген II",
    "cat": 16,
    "price": 190000
   },
   {
    "id": 375,
+   "ext": "__export__.product_product_375_65200ea8",
    "name": "Прокальцитонин (Procalcitonin)",
    "cat": 16,
    "price": 340000
   },
   {
    "id": 381,
+   "ext": "__export__.product_product_381_0f230089",
    "name": "Ревматоидный фактор (RF - Rheumatoid Factor)",
    "cat": 16,
    "price": 70000
   },
   {
    "id": 380,
+   "ext": "__export__.product_product_380_c47616b8",
    "name": "С- реактивный белок (C-Reactive Protein)",
    "cat": 16,
    "price": 70000
   },
   {
    "id": 983,
+   "ext": "__export__.product_product_983_a06997f1",
    "name": "Соотношение концентраций Пепсиноген I и Пепсиноген II",
    "cat": 16,
    "price": 320000
   },
   {
    "id": 10732,
+   "ext": "__export__.product_product_10732_c1bdd67e",
    "name": "Тропонин I",
    "cat": 16,
    "price": 150000
   },
   {
    "id": 461,
+   "ext": "__export__.product_product_461_1fc9829e",
    "name": "Антитела к рецепторам ТТГ (TSH receptor antibodies)",
    "cat": 17,
    "price": 300000
   },
   {
    "id": 449,
+   "ext": "__export__.product_product_449_c845e5ee",
    "name": "Антитела к тиреоглобулину (Anti-TG)",
    "cat": 17,
    "price": 120000
   },
   {
    "id": 454,
+   "ext": "__export__.product_product_454_c6647c8f",
    "name": "Антитела к тиреопероксидазе (Anti-TPO)",
    "cat": 17,
    "price": 120000
   },
   {
    "id": 453,
+   "ext": "__export__.product_product_453_2fe4eb23",
    "name": "Кальцитонин (Calcitonin)",
    "cat": 17,
    "price": 240000
   },
   {
    "id": 450,
+   "ext": "__export__.product_product_450_34c7f769",
    "name": "Общий Т3 (Total T3)",
    "cat": 17,
    "price": 100000
   },
   {
    "id": 451,
+   "ext": "__export__.product_product_451_2ced5f77",
    "name": "Общий Т4 (Total T4)",
    "cat": 17,
    "price": 100000
   },
   {
    "id": 459,
+   "ext": "__export__.product_product_459_8b51548e",
    "name": "Свободный Т3 (Free T3)",
    "cat": 17,
    "price": 100000
   },
   {
    "id": 456,
+   "ext": "__export__.product_product_456_395ca8fc",
    "name": "Свободный Т4 (Free T4)",
    "cat": 17,
    "price": 100000
   },
   {
    "id": 452,
+   "ext": "__export__.product_product_452_c5d01929",
    "name": "Тиреоглобулин ТГ (Thyreoglobulin)",
    "cat": 17,
    "price": 110000
   },
   {
    "id": 457,
+   "ext": "__export__.product_product_457_fce0f137",
    "name": "Тиреотропный гормон ТТГ (TSH 3.Generation)",
    "cat": 17,
    "price": 100000
   },
   {
    "id": 470,
+   "ext": "__export__.product_product_470_6fab19c6",
    "name": "Бак посев из левого уха с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 469,
+   "ext": "__export__.product_product_469_0b44addb",
    "name": "Бак посев из правого уха с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 495,
+   "ext": "__export__.product_product_495_bfaba3ae",
    "name": "Бак посев сока простаты с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 482,
+   "ext": "__export__.product_product_482_e9836f25",
    "name": "Бактериальный посев грудного молока слева с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 481,
+   "ext": "__export__.product_product_481_1f029051",
    "name": "Бактериальный посев грудного молока справа с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 479,
+   "ext": "__export__.product_product_479_16f90877",
    "name": "Бактериальный посев из влагалища с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 10654,
+   "ext": "__export__.product_product_10654_9d968356",
    "name": "Бактериальный посев из вульвы с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 472,
+   "ext": "__export__.product_product_472_bdecb092",
    "name": "Бактериальный посев из зева с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 494,
+   "ext": "__export__.product_product_494_047006ed",
    "name": "Бактериальный посев из конъюктивы левого глаза с чувствительностью к АБ",
    "cat": 18,
    "price": 392000
   },
   {
    "id": 493,
+   "ext": "__export__.product_product_493_de92fbaf",
    "name": "Бактериальный посев из конъюктивы правого глаза с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 473,
+   "ext": "__export__.product_product_473_fc331714",
    "name": "Бактериальный посев из носа с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 496,
+   "ext": "__export__.product_product_496_fdf0471b",
    "name": "Бактериальный посев из полости рта с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 474,
+   "ext": "__export__.product_product_474_b8f0f8cb",
    "name": "Бактериальный посев из раны с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 1001,
+   "ext": "__export__.product_product_1001_a089b827",
    "name": "Бактериальный посев из трех точек (U, C, V) с чувствительностью к АБ",
    "cat": 18,
    "price": 650000
   },
   {
    "id": 478,
+   "ext": "__export__.product_product_478_6a18dc16",
    "name": "Бактериальный посев из уретры с чувствительностью к АБ",
    "cat": 18,
    "price": 392000
   },
   {
    "id": 477,
+   "ext": "__export__.product_product_477_9b8343d7",
    "name": "Бактериальный посев из цервикса с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 484,
+   "ext": "__export__.product_product_484_49375057",
    "name": "Бактериальный посев мокроты с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 476,
+   "ext": "__export__.product_product_476_f6bfdea3",
    "name": "Бактериальный посев мочи с чувствительностью к АБ",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 475,
+   "ext": "__export__.product_product_475_7bb881d0",
    "name": "Бактериальный посев смывов на стерильность",
    "cat": 18,
    "price": 400000
   },
   {
    "id": 483,
+   "ext": "__export__.product_product_483_5369fb67",
    "name": "Бактериальный посев эякулята с чувствительностью к АБ",
    "cat": 18,
    "price": 392000
   },
   {
    "id": 471,
+   "ext": "__export__.product_product_471_9177cadc",
    "name": "Исследование микрофлоры кишечника с чувствительностью к АБ",
    "cat": 18,
    "price": 300000
   },
   {
    "id": 437,
+   "ext": "__export__.product_product_437_a06cc5db",
    "name": "Вальпроевая кислота (Valproic Acid) до приема",
    "cat": 19,
    "price": 250000
   },
   {
    "id": 438,
+   "ext": "__export__.product_product_438_c6344d4b",
    "name": "Вальпроевая кислота (Valproic Acid) после приема",
    "cat": 19,
    "price": 250000
   },
   {
    "id": 441,
+   "ext": "__export__.product_product_441_b94be272",
    "name": "Карбамазепин (Carbamazepine) до приема",
    "cat": 19,
    "price": 180000
   },
   {
    "id": 442,
+   "ext": "__export__.product_product_442_07aa7ad4",
    "name": "Карбамазепин (Carbamazepine) после приема",
    "cat": 19,
    "price": 180000
   },
   {
    "id": 446,
+   "ext": "__export__.product_product_446_1ab646ee",
    "name": "Такролимус (Tacrolimus)",
    "cat": 19,
    "price": 325000
   },
   {
    "id": 296,
+   "ext": "__export__.product_product_296_c85db217",
    "name": "Витамин B12 (Vitamin B12)",
    "cat": 20,
    "price": 180000
   },
   {
    "id": 298,
+   "ext": "__export__.product_product_298_92388a50",
    "name": "Гомоцистеин (Homocysteine )",
    "cat": 20,
    "price": 340000
   },
   {
    "id": 306,
+   "ext": "__export__.product_product_306_212f8529",
    "name": "Трансферрин (Transferrin)",
    "cat": 20,
    "price": 170000
   },
   {
    "id": 300,
+   "ext": "__export__.product_product_300_2156f5a5",
    "name": "Ферритин (Ferritin)",
    "cat": 20,
    "price": 150000
   },
   {
    "id": 299,
+   "ext": "__export__.product_product_299_893430d0",
    "name": "Фолиевая кислота (Folic Acid)",
    "cat": 20,
    "price": 180000
   },
   {
    "id": 297,
+   "ext": "__export__.product_product_297_ad6f80cb",
    "name": "Эритропоэтин (Eritropoetin)",
    "cat": 20,
    "price": 180000
   },
   {
    "id": 188,
+   "ext": "__export__.product_product_188_46acc66a",
    "name": "Витамин Д (25-OH vitamin D)",
    "cat": 21,
    "price": 250000
   },
   {
    "id": 186,
+   "ext": "__export__.product_product_186_5fe2d79a",
    "name": "Остеокальцин (Osteocalcin)",
    "cat": 21,
    "price": 200000
   },
   {
    "id": 187,
+   "ext": "__export__.product_product_187_a0cd2a2f",
    "name": "Паратгормон (PTH)",
    "cat": 21,
    "price": 230000
   },
   {
    "id": 550,
+   "ext": "__export__.product_product_550_1b08a43c",
    "name": "Выявление гена гистосовместимости HLA-В27",
    "cat": 22,
    "price": 380000
   },
   {
    "id": 515,
+   "ext": "__export__.product_product_515_7fe56c76",
    "name": "Выявление микроделеций Y-хромосомы, ассоциированных с азооспермией (AZF)",
    "cat": 22,
    "price": 400000
   },
   {
    "id": 516,
+   "ext": "__export__.product_product_516_f145bf8d",
    "name": "Генетический маркёр синдрома Жильбера – определение количества повторов в гене UGT1A1",
    "cat": 22,
    "price": 450000
   },
   {
    "id": 519,
+   "ext": "__export__.product_product_519_69e2aea8",
    "name": "Генетический тест на лактазную недостаточность (полиморфизм -13910C>T в гене MCM6)",
    "cat": 22,
    "price": 380000
   },
   {
    "id": 498,
+   "ext": "__export__.product_product_498_43af274d",
    "name": "Генотипирование локуса CYP3A4",
    "cat": 22,
    "price": 380000
   },
   {
    "id": 497,
+   "ext": "__export__.product_product_497_b95d47a2",
    "name": "Генотипирование локуса CYP3A5 (прогнозирование метаболизма такролимуса)",
    "cat": 22,
    "price": 380000
   },
   {
    "id": 518,
+   "ext": "__export__.product_product_518_fa54c8ff",
    "name": "Гены ФОЛАТНОГО ЦИКЛА (MTHFR, MTR, MTRR)",
    "cat": 22,
    "price": 450000
   },
   {
    "id": 520,
+   "ext": "__export__.product_product_520_63599492",
    "name": "Комплекс полиморфизмов, ассоциированных с тромбофилией (F2, F5, F7, FGB, F13A1, ITGB3, PAI-1)",
    "cat": 22,
    "price": 750000
   },
   {
    "id": 1005,
+   "ext": "__export__.product_product_1005_19e07183",
    "name": "Нутригенетический тест (PPARG2, FABP2, ADRB2, ADRB3, MCM6)",
    "cat": 22,
    "price": 1000000
   },
   {
    "id": 517,
+   "ext": "__export__.product_product_517_fd84b045",
    "name": "Определение полиморфизмов генов BRCA1 и BRCA2, ассоциированных с риском развития рака молочной железы",
    "cat": 22,
    "price": 500000
   },
   {
    "id": 513,
+   "ext": "__export__.product_product_513_bd1aa748",
    "name": "Типирование генов гистосовместимости человека (HLA) I, II классов",
    "cat": 22,
    "price": 5000000
   },
   {
    "id": 514,
+   "ext": "__export__.product_product_514_1d0ec78d",
    "name": "Типирование генов гистосовместимости человека (HLA) II класса: DRB1, DQA1, DQB1",
    "cat": 22,
    "price": 2000000
   },
   {
    "id": 440,
+   "ext": "__export__.product_product_440_a9e6fce3",
    "name": "Гормон роста человека (hGH)",
    "cat": 23,
    "price": 140000
   },
   {
    "id": 435,
+   "ext": "__export__.product_product_435_a6eda5a1",
    "name": "Инсулиноподобный фактор роста-1 (IGF-1)",
    "cat": 23,
    "price": 230000
   },
   {
    "id": 353,
+   "ext": "__export__.product_product_353_dbcd7917",
    "name": "Группа крови / резус фактор",
    "cat": 24,
    "price": 150000
   },
   {
    "id": 892,
+   "ext": "__export__.product_product_892_2eba35b6",
    "name": "Общий анализ крови развернутый (XN-1000, Sysmex, Япония)",
    "cat": 24,
    "price": 80000
   },
   {
    "id": 975,
+   "ext": "__export__.product_product_975_1f1ab01a",
    "name": "Общий анализ крови с развернутыми ретикулоцитами и тромбоцитами (XN-1000, Sysmex, Япония)",
    "cat": 24,
    "price": 170000
   },
   {
    "id": 357,
+   "ext": "__export__.product_product_357_7c68deed",
    "name": "Скорость оседания эритроцитов",
    "cat": 24,
    "price": 35000
   },
   {
    "id": 11076,
+   "ext": "__export__.product_product_11076_cf650937",
    "name": "Услуга для теста",
    "cat": 24,
    "price": 10000
   },
   {
    "id": 645,
+   "ext": "__export__.product_product_645_fdf293c2",
    "name": "Дегидроэпиандростерон-сульфат (ДГЭА-С) в моче",
    "cat": 25,
    "price": 100000
   },
   {
    "id": 647,
+   "ext": "__export__.product_product_647_101aa5ac",
    "name": "Дофамин в суточной моче",
    "cat": 25,
    "price": 150000
   },
   {
-   "id": 563,
+   "id": 1000563,
+   "ext": "__import__.product_product_563",
    "name": "Коэнзим Q10 (убихинон)",
    "cat": 25,
    "price": 450000
   },
   {
    "id": 10670,
+   "ext": "__export__.product_product_10670_99b66c56",
    "name": "«Женщина Разумная» - авторский чек-ап от Анны Прохоровой",
    "cat": 26,
    "price": 3000000
   },
   {
    "id": 10688,
+   "ext": "__export__.product_product_10688_03276917",
    "name": "Чек-ап \"Ментальное здоровье\"",
    "cat": 26,
    "price": 1300000
   },
   {
    "id": 10696,
+   "ext": "__export__.product_product_10696_15a60d9c",
    "name": "Чек-ап для женщин (Апекс Ассист)",
    "cat": 26,
    "price": 4200000
   },
   {
    "id": 10700,
+   "ext": "__export__.product_product_10700_ada457e0",
    "name": "Чек-ап №1 (насморк, чихание, заложенность носа)",
    "cat": 26,
    "price": 1700000
   },
   {
    "id": 10704,
+   "ext": "__export__.product_product_10704_c4b4b22e",
    "name": "Чек-ап №2 (высыпания и зуд)",
    "cat": 26,
    "price": 3600000
   },
   {
    "id": 10718,
+   "ext": "__export__.product_product_10718_79b45b50",
    "name": "Чек-ап №3 (высыпания и зуд с насморком)",
    "cat": 26,
    "price": 4200000
   },
   {
    "id": 10719,
+   "ext": "__export__.product_product_10719_44d96601",
    "name": "Чек-ап №4 (кашель, приступы одышки и удушья)",
    "cat": 26,
    "price": 1700000
   },
   {
    "id": 10674,
+   "ext": "__export__.product_product_10674_4f61de44",
    "name": "Чек-ап №5 (кашель, приступы одышки и удушья и зуд с высыпаниями)",
    "cat": 26,
    "price": 3400000
   },
   {
    "id": 930,
+   "ext": "__export__.product_product_930_7d0202ee",
    "name": "Иммуногемограмма",
    "cat": 27,
    "price": 280000
   },
   {
    "id": 995,
+   "ext": "__export__.product_product_995_f9d00ea1",
    "name": "Иммунограмма методом проточной цитофлуориметрии ACCURI C6",
    "cat": 27,
    "price": 560000
   },
   {
    "id": 902,
+   "ext": "__export__.product_product_902_65136b13",
    "name": "Иммунологическая карта ПИД",
    "cat": 27,
    "price": 620000
   },
   {
    "id": 127,
+   "ext": "__export__.product_product_127_f7d4f20c",
    "name": "Интерлейкин-1",
    "cat": 27,
    "price": 200000
   },
   {
    "id": 100,
+   "ext": "__export__.product_product_100_82bcc731",
    "name": "Интерлейкин-10",
    "cat": 27,
    "price": 200000
   },
   {
    "id": 101,
+   "ext": "__export__.product_product_101_004397a6",
    "name": "Интерлейкин-18",
    "cat": 27,
    "price": 200000
   },
   {
    "id": 128,
+   "ext": "__export__.product_product_128_b2b5f9ef",
    "name": "Интерлейкин-2",
    "cat": 27,
    "price": 200000
   },
   {
    "id": 129,
+   "ext": "__export__.product_product_129_fea15095",
    "name": "Интерлейкин-4",
    "cat": 27,
    "price": 200000
   },
   {
    "id": 138,
+   "ext": "__export__.product_product_138_eb1f7271",
    "name": "Интерлейкин-6",
    "cat": 27,
    "price": 220000
   },
   {
    "id": 130,
+   "ext": "__export__.product_product_130_fe21b8cd",
    "name": "Интерлейкин-8",
    "cat": 27,
    "price": 200000
   },
   {
    "id": 93,
+   "ext": "__export__.product_product_93_bddf9556",
    "name": "Интерфероновый статус",
    "cat": 27,
    "price": 450000
   },
   {
    "id": 997,
+   "ext": "__export__.product_product_997_3c0ab2b2",
    "name": "Комплекс ЦИК крупных и мелких размеров",
    "cat": 27,
    "price": 160000
   },
   {
    "id": 147,
+   "ext": "__export__.product_product_147_3200e02a",
    "name": "Компонент комплемента C3 (С3- Complement Factor)",
    "cat": 27,
    "price": 150000
   },
   {
    "id": 148,
+   "ext": "__export__.product_product_148_ca2d4f55",
    "name": "Компонент комплемента C4 (С4 - Complement Factor)",
    "cat": 27,
    "price": 150000
   },
   {
    "id": 98,
+   "ext": "__export__.product_product_98_a9aea3ab",
    "name": "Криоглобулины",
    "cat": 27,
    "price": 160000
   },
   {
    "id": 996,
+   "ext": "__export__.product_product_996_d9d9bcd0",
    "name": "Онкоиммунограмма",
    "cat": 27,
    "price": 210000
   },
   {
    "id": 11013,
+   "ext": "__export__.product_product_11013_750e65e8",
    "name": "Онкочувствительность",
    "cat": 27,
    "price": 225000
   },
   {
    "id": 126,
+   "ext": "__export__.product_product_126_4879c2a9",
    "name": "Определение специфических антител к антигенам органов",
    "cat": 27,
    "price": 150000
   },
   {
    "id": 96,
+   "ext": "__export__.product_product_96_aa2a9218",
    "name": "Определение специфических антител к антигенам почек",
    "cat": 27,
    "price": 150000
   },
   {
    "id": 97,
+   "ext": "__export__.product_product_97_50488181",
    "name": "Определение специфических антител к антигенам толстого и тонкого кишечника",
    "cat": 27,
    "price": 150000
   },
   {
    "id": 1000,
+   "ext": "__export__.product_product_1000_35a93967",
    "name": "Перекрестная проба (Лимфоцитотоксический тест)",
    "cat": 27,
    "price": 510000
   },
   {
    "id": 135,
+   "ext": "__export__.product_product_135_35ee55dc",
    "name": "Суммарные иммуноглобулины G (IgG)",
    "cat": 27,
    "price": 100000
   },
   {
    "id": 94,
+   "ext": "__export__.product_product_94_b24b11a5",
    "name": "Суммарные иммуноглобулины G2 (IgG2)",
    "cat": 27,
    "price": 160000
   },
   {
    "id": 95,
+   "ext": "__export__.product_product_95_8230aa2a",
    "name": "Суммарные иммуноглобулины G4 (IgG4)",
    "cat": 27,
    "price": 160000
   },
   {
    "id": 136,
+   "ext": "__export__.product_product_136_ecdd54db",
    "name": "Суммарные иммуноглобулины А (IgA )",
    "cat": 27,
    "price": 100000
   },
   {
    "id": 137,
+   "ext": "__export__.product_product_137_649fd76d",
    "name": "Суммарные иммуноглобулины М (IgM)",
    "cat": 27,
    "price": 100000
   },
   {
    "id": 999,
+   "ext": "__export__.product_product_999_025ac809",
    "name": "Трансплантационная иммунограмма",
    "cat": 27,
    "price": 400000
   },
   {
    "id": 99,
+   "ext": "__export__.product_product_99_29ac3a88",
    "name": "Фагоцитоз",
    "cat": 27,
    "price": 160000
   },
   {
    "id": 109,
+   "ext": "__export__.product_product_109_238aa560",
    "name": "Фактор некроза опухоли-альфа (ФНО-альфа)",
    "cat": 27,
    "price": 157000
   },
   {
    "id": 111,
+   "ext": "__export__.product_product_111_857b5969",
    "name": "Чувствительность к иммунологическим препаратам",
    "cat": 27,
    "price": 730000
   },
   {
    "id": 10649,
+   "ext": "__export__.product_product_10649_8fc93c90",
    "name": "Катехоламины в моче суточной (адреналин, норадреналин, дофамин)",
    "cat": 28,
    "price": 350000
   },
   {
    "id": 10648,
+   "ext": "__export__.product_product_10648_f3ded241",
    "name": "Кортизол свободный в суточной моче",
    "cat": 28,
    "price": 150000
   },
   {
    "id": 10650,
+   "ext": "__export__.product_product_10650_cb29cb9a",
    "name": "Метаболиты биогенных аминов: гомованилиновая кислота (ГВК), ванилин-миндальная кислота (ВМК), 5-гидрокси-индолуксусная кислота (5-ГИУК) - в моче",
    "cat": 28,
    "price": 350000
   },
   {
    "id": 10647,
+   "ext": "__export__.product_product_10647_5f2d589e",
    "name": "Метаболиты эстрогенов, расчет соотношения (оценка риска развития онкопатологии), в суточной моче",
    "cat": 28,
    "price": 1100000
   },
   {
    "id": 10642,
+   "ext": "__export__.product_product_10642_3a59bab1",
    "name": "Метанефрин общий и норметанефрин общий в суточной моче",
    "cat": 28,
    "price": 550000
   },
   {
    "id": 10643,
+   "ext": "__export__.product_product_10643_b3abebf8",
    "name": "Метанефрин свободный норметанефрины свободные в суточной моче",
    "cat": 28,
    "price": 550000
   },
   {
    "id": 10651,
+   "ext": "__export__.product_product_10651_0941066a",
    "name": "Норметанефрины свободные в суточной моче",
    "cat": 28,
    "price": 550000
   },
   {
    "id": 10644,
+   "ext": "__export__.product_product_10644_84d2892f",
    "name": "Серотонин в суточной моче",
    "cat": 28,
    "price": 150000
   },
   {
    "id": 10645,
+   "ext": "__export__.product_product_10645_7b467742",
    "name": "Тестостерон в суточной моче",
    "cat": 28,
    "price": 100000
   },
   {
    "id": 10646,
+   "ext": "__export__.product_product_10646_fe22c45e",
    "name": "Эстрогены и их метаболиты в суточной моче (9 показателей: эстрадиол, эстрон, эстриол,16а-ОНЕ1, 2-ОНЕ2, 2-ОНЕ1, 2-ОМеЕ1, 4-ОМеЕ2, 4-ОНЕ1 и расчет их соотношений)",
    "cat": 28,
    "price": 1500000
   },
   {
    "id": 10337,
+   "ext": "__export__.product_product_10337_5c9c15c9",
    "name": "Кортизол в слюне суточный (4 точки)",
    "cat": 29,
    "price": 850000
   },
   {
    "id": 10336,
+   "ext": "__export__.product_product_10336_43d8e007",
    "name": "Стероидный профиль в слюне (1 точка)",
    "cat": 29,
    "price": 900000
   },
   {
    "id": 11001,
+   "ext": "__export__.product_product_11001_5af9b182",
    "name": "Неинвазивное пренатальное тестирование (НИПТ)(базовый)",
    "cat": 30,
    "price": 3500000
   },
   {
-   "id": 410,
+   "id": 1000410,
+   "ext": "__import__.product_product_410",
    "name": "Цитомегаловирус в слезе",
    "cat": 30,
    "price": 146000
   },
   {
    "id": 662,
+   "ext": "__export__.product_product_662_874d202e",
    "name": "Спермограмма",
    "cat": 31,
    "price": 200000
   },
   {
    "id": 10637,
+   "ext": "__export__.product_product_10637_1cba3997",
    "name": "Стероидный профиль в крови",
    "cat": 32,
    "price": 900000
   },
   {
    "id": 10636,
+   "ext": "__export__.product_product_10636_3e5a4be3",
    "name": "Стероидный профиль в крови расширенный",
    "cat": 32,
    "price": 1200000
   },
   {
    "id": 10635,
+   "ext": "__export__.product_product_10635_b5279e29",
    "name": "Тироксин и его метаболиты (Т3 реверсивный, Т3 общий, Т4 общий, индекс Т3",
    "cat": 32,
    "price": 900000

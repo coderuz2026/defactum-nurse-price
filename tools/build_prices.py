@@ -1,7 +1,7 @@
 import openpyxl, sys, re, json, collections
 src, out = sys.argv[1], sys.argv[2]
 rows = list(openpyxl.load_workbook(src, read_only=True, data_only=True).active.iter_rows(values_only=True))[1:]
-cats, items, excluded, seen = {}, [], [], set()
+cats, items, excluded, seen, used_ids = {}, [], [], set(), set()
 for ext, name, cat, _n, price, _c in rows:
     name = re.sub(r'\s+', ' ', (name or '')).strip()
     cat = re.sub(r'\s+', ' ', (cat or '')).strip()
@@ -17,7 +17,14 @@ for ext, name, cat, _n, price, _c in rows:
     code, cname = (m.group(1), m.group(2)) if m else ('', 'Прочее' if cat == 'All' else cat)
     if cname not in cats: cats[cname] = {'id': len(cats) + 1, 'code': code, 'name': cname}
     pid = re.search(r'product_product_(\d+)', ext or '')
-    items.append({'id': int(pid.group(1)) if pid else None, 'name': name, 'cat': cats[cname]['id'], 'price': int(price)})
+    if not pid: raise SystemExit('Нет внешнего идентификатора у услуги: ' + name)
+    num = int(pid.group(1))
+    # __export__ и __import__ могут иметь одинаковый номер — разводим, чтобы id был уникальным
+    iid = num if (ext or '').startswith('__export__') else 1000000 + num
+    if iid in used_ids: raise SystemExit('Повтор id %s: %s' % (iid, name))
+    used_ids.add(iid)
+    if float(price) != int(price) or price < 0: raise SystemExit('Некорректная цена у: ' + name)
+    items.append({'id': iid, 'ext': ext, 'name': name, 'cat': cats[cname]['id'], 'price': int(price)})
 items.sort(key=lambda x: (x['cat'], x['name'].lower()))
 data = {'version': '2026-11-10', 'currency': 'UZS', 'source': 'Aurora: экспорт product.product',
         'categories': sorted(cats.values(), key=lambda c: (c['code'] == '', [int(p) for p in c['code'].split('/')] if c['code'] else [999], c['name'])),
