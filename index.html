@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#FFFFFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="DF Прайс">
+<meta name="apple-mobile-web-app-title" content="de factum">
 <title>De Factum · Прайс для медсестёр</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -136,6 +136,10 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 .paybox b{font-size:30px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
 .toast{position:fixed;left:50%;bottom:calc(100px + var(--safe-b));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:14px;font-size:14px;z-index:100;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:90vw}
 .del{border:0;background:transparent;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.install{position:fixed;inset:0;z-index:200;background:rgba(15,23,42,.45);display:flex;align-items:flex-end;justify-content:center}
+.install>div{width:100%;max-width:520px;background:#fff;border-radius:26px 26px 0 0;padding:22px 20px calc(20px + var(--safe-b));display:flex;flex-direction:column;gap:14px;box-shadow:0 -10px 40px rgba(15,23,42,.2)}
+.install .step{display:flex;align-items:center;gap:12px;font-size:15px;line-height:1.4}
+.install .n{width:28px;height:28px;border-radius:14px;background:var(--tint);color:var(--brand-deep);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 @media print{
   body *{visibility:hidden}
   .print-area,.print-area *{visibility:visible}
@@ -146,6 +150,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 </head>
 <body>
 <div class="app" id="app"></div>
+<div id="install"></div>
 <script>
 'use strict';
 const BRAND = '#0B7F90';
@@ -518,7 +523,7 @@ function vProfile() {
       <div class="row between"><span>Выездов на телефоне</span><b>${S.visits.length}</b></div>
       <button class="btn light small" data-act="reloadPrices">${I.sync} Проверить обновление цен</button>
     </div>
-    <div class="note info">Чтобы добавить на главный экран: Android — меню ⋮ → «Добавить на главный экран»; iPhone (Safari) — «Поделиться» → «На экран „Домой“».</div>
+    ${isStandalone() ? `<div class="note ok">Приложение установлено на этот телефон.</div>` : `<button class="btn ghost" data-act="instShow">Установить на телефон</button>`}
     <button class="btn light" data-act="logout" style="color:var(--bad)">Выйти</button>
   </div>`;
 }
@@ -595,11 +600,48 @@ document.addEventListener('submit', (e) => {
   function fail(m) { UI.err = m; keepForm(); }
 });
 
+/* ---------- Установка на телефон (PWA) ---------- */
+const INST = { evt: null, key: LS + '_install' };
+const isStandalone = () => (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isAndroid = () => /android/i.test(navigator.userAgent);
+const instState = () => { try { return localStorage.getItem(INST.key); } catch (e) { return null; } };
+const instSet = (v) => { try { localStorage.setItem(INST.key, v); } catch (e) {} };
+function showInstall(force) {
+  const box = document.getElementById('install'); if (!box) return;
+  if (isStandalone()) { box.innerHTML = ''; return; }
+  if (!force && instState()) return;
+  if (!force && !isIOS() && !isAndroid()) return;
+  const ios = isIOS();
+  const shareIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0B7F90" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-3px"><path d="M12 15V3M8 7l4-4 4 4M6 11v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/></svg>`;
+  let steps;
+  if (ios) steps = [`Нажмите ${shareIcon} <b>«Поделиться»</b> внизу экрана Safari`, 'Прокрутите и выберите <b>«На экран „Домой“»</b>', 'Нажмите <b>«Добавить»</b> — иконка появится на экране'];
+  else if (!INST.evt) steps = ['Откройте меню <b>⋮</b> в правом верхнем углу Chrome', 'Выберите <b>«Установить приложение»</b> или <b>«Добавить на главный экран»</b>', 'Подтвердите — иконка появится на экране'];
+  box.innerHTML = `<div class="install" data-act="instBackdrop"><div role="dialog" aria-label="Установка приложения">
+    <div class="row">${MARK(44)}<div style="flex:1"><div class="h2" style="font-size:19px">Установите приложение</div><div class="sub">de factum · прайс для медсестёр</div></div></div>
+    <div style="font-size:14.5px;color:var(--ink2);line-height:1.45">Иконка на главном экране, запуск в один тап, работает без интернета.</div>
+    ${steps ? steps.map((t, i) => `<div class="step"><span class="n">${i + 1}</span><span>${t}</span></div>`).join('') : ''}
+    ${!steps ? `<button class="btn" data-act="instGo">Установить</button>` : ''}
+    <button class="btn light" data-act="instLater">${steps ? 'Понятно' : 'Позже'}</button>
+  </div></div>`;
+}
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); INST.evt = e; if (!instState()) showInstall(); else if (document.querySelector('#install .install')) showInstall(true); });
+window.addEventListener('appinstalled', () => { instSet('installed'); document.getElementById('install').innerHTML = ''; toast('Приложение установлено'); });
+document.addEventListener('click', async (e) => {
+  const el = e.target.closest('[data-act^="inst"]'); if (!el) return;
+  const a = el.dataset.act, box = document.getElementById('install');
+  if (a === 'instBackdrop' && e.target !== el) return;
+  if (a === 'instShow') { showInstall(true); return; }
+  if (a === 'instGo' && INST.evt) { const ev = INST.evt; INST.evt = null; ev.prompt(); try { const r = await ev.userChoice; instSet(r.outcome === 'accepted' ? 'installed' : 'later'); } catch (x) {} box.innerHTML = ''; return; }
+  instSet('later'); box.innerHTML = '';
+});
+
 /* ---------- Старт ---------- */
 S.visits.forEach((v) => { v.homeFee = 0; }); // поле «Выезд на дом» убрано
 if (S.me) UI.view = 'visit';
 render();
 loadPrices(false);
+setTimeout(() => showInstall(), 1200); // iPhone: события нет — показываем инструкцию; Android: окно появится по событию или подсказкой
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
