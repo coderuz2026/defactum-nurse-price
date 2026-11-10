@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#2347C5">
+<meta name="theme-color" content="#FFFFFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="DF Прайс">
@@ -12,11 +12,11 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=Arimo:wght@400;700&display=swap&subset=cyrillic" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=Poppins:wght@500;600&family=Arimo:wght@400;700&display=swap&subset=cyrillic" rel="stylesheet">
 <script src="vendor/JsBarcode.all.min.js"></script>
 <style>
 :root{
-  --brand:#2347C5; --brand-deep:#1B379A; --tint:#EDF1FB; --soft:#BCC8EE;
+  --brand:#0B7F90; --brand-deep:#075E6C; --tint:#E9F6F5; --soft:#A9DAD6; --green:#9DCA4A;
   --ink:#0F172A; --ink2:#334155; --muted:#475569; --line:#EDF0F4; --line2:#E2E8F0;
   --bg:#F6F7F9; --card:#FFFFFF; --ok:#0F6B3A; --okbg:#ECFDF3; --bad:#B42318; --badbg:#FEF2F2;
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -31,7 +31,9 @@ a{color:var(--brand)}
 .row{display:flex;align-items:center;gap:10px}
 .between{justify-content:space-between}
 .logo{display:flex;align-items:center;gap:10px}
-.logo-mark{width:38px;height:38px;border-radius:12px;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-mark{display:block;flex-shrink:0}
+.wordmark{font-family:Poppins,Onest,system-ui,sans-serif;font-weight:500;letter-spacing:-.5px;color:#0A0A0A;white-space:nowrap;line-height:1}
+.wordmark sup{font-size:.34em;font-weight:500;vertical-align:top;position:relative;top:.25em;margin-left:.06em}
 .logo-text{display:flex;flex-direction:column;gap:1px}
 .logo-text b{font-weight:800;font-size:16px;letter-spacing:2px}
 .logo-text span{font-size:9.5px;font-weight:600;letter-spacing:3px;color:var(--brand-deep)}
@@ -42,7 +44,7 @@ a{color:var(--brand)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:20px}
 .pad{padding:16px}
 .iconbtn{width:44px;height:44px;border-radius:14px;border:0;background:#F1F5F9;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.btn{height:54px;border-radius:16px;border:0;background:var(--brand);color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;box-shadow:0 10px 24px rgba(35,71,197,.25)}
+.btn{height:54px;border-radius:16px;border:0;background:var(--brand);color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;box-shadow:0 10px 24px rgba(11,127,144,.25)}
 .btn:disabled{opacity:.45;box-shadow:none}
 .btn.ghost{background:#fff;color:var(--brand-deep);border:1.5px solid var(--brand);box-shadow:none}
 .btn.light{background:#fff;color:var(--ink);border:1px solid var(--line2);box-shadow:none}
@@ -69,8 +71,9 @@ a{color:var(--brand)}
 .note.info{background:var(--tint);color:var(--brand-deep)}
 .note.ok{background:var(--okbg);color:var(--ok)}
 .note.err{background:var(--badbg);color:var(--bad)}
-.hero{background:var(--tint);border-radius:0 0 36px 36px;padding:calc(48px + env(safe-area-inset-top,0px)) 20px 36px;display:flex;flex-direction:column;align-items:center;gap:16px}
-.hero .logo-mark{width:80px;height:80px;border-radius:24px;box-shadow:0 14px 30px rgba(35,71,197,.3)}
+/* hero */
+.hero{background:linear-gradient(160deg,#F3F9EC 0%,#E9F6F5 55%,#E3F3F7 100%);border-radius:0 0 36px 36px;padding:calc(48px + env(safe-area-inset-top,0px)) 20px 36px;display:flex;flex-direction:column;align-items:center;gap:16px}
+
 .bottom{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;pointer-events:none}
 .bottom>div{pointer-events:auto;width:100%;max-width:520px;background:#fff;border-top:1px solid var(--line);box-shadow:0 -10px 30px rgba(15,23,42,.07);border-radius:26px 26px 0 0;padding:14px 16px calc(16px + var(--safe-b));display:flex;flex-direction:column;gap:10px}
 .sum-row{display:flex;justify-content:space-between;font-size:14.5px;color:var(--ink2)}
@@ -120,7 +123,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 .label .l3{font-size:15px;font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .label .l4{font-size:10px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .labels{display:flex;gap:12px;overflow-x:auto;padding:16px;margin:0 -16px;scrollbar-width:none}
-.receipt{background:#fff;border-radius:26px;box-shadow:0 20px 50px rgba(35,71,197,.18);overflow:hidden}
+.receipt{background:#fff;border-radius:26px;box-shadow:0 20px 50px rgba(11,127,144,.18);overflow:hidden}
 .meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px 20px;border-bottom:1px solid #F1F5F9}
 .meta span{display:block;font-size:11.5px;color:var(--muted)}
 .meta b{font-size:14px;font-weight:600}
@@ -141,7 +144,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <div class="app" id="app"></div>
 <script>
 'use strict';
-const BRAND = '#2347C5';
+const BRAND = '#0B7F90';
 const PRICES_URLS = ['data/prices.json', 'https://raw.githubusercontent.com/coderuz2026/defactum-nurse-price/main/data/prices.json'];
 const BRANCHES = ['De Factum Central', 'Юнусабад', 'Госпитальный', 'De Factum Kids'];
 const LS = 'df_nurse_v1';
@@ -221,7 +224,8 @@ const I = {
   tube: (cap) => `<svg width="10" height="22" viewBox="0 0 10 22" aria-hidden="true"><rect x=".5" y="0" width="9" height="6" rx="2" fill="${cap}"/><rect x="1.5" y="5" width="7" height="16" rx="3.5" fill="#fff" stroke="#CBD5E1"/></svg>`,
   bigTube: (cap, fill) => `<svg width="30" height="76" viewBox="0 0 30 76" aria-hidden="true"><rect x="2" y="0" width="26" height="16" rx="4" fill="${cap}"/><rect x="5" y="13" width="20" height="62" rx="10" fill="#fff" stroke="#CBD5E1" stroke-width="1.5"/><rect x="6.5" y="42" width="17" height="31.5" rx="8.5" fill="${fill}"/><rect x="5.75" y="26" width="18.5" height="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width=".75"/></svg>`
 };
-const logo = (big) => `<div class="logo"><div class="logo-mark">${I.plus('#fff', big ? 38 : 20)}</div>${big ? '' : '<div class="logo-text"><b>DE FACTUM</b><span>LABORATORIES</span></div>'}</div>`;
+const MARK = (h) => `<svg class="logo-mark" width="${Math.round(h * 500 / 480)}" height="${h}" viewBox="30 40 500 480" role="img" aria-label="de factum"><defs><linearGradient id="dfg" gradientUnits="userSpaceOnUse" x1="250" y1="60" x2="470" y2="470"><stop offset="0" stop-color="#A9D046"/><stop offset=".5" stop-color="#2FA98C"/><stop offset="1" stop-color="#0A93B2"/></linearGradient></defs><g fill="url(#dfg)" stroke="url(#dfg)" stroke-width="66" stroke-linecap="round"><circle cx="285" cy="125" r="62" stroke="none"/><circle cx="195" cy="275" r="46" stroke="none"/><path d="M285 125L195 275"/><circle cx="362" cy="255" r="45" stroke="none"/><circle cx="445" cy="402" r="62" stroke="none"/><path d="M362 255L445 402"/><circle cx="125" cy="410" r="62" stroke="none"/><circle cx="296" cy="410" r="45" stroke="none"/><path d="M125 410L296 410"/></g></svg>`;
+const logo = (h = 30) => `<div class="logo" style="gap:${Math.round(h * .3)}px">${MARK(h)}<span class="wordmark" style="font-size:${Math.round(h * .98)}px">de factum<sup>®</sup></span></div>`;
 
 /* ---------- Прайс ---------- */
 async function loadPrices(force) {
@@ -294,11 +298,8 @@ function vAuth() {
   const b = UI.regBranch || BRANCHES[0];
   return `
   <div class="hero">
-    ${logo(true)}
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-      <span style="font-weight:800;font-size:26px;letter-spacing:3px">DE FACTUM</span>
-      <span style="font-size:11.5px;font-weight:600;letter-spacing:4px;color:var(--brand-deep)">LABORATORIES</span>
-    </div>
+    ${logo(46)}
+    <span style="font-size:12px;font-weight:600;letter-spacing:3px;color:var(--brand-deep);text-transform:uppercase">Прайс для медсестёр</span>
   </div>
   <form class="body" style="padding-bottom:40px" data-submit="${reg ? 'register' : 'login'}" autocomplete="on">
     <div><h1 class="h1">${reg ? 'Регистрация' : 'Вход для медсестёр'}</h1><div class="sub" style="margin-top:6px">${reg ? 'Данные сотрудника для расчётов и этикеток' : 'Прайс и расчёт стоимости услуг на выезде'}</div></div>
@@ -329,7 +330,7 @@ function vVisit() {
   const me = S.me;
   return `
   <div class="top">
-    <div class="row between">${logo()}<button data-act="go" data-v="profile" aria-label="Профиль" style="height:44px;padding:0 4px 0 12px;border-radius:22px;border:1px solid var(--line2);background:#fff;display:flex;align-items:center;gap:8px">
+    <div class="row between">${logo(28)}<button data-act="go" data-v="profile" aria-label="Профиль" style="height:44px;padding:0 4px 0 12px;border-radius:22px;border:1px solid var(--line2);background:#fff;display:flex;align-items:center;gap:8px">
       <span style="display:flex;flex-direction:column;align-items:flex-end"><b style="font-size:12.5px">${esc(shortName(me.name.split(' ')[1] || me.name, me.name.split(' ')[0]))}</b><span style="font-size:10.5px;color:var(--muted)">${esc(me.branch)}</span></span>
       <span class="avatar" style="width:34px;height:34px;font-size:13px">${esc(initials(me.name))}</span></button></div>
     <div class="row between" style="align-items:flex-end">
@@ -484,8 +485,7 @@ function vClient() {
     <div class="row between" style="padding:0 4px"><span class="sub" style="color:var(--brand-deep);font-weight:600">Экран для клиента</span><button class="iconbtn" style="background:#fff;border-radius:22px" data-act="go" data-v="visit" aria-label="Закрыть">${I.x('#334155')}</button></div>
     <div class="receipt">
       <div style="padding:24px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;border-bottom:1px dashed var(--line2)">
-        <div class="logo-mark" style="width:60px;height:60px;border-radius:18px">${I.plus('#fff', 30)}</div>
-        <div style="text-align:center"><div style="font-weight:800;font-size:22px;letter-spacing:3px">DE FACTUM</div><div style="font-size:10.5px;font-weight:600;letter-spacing:4px;color:var(--brand-deep)">LABORATORIES</div></div>
+        ${logo(40)}
         <div style="font-weight:600;color:var(--ink2)">Расчёт стоимости услуг</div>
       </div>
       <div class="meta">
