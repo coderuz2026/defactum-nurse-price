@@ -342,7 +342,7 @@ function vVisit() {
     </div>
     <label class="phone" style="height:46px;border-radius:14px;background:#F6F7F9"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><input data-input="addr" value="${esc(v.addr)}" placeholder="Адрес выезда (необязательно)" style="font-size:14.5px"></label>
   </div>
-  <div class="body" style="padding-bottom:300px">
+  <div class="body" style="padding-bottom:240px">
     ${v.patients.map((p) => {
       const tubes = groupTubes(p); const marked = tubes.length && tubes.every((x) => x.stuck);
       return `<div class="card pad" style="display:flex;flex-direction:column;gap:12px">
@@ -361,9 +361,8 @@ function vVisit() {
   </div>
   <div class="bottom"><div>
     <div class="sum-row"><span>Анализы${v.patients.length ? ', ' + v.patients.length + ' ' + plural(v.patients.length, 'пациент', 'пациента', 'пациентов') : ''}</span><span class="num">${fmt(t.an)}</span></div>
-    <label class="phone" style="height:44px;border-radius:12px"><span class="sub" style="white-space:nowrap">Выезд на дом</span><input data-input="homeFee" inputmode="numeric" value="${v.homeFee ? esc(String(v.homeFee)) : ''}" placeholder="0" style="text-align:right;font-size:15px"><span class="sub">сум</span></label>
-    <div class="row" style="gap:8px"><span class="sub" style="white-space:nowrap">Скидка</span>
-      <div class="seg" style="grid-template-columns:repeat(4,minmax(0,1fr));flex:1;padding:3px">${[0, 5, 10, 15].map((d) => `<button class="${(v.discount || 0) === d ? 'on' : ''}" data-act="disc" data-v="${d}" style="height:36px;font-size:13px">${d ? d + '%' : 'Нет'}</button>`).join('')}</div>
+    <div class="row between" style="gap:8px"><span class="sub">Скидка</span>
+      <div class="seg" style="grid-template-columns:repeat(4,44px);padding:2px;border-radius:11px">${[0, 5, 10, 15].map((d) => `<button class="${(v.discount || 0) === d ? 'on' : ''}" data-act="disc" data-v="${d}" style="height:28px;font-size:12px;border-radius:9px">${d ? d + '%' : 'Нет'}</button>`).join('')}</div>
     </div>
     ${t.off ? `<div class="sum-row"><span>Скидка ${v.discount}%</span><span class="num" style="color:var(--ok)">− ${fmt(t.off)}</span></div>` : ''}
     <div class="total"><span style="font-weight:700">Итого</span><b>${fmt(t.total)}</b></div>
@@ -597,6 +596,7 @@ document.addEventListener('submit', (e) => {
 });
 
 /* ---------- Старт ---------- */
+S.visits.forEach((v) => { v.homeFee = 0; }); // поле «Выезд на дом» убрано
 if (S.me) UI.view = 'visit';
 render();
 loadPrices(false);
