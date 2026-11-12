@@ -122,6 +122,7 @@ const Scan = (() => {
 
   /* ---------- Распознавание в браузере (Tesseract, файлы лежат в vendor/tesseract) ---------- */
   const base = () => new URL('vendor/tesseract/', document.baseURI).href;
+  const inApk = () => !!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost');
   const CFG = { paperW: 1700, split: true, crop: true, lines: true, norm: true, gamma: 1.3, zooms: [1.6, 1.3, 2], params: { tessedit_pageseg_mode: '6', tessedit_do_invert: '0', user_defined_dpi: '200' } }; // режим страницы задаём всегда: параметры в модуле сохраняются между вызовами
   const ID_RE = /сч[её]та\s*[:;]?\s*\d{5,8}/i;
   // Два потока распознавания: верх листа (данные пациента) и низ (таблица услуг) читаются одновременно
@@ -134,7 +135,7 @@ const Scan = (() => {
   function getWorker(i) {
     i = i || 0;
     if (!pool[i]) pool[i] = lib().then(() => window.Tesseract.createWorker(['rus', 'eng'], 1, {
-      workerPath: base() + 'worker.min.js', corePath: base(), langPath: base() + 'lang', gzip: true,
+      workerPath: base() + 'worker.min.js', corePath: base(), langPath: base() + 'lang', gzip: !inApk(), // Android при сборке APK сам распаковывает .gz
       logger: (m) => { if (i === 0 && progressCb && m.status) progressCb(m.status === 'recognizing text' ? 0.3 + 0.6 * m.progress : 0.05 + 0.25 * (m.progress || 0), m.status); }
     })).catch((e) => { pool[i] = null; throw e; });
     return pool[i];
