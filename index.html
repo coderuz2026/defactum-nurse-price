@@ -199,6 +199,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
+const APP_VERSION = '1.14', APP_DATE = '12.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 const PRICES_URLS = ['data/prices.json', 'https://raw.githubusercontent.com/coderuz2026/defactum-nurse-price/main/data/prices.json'];
 const BRANCHES = ['DeFactum Central', 'DeFactum KIDS'];
@@ -372,6 +373,7 @@ function vAuth() {
     ${UI.err ? `<div class="note err">${esc(UI.err)}</div>` : ''}
     <button class="btn" type="submit">${reg ? 'Зарегистрироваться' : 'Войти'}</button>
     <div style="text-align:center;font-size:14.5px;color:var(--muted)">${reg ? 'Уже есть аккаунт?' : 'Нет аккаунта?'} <a href="#" data-act="authMode" style="font-weight:700;text-decoration:none">${reg ? 'Войти' : 'Регистрация'}</a></div>
+    <div class="sub" style="text-align:center">Версия ${APP_VERSION} от ${APP_DATE}</div>
     <div class="note warn">Тестовая версия: аккаунт сохраняется только на этом телефоне. В рабочей версии регистрацию будет подтверждать администратор.</div>
   </form>`;
 }
@@ -421,6 +423,7 @@ function vVisit() {
       <button class="btn light small" data-act="newPatient">${I.plus('#0F172A', 15)} Вручную</button>
     </div>
     ${v.patients.length ? `<button class="btn light small" data-act="newVisit" style="color:var(--muted)">Завершить и начать новый выезд</button>` : ''}
+    ${UI.newVer ? `<button class="btn small" data-act="appUpdate">Доступно обновление ${esc(UI.newVer)} — обновить</button>` : `<div class="sub" style="text-align:center;font-size:12px">Версия ${APP_VERSION} от ${APP_DATE}</div>`}
   </div>
   <div class="bottom"><div>
     ${t.ex ? `<div class="sum-row"><span>Вызов на дом и прочее</span><span class="num">${fmt(t.ex)}</span></div>` : ''}
@@ -579,6 +582,8 @@ function vProfile() {
   <div class="body">
     <div class="card pad row"><span class="avatar" style="width:56px;height:56px;font-size:18px">${esc(initials(me.name))}</span><div><b style="font-size:17px">${esc(me.name)}</b><div class="sub">+998 ${esc(me.phone)} · ${esc(me.branch)}</div></div></div>
     <div class="card pad" style="display:flex;flex-direction:column;gap:10px">
+      <div class="row between"><span>Версия приложения</span><b>${APP_VERSION} от ${APP_DATE}</b></div>
+      ${UI.newVer ? `<button class="btn small" data-act="appUpdate">Обновить до версии ${esc(UI.newVer)}</button>` : `<button class="btn light small" data-act="appCheck">${I.sync} Проверить обновление приложения</button>`}
       <div class="row between"><span>Версия прайса</span><b>${esc(P.version || '—')}</b></div>
       <div class="row between"><span>Услуг в прайсе</span><b>${P.items.length}</b></div>
       <div class="row between"><span>Выездов на телефоне</span><b>${S.visits.length}</b></div>
@@ -617,6 +622,8 @@ document.addEventListener('click', (e) => {
     case 'disc': vis.discount = +v; save(); UI._keepScroll = true; render(); break;
     case 'newVisit': if (confirm('Завершить текущий выезд и начать новый?')) { newVisit(); go('visit'); } break;
     case 'reloadPrices': loadPrices(true); break;
+    case 'appCheck': checkUpdate(true); break;
+    case 'appUpdate': applyUpdate(); break;
     case 'geo': locate(); break;
     case 'scanCam': overlay(''); document.getElementById('scanCam').click(); break;
     case 'scanClose': overlay(''); break;
@@ -865,12 +872,28 @@ document.addEventListener('click', async (e) => {
   instSet('later'); box.innerHTML = '';
 });
 
+/* ---------- Версия и обновление приложения ---------- */
+const verNum = (v) => String(v).split('.').reduce((s, x) => s * 1000 + (+x || 0), 0);
+async function checkUpdate(manual) {
+  try {
+    const r = await fetch('index.html?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) throw 0;
+    const m = (await r.text()).match(/APP_VERSION = '([\d.]+)'/);
+    if (m && verNum(m[1]) > verNum(APP_VERSION)) { UI.newVer = m[1]; UI._keepScroll = true; if (UI.view === 'visit' || UI.view === 'profile') render(); if (manual) toast('Доступна версия ' + m[1]); }
+    else if (manual) toast('У вас последняя версия: ' + APP_VERSION);
+  } catch (e) { if (manual) toast('Нет связи — не удалось проверить'); }
+}
+async function applyUpdate() {
+  try { if ('serviceWorker' in navigator) { const reg = await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); } if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map((k) => caches.delete(k))); } } catch (e) {}
+  location.reload();
+}
+
 /* ---------- Старт ---------- */
 { const sp = document.getElementById('splash'); if (sp) sp.addEventListener('animationend', (e) => { if (e.animationName === 'spOut') sp.remove(); }); setTimeout(() => { if (sp) sp.remove(); }, 4500); }
 S.visits.forEach((v) => { v.homeFee = 0; }); // поле «Выезд на дом» убрано
 if (S.me) UI.view = 'visit';
 render();
 loadPrices(false);
+setTimeout(() => checkUpdate(false), 4000);
 setTimeout(() => showInstall(), document.documentElement.classList.contains('nosplash') ? 1200 : 3800); // iPhone: события нет — показываем инструкцию; Android: окно появится по событию или подсказкой
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(() => { if (S.me) setTimeout(() => Scan.warmup(), 6000); }).catch(() => {});
 </script>
