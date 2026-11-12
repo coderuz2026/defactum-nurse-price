@@ -199,7 +199,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.22', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.23', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -307,7 +307,7 @@ async function loadPrices(force) {
       const changed = !P.version || P.version !== d.version;
       setPrices(d);
       try { localStorage.setItem(LS + '_prices', JSON.stringify(d)); } catch (e) {}
-      if (force) toast(changed ? 'Прайс обновлён: ' + d.version : 'Прайс актуален: ' + d.version);
+      if (force) toast((changed ? 'Прайс обновлён: ' : 'Прайс актуален: ') + priceDate());
       render();
       return;
     } catch (e) {}
@@ -315,6 +315,8 @@ async function loadPrices(force) {
   if (force) toast(P.version ? 'Нет связи — работаем по сохранённому прайсу' : 'Не удалось загрузить прайс');
   render();
 }
+// Дата прайса в привычном виде: 2026-11-10 → 10.11.2026
+const priceDate = () => String(P.version || '').split('-').reverse().join('.');
 function setPrices(d) {
   P.version = d.version; P.cats = d.categories; P.items = d.items; P.byId = {}; P.catById = {};
   d.categories.forEach((c) => { P.catById[c.id] = c; c.n = 0; });
@@ -401,11 +403,14 @@ function vVisit() {
   return `
   <div class="top">
     <div class="row between">${logo(28)}<button data-act="go" data-v="profile" aria-label="Профиль" style="height:44px;padding:0 4px 0 12px;border-radius:22px;border:1px solid var(--line2);background:#fff;display:flex;align-items:center;gap:8px">
-      <span style="display:flex;flex-direction:column;align-items:flex-end"><b style="font-size:12.5px">${esc(shortName(me.name.split(' ')[1] || me.name, me.name.split(' ')[0]))}</b><span style="font-size:10.5px;color:var(--muted)">${esc(me.branch)}</span></span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end"><b style="font-size:12.5px">${esc(shortName(me.name.split(' ')[1] || me.name, me.name.split(' ')[0]))}</b><span style="font-size:10.5px;color:var(--muted);white-space:nowrap">${esc(me.branch)}</span></span>
       <span class="avatar" style="width:34px;height:34px;font-size:13px">${esc(initials(me.name))}</span></button></div>
-    <div class="row between" style="align-items:flex-end">
-      <div><div class="sub">Выезд №${v.no} · ${dt(v.created)}</div><h1 class="h1">Пациенты выезда</h1></div>
-      <span class="chip" style="background:var(--okbg);color:var(--ok);font-weight:600;padding:0 10px"><span style="width:7px;height:7px;border-radius:4px;background:#22A55B"></span>${P.version ? 'Прайс ' + esc(P.version.split('-').reverse().slice(0, 2).join('.')) : 'Загрузка…'}</span>
+    <div>
+      <div class="row between" style="gap:8px">
+        <span class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">Выезд №${v.no} · ${dt(v.created)}</span>
+        <span class="chip" style="background:var(--okbg);color:var(--ok);font-weight:600;padding:0 10px;height:26px;font-size:12px;white-space:nowrap;flex-shrink:0"><span style="width:7px;height:7px;border-radius:4px;background:#22A55B"></span>${P.version ? 'Прайс ' + esc(priceDate()) : 'Загрузка…'}</span>
+      </div>
+      <h1 class="h1" style="margin-top:4px">Пациенты выезда</h1>
     </div>
     <div class="phone" style="height:48px;border-radius:14px;background:#F6F7F9;padding:0 4px 0 14px;gap:6px"><input data-input="addr" aria-label="Адрес выезда" value="${esc(v.addr)}" placeholder="Адрес выезда (необязательно)" style="font-size:14.5px">
       <button data-act="geo" aria-label="Определить адрес по геолокации" ${UI.geoBusy ? 'disabled' : ''} style="width:40px;height:40px;border-radius:12px;border:0;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0;${UI.geoBusy ? 'opacity:.55' : ''}">${UI.geoBusy ? '<span class="spin"></span>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>'}</button></div>
@@ -585,7 +590,7 @@ function vClient() {
       </div>
       <div class="paybox"><span style="font-size:13px;opacity:.85">Итого<br>к оплате</span><b>${fmt(t.total).replace(' сум', '')} <span style="font-size:16px">сум</span></b></div>
     </div>
-    <div class="sub" style="text-align:center">Цены действительны на дату расчёта · прайс от ${esc((P.version || '').split('-').reverse().join('.'))}</div>
+    <div class="sub" style="text-align:center">Цены действительны на дату расчёта · прайс от ${esc(priceDate())}</div>
   </div>`;
 }
 
@@ -596,8 +601,9 @@ function vProfile() {
     <div class="card pad row"><span class="avatar" style="width:56px;height:56px;font-size:18px">${esc(initials(me.name))}</span><div><b style="font-size:17px">${esc(me.name)}</b><div class="sub">+998 ${esc(me.phone)} · ${esc(me.branch)}</div></div></div>
     <div class="card pad" style="display:flex;flex-direction:column;gap:10px">
       <div class="row between"><span>Версия приложения</span><b>${APP_VERSION} от ${APP_DATE}${IS_APK ? ' · APK' : ''}</b></div>
+      ${IS_APK && UI.shell ? `<div class="row between"><span>Оболочка Android</span><b>${esc(UI.shell.apkVersion || '—')}${UI.shell.native ? ' · уровень ' + UI.shell.native : ''}</b></div>` : ''}
       ${UI.newVer ? `<button class="btn small" data-act="appUpdate">Обновить до версии ${esc(UI.newVer)}</button>` : `<button class="btn light small" data-act="appCheck">${I.sync} Проверить обновление приложения</button>`}
-      <div class="row between"><span>Версия прайса</span><b>${esc(P.version || '—')}</b></div>
+      <div class="row between"><span>Прайс от</span><b>${esc(priceDate() || '—')}</b></div>
       <div class="row between"><span>Услуг в прайсе</span><b>${P.items.length}</b></div>
       <div class="row between"><span>Выездов на телефоне</span><b>${S.visits.length}</b></div>
       <button class="btn light small" data-act="reloadPrices">${I.sync} Проверить обновление цен</button>
@@ -1076,7 +1082,7 @@ async function applyUpdate() {
     if ((UI.newNative || 1) > native) {
       // изменилась «родная» часть — нужен новый APK: скачиваем и открываем установку
       await lp.updateApk({ url: APK_URL });
-      overlay(`${MARK(48)}<b style="font-size:17px">Подтвердите установку</b><span class="sub">Android покажет окно установки — нажмите «Обновить». Данные сохранятся.</span><button class="btn light small" data-act="scanClose">Закрыть</button>`);
+      overlay(`${MARK(48)}<b style="font-size:17px">Подтвердите установку</b><span class="sub">Android покажет окно установки — нажмите «Обновить». Данные сохранятся.</span><span class="sub" style="font-size:12px">Если Android напишет «конфликтует с другим пакетом» — приложение установлено старой сборкой с другой подписью. Один раз удалите его и установите заново по ссылке из профиля.</span><button class="btn light small" data-act="scanClose">Закрыть</button>`);
     } else {
       try { localStorage.setItem(UPD_KEY, ver); } catch (e) {}
       await lp.updateWeb({ url: WEB_ZIP_URL, version: ver }); // после этого приложение само перезагрузится уже новой версией
@@ -1104,7 +1110,7 @@ loadPrices(false);
 setTimeout(updateResult, document.documentElement.classList.contains('nosplash') ? 300 : 3600);
 setTimeout(() => checkUpdate(false), 4000);
 setTimeout(() => showInstall(), document.documentElement.classList.contains('nosplash') ? 1200 : 3800); // iPhone: события нет — показываем инструкцию; Android: окно появится по событию или подсказкой
-if (IS_APK) setTimeout(() => { if (S.me) Scan.warmup(); }, 6000);
+if (IS_APK) { setTimeout(() => { if (S.me) Scan.warmup(); }, 6000); setTimeout(async () => { try { UI.shell = await LP().info(); if (UI.view === 'profile') { UI._keepScroll = true; render(); } } catch (e) {} }, 800); }
 else if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(() => { if (S.me) setTimeout(() => Scan.warmup(), 6000); }).catch(() => {});
 </script>
 </body>
