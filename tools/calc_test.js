@@ -7,7 +7,7 @@ const Scan = require('../scan.js');
 const stub = { Scan, btoa: (x) => Buffer.from(x, 'binary').toString('base64'), location: { protocol: 'https:', hostname: 'example.org' }, sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
   document: { documentElement: { classList: { contains: () => true, add() {} } }, addEventListener() {}, getElementById: () => ({ innerHTML: '', addEventListener() {}, remove() {} }), querySelectorAll: () => [], querySelector: () => null, body: { appendChild() {} }, createElement: () => ({ remove() {} }) },
   window: { scrollTo() {}, scrollY: 0, addEventListener() {}, Capacitor: null }, navigator: { userAgent: '' }, fetch: async () => ({ ok: false }), setTimeout, clearTimeout, console, Date, Math, JSON };
-const fn = new Function(...Object.keys(stub), src + '\nreturn {prepFor, prepList, SETS, setItems, dayReport, dayKey, closeVisit, vSum, reportText, receiptLines, T, UZ, vHistory, vCatalog, PAY, tubeArt, priceDate, goBack, updateResult, printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
+const fn = new Function(...Object.keys(stub), src + '\nreturn {prepFor, prepList, SETS, setItems, dayReport, dayKey, closeVisit, vSum, reportText, receiptLines, vHistory, vCatalog, PAY, tubeArt, priceDate, goBack, updateResult, printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
 const A = fn(...Object.values(stub));
 const prices = JSON.parse(fs.readFileSync('data/prices.json', 'utf8'));
 A.setPrices(prices);
@@ -205,17 +205,6 @@ eq('все анализы готовых наборов есть в прайсе
   eq('текст отчёта содержит итог', A.reportText(r).includes(A.fmt(r.total)), true);
   eq('экран истории рисуется', /Итого за день/.test(A.vHistory()), true);
   A.UI.patientId = 'h1'; A.UI.cat = -1; eq('экран наборов рисуется', /Наборы анализов/.test(A.vCatalog()), true); A.UI.cat = 0;
-  // язык
-  eq('русский: текст не меняется', A.T('Итого'), 'Итого');
-  A.S.lang = 'uz';
-  eq('узбекский: слово из словаря', A.T('Итого'), 'Jami');
-  eq('узбекский: сумма', A.T('1 115 000 сум'), '1 115 000 so‘m');
-  eq('узбекский: счёт анализов', A.T('Ж · 18.05.1950 · 3 анализа'), 'A · 18.05.1950 · 3 ta tahlil');
-  eq('узбекский: название анализа не трогаем', A.T('Глюкоза (Glucose)'), 'Глюкоза (Glucose)');
-  eq('узбекский: пробелы по краям сохраняются', A.T(' Анализы '), ' Tahlillar ');
-  eq('узбекский: подсказки подготовки переведены все', [...new Set(prices.items.map((x) => A.prepFor(x)).filter(Boolean))].filter((x) => A.T(x) === x), []);
-  eq('узбекский: в словаре нет пустых переводов', Object.values(A.UZ).every((x) => typeof x === 'string' && x.length > 0), true);
-  A.S.lang = 'ru';
 }
 console.log(fail ? `\nОШИБОК: ${fail}` : '\nВСЕ ТЕСТЫ ПРОШЛИ');
 process.exit(fail ? 1 : 0);
