@@ -7,7 +7,7 @@ const Scan = require('../scan.js');
 const stub = { Scan, btoa: (x) => Buffer.from(x, 'binary').toString('base64'), location: { protocol: 'https:', hostname: 'example.org' }, sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
   document: { documentElement: { classList: { contains: () => true, add() {} } }, addEventListener() {}, getElementById: () => ({ innerHTML: '', addEventListener() {}, remove() {} }), querySelectorAll: () => [], querySelector: () => null, body: { appendChild() {} }, createElement: () => ({ remove() {} }) },
   window: { scrollTo() {}, scrollY: 0, addEventListener() {}, Capacitor: null }, navigator: { userAgent: '' }, fetch: async () => ({ ok: false }), setTimeout, clearTimeout, console, Date, Math, JSON };
-const fn = new Function(...Object.keys(stub), src + '\nreturn {tubeArt, priceDate, goBack, updateResult, printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
+const fn = new Function(...Object.keys(stub), src + '\nreturn {prepFor, prepList, SETS, setItems, dayReport, dayKey, closeVisit, vSum, reportText, receiptLines, T, UZ, vHistory, vCatalog, PAY, tubeArt, priceDate, goBack, updateResult, printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
 const A = fn(...Object.values(stub));
 const prices = JSON.parse(fs.readFileSync('data/prices.json', 'utf8'));
 A.setPrices(prices);
@@ -171,5 +171,51 @@ eq('рисунки контейнеров: для каждого типа ест
 eq('формат 855000', A.fmt(855000), '855 000 сум');
 eq('формат 1234567', A.fmt(1234567), '1 234 567 сум');
 eq('склонения', [1, 2, 5, 11, 21, 22, 25].map((n) => A.plural(n, 'анализ', 'анализа', 'анализов')), ['анализ', 'анализа', 'анализов', 'анализов', 'анализ', 'анализа', 'анализов']);
+// ---- подготовка, наборы, история, отчёт, язык
+const byId = (n) => prices.items.find((x) => x.id === n);
+eq('подготовка: глюкоза', A.prepFor(byId(342)), 'Натощак 8–12 часов');
+eq('подготовка: общий анализ мочи', A.prepFor(byId(684)), 'Утренняя моча, средняя порция');
+eq('подготовка: суточная моча', A.prepFor(byId(678)), 'Суточная моча: сбор за 24 часа');
+eq('подготовка: кортизол', A.prepFor(byId(295)), 'Утром до 10:00, натощак');
+eq('подготовка: аллерген — без подсказки', A.prepFor(byId(610)), '');
+eq('подготовка: гликированный гемоглобин — без подсказки', A.prepFor(byId(468)), '');
+eq('подготовка: мужчине не пишем про цикл', A.prepList({ sex: 'm', items: [492] }), []);
+eq('подготовка: женщине пишем про цикл', A.prepList({ sex: 'f', items: [492] }).length, 1);
+eq('все анализы готовых наборов есть в прайсе', A.SETS.every((x) => A.setItems(x).length === x.ids.length), true);
+{
+  A.S.me = { name: 'Тестова Нигора', phone: '901234567', branch: 'DeFactum Central' };
+  const before = A.S.visits.length;
+  const v1 = A.newVisit(); v1.patients.push({ id: 'h1', last: 'Каримова', first: 'Лола', sex: 'f', items: [342, 684], extra: [{ name: 'Вызов на дом', price: 80000 }] }); v1.pay = 'click'; v1.discount = 10;
+  const sum1 = A.vTotals(v1).total;
+  eq('выезд 1: скидка только на анализы', sum1, 130000 - 13000 + 80000);
+  A.closeVisit(v1);
+  const v2 = A.newVisit(); v2.patients.push({ id: 'h2', last: 'Юсупова', first: 'Малика', sex: 'f', items: [300], extra: [] });
+  const r = A.dayReport(A.dayKey(Date.now()));
+  const mine = r.visits.filter((x) => x.id === v1.id || x.id === v2.id);
+  eq('отчёт: оба выезда попали в сегодняшний день', mine.length, 2);
+  eq('отчёт: сумма дня = сумма выездов', r.total, r.visits.reduce((a, x) => a + A.vSum(x), 0));
+  eq('отчёт: оплаты по видам в сумме дают итог', Object.values(r.pay).reduce((a, x) => a + x, 0), r.total);
+  eq('отчёт: Click учтён', r.pay.click >= sum1, true);
+  eq('закрытый выезд помнит свою сумму при смене цены', (() => { const it = byId(342), old = it.price; it.price = 999999; const s = A.vSum(v1); it.price = old; return s; })(), sum1);
+  eq('пустой выезд в отчёт не попадает', (() => { const n = A.dayReport(A.dayKey(Date.now())).visits.length; A.newVisit(); const m = A.dayReport(A.dayKey(Date.now())).visits.length; return m - n; })(), 0);
+  A.S.visitId = v1.id;
+  const L = A.receiptLines(v1);
+  eq('чек: итог совпадает с расчётом', L.find((x) => x.k === 'total').r, A.fmt(sum1));
+  eq('чек: есть строка оплаты', L.some((x) => x.r === 'Click'), true);
+  eq('текст отчёта содержит итог', A.reportText(r).includes(A.fmt(r.total)), true);
+  eq('экран истории рисуется', /Итого за день/.test(A.vHistory()), true);
+  A.UI.patientId = 'h1'; A.UI.cat = -1; eq('экран наборов рисуется', /Наборы анализов/.test(A.vCatalog()), true); A.UI.cat = 0;
+  // язык
+  eq('русский: текст не меняется', A.T('Итого'), 'Итого');
+  A.S.lang = 'uz';
+  eq('узбекский: слово из словаря', A.T('Итого'), 'Jami');
+  eq('узбекский: сумма', A.T('1 115 000 сум'), '1 115 000 so‘m');
+  eq('узбекский: счёт анализов', A.T('Ж · 18.05.1950 · 3 анализа'), 'A · 18.05.1950 · 3 ta tahlil');
+  eq('узбекский: название анализа не трогаем', A.T('Глюкоза (Glucose)'), 'Глюкоза (Glucose)');
+  eq('узбекский: пробелы по краям сохраняются', A.T(' Анализы '), ' Tahlillar ');
+  eq('узбекский: подсказки подготовки переведены все', [...new Set(prices.items.map((x) => A.prepFor(x)).filter(Boolean))].filter((x) => A.T(x) === x), []);
+  eq('узбекский: в словаре нет пустых переводов', Object.values(A.UZ).every((x) => typeof x === 'string' && x.length > 0), true);
+  A.S.lang = 'ru';
+}
 console.log(fail ? `\nОШИБОК: ${fail}` : '\nВСЕ ТЕСТЫ ПРОШЛИ');
 process.exit(fail ? 1 : 0);

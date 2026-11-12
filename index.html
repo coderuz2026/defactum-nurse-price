@@ -99,6 +99,15 @@ a{color:var(--brand)}
 .drop-h b{font-weight:700;text-transform:uppercase;letter-spacing:.6px}
 .sugg{width:100%;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px;border:0;border-top:1px solid #F1F5F9;background:#fff;text-align:left;min-height:60px}
 mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radius:4px;padding:0 2px}
+.prep{font-size:12px!important;color:#8A5200!important;font-weight:600}
+.stat3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat3 div{background:var(--bg);border-radius:14px;padding:10px 8px;text-align:center}
+.stat3 b{display:block;font-size:20px;font-weight:800}
+.stat3 span{font-size:12px;color:var(--muted)}
+.vrow{width:100%;text-align:left;border:0;border-bottom:1px solid #F1F5F9;background:#fff;padding:12px 14px;display:flex;gap:10px;align-items:flex-start}
+.vrow:last-child{border-bottom:0}
+.paytag{display:inline-block;padding:2px 8px;border-radius:9px;background:var(--tint);color:var(--brand-deep);font-size:11.5px;font-weight:700}
+.paytag.none{background:#FFF7E6;color:#7A4B00}
 .linkbtn{border:0;background:none;padding:6px 2px;min-height:36px;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
 .cats{display:flex;gap:8px;overflow-x:auto;padding:2px 16px 4px;margin:0 -16px;scrollbar-width:none}
 .cats::-webkit-scrollbar{display:none}
@@ -200,7 +209,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.27', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.28', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -340,7 +349,345 @@ const initials = (s) => s.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[
 const shortName = (last, first) => (last || '') + (first ? ' ' + first[0].toUpperCase() + '.' : '');
 const now = () => new Date();
 const dt = (d) => { d = new Date(d); const p = (x) => String(x).padStart(2, '0'); return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; };
-function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
+/* ---------- Язык интерфейса: русский текст переводится по словарю, названия анализов остаются как в прайсе ---------- */
+const UZ = {
+  "Прайс для медсестёр": "Hamshiralar uchun narxlar",
+  "Вход для медсестёр": "Hamshiralar uchun kirish",
+  "Прайс и расчёт стоимости услуг на выезде": "Chiqishda xizmatlar narxi va hisob-kitobi",
+  "Номер телефона": "Telefon raqami",
+  "PIN-код": "PIN-kod",
+  "Войти": "Kirish",
+  "Нет аккаунта?": "Akkauntingiz yo‘qmi?",
+  "Регистрация": "Ro‘yxatdan o‘tish",
+  "Тестовая версия: аккаунт сохраняется только на этом телефоне. В рабочей версии регистрацию будет подтверждать администратор.": "Sinov versiyasi: akkaunt faqat shu telefonda saqlanadi. Ishchi versiyada ro‘yxatdan o‘tishni administrator tasdiqlaydi.",
+  "Данные сотрудника для расчётов и этикеток": "Hisob-kitob va yorliqlar uchun xodim ma’lumotlari",
+  "ФИО": "F.I.Sh.",
+  "Филиал": "Filial",
+  "Придумайте PIN": "PIN o‘ylab toping",
+  "Повторите PIN": "PINni takrorlang",
+  "Зарегистрироваться": "Ro‘yxatdan o‘tish",
+  "Уже есть аккаунт?": "Akkauntingiz bormi?",
+  "Например: Рахимова Нигора": "Masalan: Rahimova Nigora",
+  "Пациенты выезда": "Chiqish bemorlari",
+  "Загрузка…": "Yuklanmoqda…",
+  "Сфотографируйте лист заказа из Aurora или добавьте пациента вручную. Можно несколько пациентов на один выезд.": "Aurora buyurtma varag‘ini suratga oling yoki bemorni qo‘lda qo‘shing. Bitta chiqishga bir nechta bemor qo‘shish mumkin.",
+  "Сфотографировать лист заказа": "Buyurtma varag‘ini suratga olish",
+  "ФИО, анализы и сумма заполнятся сами": "F.I.Sh., tahlillar va summa o‘zi to‘ldiriladi",
+  "Фото из галереи": "Galereyadan surat",
+  "Вручную": "Qo‘lda",
+  "История выездов и отчёт за смену": "Chiqishlar tarixi va smena hisoboti",
+  "Анализы": "Tahlillar",
+  "Скидка": "Chegirma",
+  "Нет": "Yo‘q",
+  "Оплата": "To‘lov",
+  "Наличные": "Naqd",
+  "Карта": "Karta",
+  "Итого": "Jami",
+  "Показать клиенту": "Mijozga ko‘rsatish",
+  "Профиль": "Profil",
+  "Адрес выезда (необязательно)": "Chiqish manzili (ixtiyoriy)",
+  "Адрес выезда": "Chiqish manzili",
+  "Определить адрес по геолокации": "Manzilni geolokatsiya orqali aniqlash",
+  "Новый пациент": "Yangi bemor",
+  "Пациент": "Bemor",
+  "Фамилия": "Familiya",
+  "Имя": "Ism",
+  "Отчество": "Otasining ismi",
+  "(необязательно)": "(ixtiyoriy)",
+  "Дата рождения": "Tug‘ilgan sana",
+  "Пол": "Jinsi",
+  "Мужской": "Erkak",
+  "Женский": "Ayol",
+  "Телефон": "Telefon",
+  "ФИО и дата рождения печатаются на этикетке каждой пробирки.": "F.I.Sh. va tug‘ilgan sana har bir probirka yorlig‘ida chop etiladi.",
+  "Далее: выбрать анализы →": "Keyingi: tahlillarni tanlash →",
+  "Сохранить": "Saqlash",
+  "Назад": "Orqaga",
+  "ДД.ММ.ГГГГ": "KK.OO.YYYY",
+  "Подготовка:": "Tayyorgarlik:",
+  "Пробирки": "Probirkalar",
+  "Промаркировано": "Belgilandi",
+  "Изменить": "O‘zgartirish",
+  "Изменить данные": "Ma’lumotni o‘zgartirish",
+  "Удалить": "O‘chirish",
+  "Завершить и начать новый выезд": "Yakunlash va yangi chiqishni boshlash",
+  "Вызов на дом и прочее": "Uyga chaqiruv va boshqalar",
+  "Выбрано": "Tanlangan",
+  "Наборы": "To‘plamlar",
+  "Выбранные анализы": "Tanlangan tahlillar",
+  "Сохранить как набор": "To‘plam sifatida saqlash",
+  "Готово": "Tayyor",
+  "Поиск: ОАК, ТТГ, витамин D…": "Qidiruv: ОАК, ТТГ, витамин D…",
+  "Наборы анализов": "Tahlillar to‘plamlari",
+  "Щитовидная железа": "Qalqonsimon bez",
+  "Печень": "Jigar",
+  "Почки": "Buyraklar",
+  "Сахар и диабет": "Qand va diabet",
+  "Анемия": "Anemiya",
+  "Базовый: кровь, моча, глюкоза": "Asosiy: qon, siydik, glyukoza",
+  "Добавить": "Qo‘shish",
+  "Уже добавлено": "Qo‘shilgan",
+  "Свой набор: отметьте анализы, откройте «Выбрано» и нажмите «Сохранить как набор».": "O‘z to‘plamingiz: tahlillarni belgilang, «Tanlangan» bo‘limini oching va «To‘plam sifatida saqlash»ni bosing.",
+  "Набор сохранён": "To‘plam saqlandi",
+  "Подсказки": "Takliflar",
+  "Очистить": "Tozalash",
+  "Ничего не найдено. Попробуйте короче: «ттг», «витамин», «моча».": "Hech narsa topilmadi. Qisqaroq yozing: «ттг», «витамин», «моча».",
+  "Пока ничего не выбрано.": "Hozircha hech narsa tanlanmagan.",
+  "Найдите анализ через поиск или выберите категорию выше.": "Tahlilni qidiruv orqali toping yoki yuqoridan toifani tanlang.",
+  "Прайс загружается… Нужен интернет при первом запуске.": "Narxlar yuklanmoqda… Birinchi ishga tushirishda internet kerak.",
+  "одинаковый контейнер = один штрихкод": "bir xil konteyner = bitta shtrix-kod",
+  "Наклеить": "Yopishtirish",
+  "Наклеено": "Yopishtirildi",
+  "Этикетки 40×30 мм": "Yorliqlar 40×30 mm",
+  "листайте →": "suring →",
+  "анализ": "tahlil",
+  "анализа": "tahlil",
+  "анализов": "tahlil",
+  "анализ →": "tahlil →",
+  "анализа →": "tahlil →",
+  "анализов →": "tahlil →",
+  "пробирка": "probirka",
+  "пробирки": "probirka",
+  "пробирок": "probirka",
+  "Группировка пробирок пока предварительная — по категории анализа. После выгрузки справочника «анализ → контейнер» из Aurora будет 1 в 1 как в лаборатории. Печать на Bluetooth-принтер — в мобильной версии.": "Probirkalarni guruhlash hozircha taxminiy — tahlil toifasi bo‘yicha. Aurora’dan «tahlil → konteyner» ma’lumotnomasi olingach, laboratoriyadagidek aniq bo‘ladi. Bluetooth-printerda chop etish — mobil versiyada.",
+  "Принтер не выбран — настроить ›": "Printer tanlanmagan — sozlash ›",
+  "Передать этикетки картинками в другое приложение": "Yorliqlarni rasm sifatida boshqa ilovaga uzatish",
+  "Печатаю…": "Chop etilmoqda…",
+  "Экран для клиента": "Mijoz uchun ekran",
+  "Расчёт стоимости услуг": "Xizmatlar narxi hisobi",
+  "Дата": "Sana",
+  "Медсестра": "Hamshira",
+  "Выезд №": "Chiqish №",
+  "Вызов на дом": "Uyga chaqiruv",
+  "Выезд на дом": "Uyga chiqish",
+  "к оплате": "to‘lovga",
+  "сум": "so‘m",
+  "Итого к оплате": "Jami to‘lovga",
+  "Отправить чек клиенту": "Chekni mijozga yuborish",
+  "Закрыть": "Yopish",
+  "Выезды и отчёт": "Chiqishlar va hisobot",
+  "Выезды": "Chiqishlar",
+  "Сегодня": "Bugun",
+  "Выездов": "Chiqishlar",
+  "Пациентов": "Bemorlar",
+  "Анализов": "Tahlillar",
+  "Итого за день": "Kun bo‘yicha jami",
+  "Отправить отчёт": "Hisobotni yuborish",
+  "Скопировать текст": "Matnni nusxalash",
+  "текущий": "joriy",
+  "Нажмите на выезд, чтобы открыть его снова": "Qayta ochish uchun chiqishni bosing",
+  "Предыдущий день": "Oldingi kun",
+  "Следующий день": "Keyingi kun",
+  "Отчёт за день": "Kunlik hisobot",
+  "Отчёт за смену": "Smena hisoboti",
+  "Оплата не указана": "To‘lov ko‘rsatilmagan",
+  "Версия приложения": "Ilova versiyasi",
+  "Проверить обновление приложения": "Ilova yangilanishini tekshirish",
+  "Прайс от": "Narxlar sanasi",
+  "Услуг в прайсе": "Narxnomadagi xizmatlar",
+  "Выездов на телефоне": "Telefondagi chiqishlar",
+  "Проверить обновление цен": "Narxlar yangilanishini tekshirish",
+  "Язык": "Til",
+  "Принтер этикеток": "Yorliq printeri",
+  "Не настроен": "Sozlanmagan",
+  "Установить на телефон": "Telefonga o‘rnatish",
+  "Выйти": "Akkauntdan chiqish",
+  "Оболочка Android": "Android qobig‘i",
+  "Приложение установлено на этот телефон.": "Ilova shu telefonga o‘rnatilgan.",
+  "Портативный Bluetooth-принтер, этикетка 40×30 мм": "Ko‘chma Bluetooth-printer, yorliq 40×30 mm",
+  "Печать напрямую работает только в приложении APK.": "To‘g‘ridan-to‘g‘ri chop etish faqat APK ilovasida ishlaydi.",
+  "В версии для браузера этикетки можно передать картинками в программу принтера — кнопка рядом с «Печать этикеток».": "Brauzer versiyasida yorliqlarni rasm sifatida printer dasturiga uzatish mumkin — «Yorliqlarni chop etish» yonidagi tugma.",
+  "1. Сопряжение": "1. Ulash",
+  "Включите принтер. В настройках Bluetooth телефона найдите его и подключите (PIN обычно 0000 или 1234). Потом вернитесь сюда и нажмите «Обновить список».": "Printerni yoqing. Telefonning Bluetooth sozlamalarida uni toping va ulang (PIN odatda 0000 yoki 1234). So‘ng shu yerga qayting va «Ro‘yxatni yangilash»ni bosing.",
+  "Настройки Bluetooth": "Bluetooth sozlamalari",
+  "Обновить список": "Ro‘yxatni yangilash",
+  "2. Выберите принтер": "2. Printerni tanlang",
+  "Bluetooth выключен — включите его и обновите список.": "Bluetooth o‘chirilgan — yoqing va ro‘yxatni yangilang.",
+  "Сопряжённых устройств нет. Подключите принтер в настройках Bluetooth.": "Ulangan qurilmalar yo‘q. Printerni Bluetooth sozlamalarida ulang.",
+  "Загружаю список…": "Ro‘yxat yuklanmoqda…",
+  "3. Настройки печати": "3. Chop etish sozlamalari",
+  "Язык принтера": "Printer tili",
+  "TSPL (этикеточный)": "TSPL (yorliq uchun)",
+  "ESC/POS (чековый)": "ESC/POS (chek uchun)",
+  "Зазор между этикетками": "Yorliqlar orasidagi masofa",
+  "мм": "mm",
+  "нет": "yo‘q",
+  "Поменять чёрное и белое (если этикетка печатается негативом)": "Qora va oqni almashtirish (yorliq negativ chiqsa)",
+  "Тестовая печать": "Sinov chop etish",
+  "Если принтер молчит или печатает мусор — переключите язык принтера и попробуйте ещё раз.": "Printer jim tursa yoki tushunarsiz belgilar chiqarsa — printer tilini almashtirib, qayta urinib ko‘ring.",
+  "Забыть принтер": "Printerni unutish",
+  "Подходят принтеры с обычным Bluetooth, которые понимают команды TSPL или ESC/POS. Принтеры со своим закрытым протоколом (например, Niimbot) напрямую не печатают — для них передайте этикетки картинками в их программу.": "Oddiy Bluetooth’li, TSPL yoki ESC/POS buyruqlarini tushunadigan printerlar mos keladi. O‘z yopiq protokoliga ega printerlar (masalan, Niimbot) to‘g‘ridan-to‘g‘ri chop etmaydi — ular uchun yorliqlarni rasm sifatida o‘z dasturiga uzating.",
+  "Нет связи — работаем по сохранённому прайсу": "Aloqa yo‘q — saqlangan narxlar bilan ishlayapmiz",
+  "Не удалось загрузить прайс": "Narxlarni yuklab bo‘lmadi",
+  "Картинка сохранена": "Rasm saqlandi",
+  "Не удалось отправить": "Yuborib bo‘lmadi",
+  "Текст скопирован": "Matn nusxalandi",
+  "Не удалось скопировать": "Nusxalab bo‘lmadi",
+  "Пациент удалён": "Bemor o‘chirildi",
+  "Откройте настройки Bluetooth вручную": "Bluetooth sozlamalarini qo‘lda oching",
+  "Завершить текущий выезд и начать новый?": "Joriy chiqishni yakunlab, yangisini boshlaysizmi?",
+  "Удалить этот набор?": "Bu to‘plam o‘chirilsinmi?",
+  "Название набора": "To‘plam nomi",
+  "Введите фамилию и имя": "Familiya va ismni kiriting",
+  "Телефон: 9 цифр после +998": "Telefon: +998 dan keyin 9 ta raqam",
+  "PIN — от 4 до 6 цифр": "PIN — 4 dan 6 gacha raqam",
+  "PIN-коды не совпадают": "PIN-kodlar mos kelmadi",
+  "Такой телефон уже зарегистрирован — войдите": "Bu telefon allaqachon ro‘yxatdan o‘tgan — kiring",
+  "Неверный телефон или PIN": "Telefon yoki PIN noto‘g‘ri",
+  "На этом телефоне ещё нет аккаунта — нажмите «Регистрация»": "Bu telefonda hali akkaunt yo‘q — «Ro‘yxatdan o‘tish»ni bosing",
+  "Заполните фамилию и имя": "Familiya va ismni to‘ldiring",
+  "ID счёта — только цифры (5–8)": "Hisob ID — faqat raqamlar (5–8)",
+  "Пациент с этим ID счёта уже есть в выезде. Заменить его?": "Bu hisob ID bilan bemor chiqishda bor. Almashtirilsinmi?",
+  "Прайс ещё не загружен — нужен интернет": "Narxlar hali yuklanmagan — internet kerak",
+  "Читаю лист заказа…": "Buyurtma varag‘i o‘qilmoqda…",
+  "Подготовка. Первый раз — до минуты.": "Tayyorgarlik. Birinchi marta — bir daqiqagacha.",
+  "Распознаю текст…": "Matn aniqlanmoqda…",
+  "Уточняю таблицу анализов…": "Tahlillar jadvali aniqlashtirilmoqda…",
+  "Загружаю модуль распознавания…": "Aniqlash moduli yuklanmoqda…",
+  "На фото не найден лист заказа de factum": "Suratda de factum buyurtma varag‘i topilmadi",
+  "Фото слишком маленькое — снимайте камерой": "Surat juda kichik — kamera bilan oling",
+  "Текст не читается: размыто, темно или лист не целиком в кадре": "Matn o‘qilmayapti: xira, qorong‘i yoki varaq kadrga to‘liq sig‘magan",
+  "Держите телефон ровно над листом, при хорошем свете": "Telefonni varaq ustida tekis, yaxshi yorug‘likda ushlang",
+  "Фото не удалось обработать": "Suratni qayta ishlab bo‘lmadi",
+  "Нет интернета: при первом сканировании он нужен, чтобы загрузить модуль распознавания": "Internet yo‘q: birinchi skanerlashda aniqlash modulini yuklash uchun kerak",
+  "Попробуйте ещё раз; если повторится — закройте и откройте приложение": "Qayta urinib ko‘ring; takrorlansa — ilovani yopib, qayta oching",
+  "Лист не распознан": "Varaq aniqlanmadi",
+  "Сфотографировать заново": "Qayta suratga olish",
+  "Не прочитано ФИО пациента": "Bemor F.I.Sh. o‘qilmadi",
+  "Анализы не распознаны — таблица услуг не попала в кадр или не читается": "Tahlillar aniqlanmadi — xizmatlar jadvali kadrga tushmagan yoki o‘qilmayapti",
+  "Не прочитана строка «Итого» — нельзя сверить сумму. Нижняя часть листа должна быть в кадре": "«Итого» qatori o‘qilmadi — summani solishtirib bo‘lmaydi. Varaqning pastki qismi kadrda bo‘lishi kerak",
+  "Не прочитана цена строки «Вызов на дом»": "«Вызов на дом» qatorining narxi o‘qilmadi",
+  "Не прочитан ID счёта — без него штрихкоды не совпадут с Aurora": "Hisob ID o‘qilmadi — usiz shtrix-kodlar Aurora bilan mos kelmaydi",
+  "ФИО не удалось перепроверить — сверьте с листом по буквам": "F.I.Sh.ni qayta tekshirib bo‘lmadi — varaq bilan harfma-harf solishtiring",
+  "Не прочитана дата рождения": "Tug‘ilgan sana o‘qilmadi",
+  "Не прочитан ID пациента": "Bemor ID o‘qilmadi",
+  "Лист заказа": "Buyurtma varag‘i",
+  "Проверьте распознанные данные": "Aniqlangan ma’lumotlarni tekshiring",
+  "Есть ошибки:": "Xatolar bor:",
+  "Как переснять:": "Qanday qayta olish:",
+  "лист целиком в кадре, телефон ровно над листом, хороший свет, без тени от руки и бликов, текст резкий.": "varaq to‘liq kadrda, telefon varaq ustida tekis, yaxshi yorug‘lik, qo‘l soyasi va yaltirashsiz, matn aniq.",
+  "Проверьте глазами:": "Ko‘z bilan tekshiring:",
+  "Муж": "Erkak",
+  "Жен": "Ayol",
+  "ID пациента": "Bemor ID",
+  "ID счёта (для штрихкода)": "Hisob ID (shtrix-kod uchun)",
+  "6 цифр": "6 ta raqam",
+  "Комментарий:": "Izoh:",
+  "проверьте по листу": "varaq bo‘yicha tekshiring",
+  "Убрать": "Olib tashlash",
+  "Анализы не распознаны": "Tahlillar aniqlanmadi",
+  "Не из прайса": "Narxnomada yo‘q",
+  "нет в прайсе": "narxnomada yo‘q",
+  "впишите цену с листа": "narxni varaqdan yozing",
+  "цена": "narx",
+  "Цена": "Narx",
+  "Скрыть распознанный текст": "Aniqlangan matnni yashirish",
+  "Показать распознанный текст": "Aniqlangan matnni ko‘rsatish",
+  "Переснять": "Qayta olish",
+  "Всё равно добавить": "Baribir qo‘shish",
+  "Печать на Bluetooth-принтер работает в приложении APK": "Bluetooth-printerda chop etish APK ilovasida ishlaydi",
+  "Модуль печати не найден — обновите приложение": "Chop etish moduli topilmadi — ilovani yangilang",
+  "Сначала выберите принтер": "Avval printerni tanlang",
+  "Ошибка печати": "Chop etish xatosi",
+  "Тестовая этикетка отправлена на принтер": "Sinov yorlig‘i printerga yuborildi",
+  "Этикетки сохранены картинками": "Yorliqlar rasm sifatida saqlandi",
+  "Не удалось передать этикетки": "Yorliqlarni uzatib bo‘lmadi",
+  "Нет доступа к Bluetooth": "Bluetooth’ga ruxsat yo‘q",
+  "Этикетки": "Yorliqlar",
+  "Телефон не поддерживает геолокацию": "Telefon geolokatsiyani qo‘llab-quvvatlamaydi",
+  "Адрес определён — проверьте и поправьте при необходимости": "Manzil aniqlandi — tekshiring va kerak bo‘lsa tuzating",
+  "Адрес не найден — записал координаты": "Manzil topilmadi — koordinatalar yozildi",
+  "Нет интернета — записал координаты": "Internet yo‘q — koordinatalar yozildi",
+  "Разрешите доступ к геолокации в настройках браузера": "Brauzer sozlamalarida geolokatsiyaga ruxsat bering",
+  "Не удалось определить место — выйдите на открытое место и повторите": "Joyni aniqlab bo‘lmadi — ochiq joyga chiqib, qayta urining",
+  "Геолокация недоступна — включите GPS": "Geolokatsiya mavjud emas — GPSni yoqing",
+  "Установка приложения": "Ilovani o‘rnatish",
+  "Установите приложение": "Ilovani o‘rnating",
+  "Установить": "O‘rnatish",
+  "Понятно": "Tushunarli",
+  "Позже": "Keyinroq",
+  "Приложение установлено": "Ilova o‘rnatildi",
+  "Иконка на главном экране, запуск в один тап, работает без интернета.": "Asosiy ekranda belgi, bir bosishda ishga tushadi, internetsiz ishlaydi.",
+  "de factum · прайс для медсестёр": "de factum · hamshiralar uchun narxlar",
+  "Нет связи — не удалось проверить": "Aloqa yo‘q — tekshirib bo‘lmadi",
+  "Обновляется…": "Yangilanmoqda…",
+  "Загружается…": "Yuklanmoqda…",
+  "Распаковывается…": "Ochilmoqda…",
+  "Открываю установку…": "O‘rnatish ochilmoqda…",
+  "Скачивается новая версия — откройте файл и установите": "Yangi versiya yuklanmoqda — faylni ochib o‘rnating",
+  "Подтвердите установку": "O‘rnatishni tasdiqlang",
+  "Android покажет окно установки — нажмите «Обновить». Данные сохранятся.": "Android o‘rnatish oynasini ko‘rsatadi — «Обновить» tugmasini bosing. Ma’lumotlar saqlanadi.",
+  "Если Android напишет «конфликтует с другим пакетом» — приложение установлено старой сборкой с другой подписью. Один раз удалите его и установите заново по ссылке из профиля.": "Agar Android «конфликтует с другим пакетом» deb yozsa — ilova boshqa imzoli eski yig‘ma bilan o‘rnatilgan. Uni bir marta o‘chirib, profildagi havola orqali qayta o‘rnating.",
+  "Сейчас приложение перезапустится": "Hozir ilova qayta ishga tushadi",
+  "Не удалось обновить": "Yangilab bo‘lmadi",
+  "Проверьте интернет и попробуйте ещё раз": "Internetni tekshirib, qayta urinib ko‘ring",
+  "Повторить": "Takrorlash",
+  "Успешно обновлено": "Muvaffaqiyatli yangilandi",
+  "Хорошо": "Yaxshi",
+  "Обновление не применилось": "Yangilanish qo‘llanmadi",
+  "За 30 минут не есть, не пить, не чистить зубы": "30 daqiqa oldin yemang, ichmang, tish yuvmang",
+  "Суточная моча: сбор за 24 часа": "Sutkalik siydik: 24 soat davomida yig‘iladi",
+  "Утренняя моча, средняя порция": "Ertalabki siydik, o‘rta qismi",
+  "Воздержание 2–7 дней": "2–7 kun tiyilish",
+  "Свежий кал в чистом контейнере": "Yangi najas, toza konteynerda",
+  "Строго натощак, тест длится 2 часа": "Qat’iy och qoringa, test 2 soat davom etadi",
+  "Через 2 часа после еды": "Ovqatdan 2 soat keyin",
+  "Натощак 8–12 часов": "Och qoringa, 8–12 soat",
+  "Утром до 10:00, натощак": "Ertalab 10:00 gacha, och qoringa",
+  "Утром, натощак, в покое": "Ertalab, och qoringa, tinch holatda",
+  "Женщинам: 2–5 день цикла, если врач не назначил иначе": "Ayollarga: siklning 2–5-kuni, shifokor boshqacha buyurmagan bo‘lsa",
+  "Женщинам: 21–23 день цикла, если врач не назначил иначе": "Ayollarga: siklning 21–23-kuni, shifokor boshqacha buyurmagan bo‘lsa",
+  "Утром, натощак": "Ertalab, och qoringa",
+  "2 дня без половых контактов и велосипеда": "2 kun jinsiy aloqa va velosipedsiz",
+  "Натощак": "Och qoringa",
+  "Желательно утром, натощак": "Imkon qadar ertalab, och qoringa",
+  "Желательно натощак или через 3 часа после лёгкой еды": "Imkon qadar och qoringa yoki yengil ovqatdan 3 soat keyin"
+};
+const UZ_RULES = [
+  [/^Версия ([\d.]+) от ([\d.]+)$/, 'Versiya $1, $2'], [/^([\d.]+) от ([\d.]+)( · APK)?$/, '$1, $2$3'], [/^Выезд №/, 'Chiqish №'], [/^Прайс (?=\d)/, 'Narxlar '],
+  [/^Точка на карте:/, 'Xaritadagi nuqta:'], [/(\d) м ›$/, '$1 m ›'], [/^([МЖ])(?= · |$)/, (m, a) => (a === 'М' ? 'E' : 'A')],
+  [/^Удалить пациента (.+) и его анализы\?$/, '$1 va uning tahlillari o‘chirilsinmi?'], [/^Удалить пациента /, 'Bemorni o‘chirish: '],
+  [/^(\d+) услуг в прайсе · выберите анализы$/, 'Narxnomada $1 ta xizmat · tahlillarni tanlang'], [/^найдено (\d+)$/, '$1 ta topildi'], [/^…и ещё (\d+)\. Уточните запрос\.$/, '…yana $1 ta. So‘rovni aniqlashtiring.'],
+  [/(\d+) анализ(а|ов)? выбрано/, '$1 ta tahlil tanlandi'], [/^Анализы, /, 'Tahlillar, '], [/(\d+) анализ(а|ов)?(?![а-яё])/g, '$1 ta tahlil'], [/(\d+) пациент(а|ов)?(?![а-яё])/g, '$1 ta bemor'],
+  [/^Скидка (\d+%)$/, 'Chegirma $1'], [/(^|; )Вызов на дом · /g, '$1Uyga chaqiruv · '], [/^объединено: /, 'birlashtirildi: '], [/^Наклеено (\d+) из (\d+)$/, '$2 tadan $1 tasi yopishtirildi'],
+  [/^Печать этикеток \((\d+)\)$/, 'Yorliqlarni chop etish ($1)'], [/^Принтер: /, 'Printer: '],
+  [/^В этот день выездов нет\.(?: Последний день с выездами: ([\d.]+)\.)?$/, (m, a) => 'Bu kuni chiqishlar yo‘q.' + (a ? ' Chiqishlar bo‘lgan oxirgi kun: ' + a + '.' : '')], [/^Открыть (?=\d)/, 'Ochish: '],
+  [/ · уровень (\d+)$/, ' · daraja $1'], [/^Обновить до версии /, 'Yangilash: versiya '], [/^Доступно обновление ([\d.]+) — обновить$/, '$1 yangilanishi mavjud — yangilash'],
+  [/^Прайс обновлён: /, 'Narxlar yangilandi: '], [/^Прайс актуален: /, 'Narxlar dolzarb: '], [/^Добро пожаловать, /, 'Xush kelibsiz, '], [/^Добавлено анализов: /, 'Qo‘shilgan tahlillar: '],
+  [/^Цены действительны на дату расчёта · прайс от/, 'Narxlar hisob sanasida amal qiladi · narxlar sanasi'], [/^Отправлено на принтер: (\d+) этикет(ка|ки|ок)$/, 'Printerga yuborildi: $1 ta yorliq'],
+  [/^Найдено сопряжённых устройств: /, 'Ulangan qurilmalar topildi: '], [/^Адрес найден, но точность низкая \(±(\d+) м\) — проверьте$/, 'Manzil topildi, lekin aniqlik past (±$1 m) — tekshiring'],
+  [/^Доступна версия /, 'Mavjud versiya: '], [/^У вас последняя версия: /, 'Sizda oxirgi versiya: '], [/^Теперь у вас версия /, 'Endi sizda versiya: '], [/^Осталась версия (.+)\. Попробуйте ещё раз из профиля\.$/, '$1 versiyasi qoldi. Profildan qayta urinib ko‘ring.'],
+  [/^Версия (.+)\. Не закрывайте приложение\.$/, 'Versiya $1. Ilovani yopmang.'], [/^Заказ от /, 'Buyurtma sanasi: '], [/ · проверить: (\d+)$/, ' · tekshirish: $1'],
+  [/^Есть ошибки \((\d+)\) — лучше переснять лист$/, 'Xatolar bor ($1) — varaqni qayta olgan ma’qul'], [/^Сумма сошлась с листом: /, 'Summa varaq bilan mos keldi: '],
+  [/^Все строки распознаны(, ФИО перепроверено)?\. Нажмите «Добавить»\.$/, (m, a) => 'Barcha qatorlar aniqlandi' + (a ? ', F.I.Sh. qayta tekshirildi' : '') + '. «Qo‘shish»ni bosing.'],
+  [/^Фото слишком маленькое \((.+) px\) — снимайте камерой, а не пересылайте сжатую картинку$/, 'Surat juda kichik ($1 px) — kamera bilan oling, siqilgan rasm yubormang'],
+  [/^Текст читается плохо \(чёткость (\d+)%\) — фото размыто, тёмное или с бликом$/, 'Matn yomon o‘qilmoqda (aniqlik $1%) — surat xira, qorong‘i yoki yaltiragan'],
+  [/^Сумма не сошлась: на листе (.+), распознано (.+) — не хватает (.+) \(пропущена строка\)$/, 'Summa mos kelmadi: varaqda $1, aniqlandi $2 — $3 yetishmayapti (qator tushib qolgan)'],
+  [/^Сумма не сошлась: на листе (.+), распознано (.+) — лишние (.+)$/, 'Summa mos kelmadi: varaqda $1, aniqlandi $2 — $3 ortiqcha'],
+  [/^Строка не найдена в прайсе: («.*»)( — сумма сошлась, проверьте название)?$/, (m, a, b) => 'Qator narxnomada topilmadi: ' + a + (b ? ' — summa mos keldi, nomini tekshiring' : '')], [/^Проверьте по листу: /, 'Varaq bo‘yicha tekshiring: '],
+  [/^ФИО прочитано двумя способами по-разному: («.*») и («.*») — сверьте по буквам или переснимите$/, 'F.I.Sh. ikki usulda turlicha o‘qildi: $1 va $2 — harfma-harf solishtiring yoki qayta oling'],
+  [/^Дата рождения прочитана по-разному: (.+) и (.+) — сверьте с листом$/, 'Tug‘ilgan sana turlicha o‘qildi: $1 va $2 — varaq bilan solishtiring'], [/^Телефон прочитан по-разному: (.+) и (.+) — сверьте с листом$/, 'Telefon turlicha o‘qildi: $1 va $2 — varaq bilan solishtiring'],
+  [/Сиреневая крышка/g, 'Binafsha qopqoq'], [/Жёлтая крышка/g, 'Sariq qopqoq'], [/Голубая крышка/g, 'Havorang qopqoq'], [/Белая крышка/g, 'Oq qopqoq'], [/\(Биохимия\)/g, '(Bioximiya)'], [/\(ЭДТА\)/g, '(EDTA)'], [/\(ПЦР\)/g, '(PZR)'],
+  [/Контейнер для мочи/g, 'Siydik uchun konteyner'], [/Контейнер для кала/g, 'Najas uchun konteyner'], [/Контейнер для слюны/g, 'So‘lak uchun konteyner'], [/Контейнер для эякулята/g, 'Eyakulyat uchun konteyner'],
+  [/Контейнер со средой для б\/п/g, 'Bakposev muhitli konteyner'], [/Предметное стекло/g, 'Buyum oynasi'], [/Набор пробирок \(уточнить\)/g, 'Probirkalar to‘plami (aniqlashtirish)'],
+  [/^Цельная кровь(?= ·)/, 'Butun qon'], [/^Сыворотка(?= ·)/, 'Zardob'], [/^Плазма цитрат(?= ·)/, 'Sitratli plazma'], [/^Моча(?= ·)/, 'Siydik'], [/^Кал(?= ·)/, 'Najas'], [/^Слюна(?= ·)/, 'So‘lak'], [/^Сперма(?= ·)/, 'Sperma'], [/^Мазок(?= ·)/, 'Surtma'], [/^По составу(?= ·)/, 'Tarkibiga ko‘ra'],
+  [/(\d) сум(?![а-яё])/g, '$1 so‘m']
+];
+function T(s) {
+  if (S.lang !== 'uz' || s == null) return s;
+  const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(String(s)), k = m[2]; if (!k || !/[А-Яа-яЁё]/.test(k)) return s;
+  if (UZ[k] !== undefined) return m[1] + UZ[k] + m[3];
+  let out = k; for (const [re, to] of UZ_RULES) out = out.replace(re, to);
+  return m[1] + out + m[3];
+}
+function trDom(root) {
+  if (S.lang !== 'uz' || !root || !root.querySelectorAll || !document.createTreeWalker) return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
+  nodes.forEach((n) => { const el = n.parentElement; if (!el || el.closest('[data-notr],svg,script,style,textarea')) return; const t = T(n.nodeValue); if (t !== n.nodeValue) n.nodeValue = t; });
+  root.querySelectorAll('[placeholder],[aria-label]').forEach((el) => ['placeholder', 'aria-label'].forEach((a) => { const v = el.getAttribute(a); if (v) { const t = T(v); if (t !== v) el.setAttribute(a, t); } }));
+}
+const ask = (msg) => confirm(T(msg));
+function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = T(msg); document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
 
 /* ---------- Иконки ---------- */
 const I = {
@@ -394,7 +741,7 @@ function setPrices(d) {
 /* ---------- Выезд / пациенты ---------- */
 const visit = () => S.visits.find((v) => v.id === S.visitId);
 function newVisit() {
-  const v = { id: uid(), no: String(S.visits.length + 1).padStart(4, '0'), created: Date.now(), addr: '', homeFee: 0, discount: 0, patients: [] };
+  const v = { id: uid(), no: String(S.visits.length + 1).padStart(4, '0'), created: Date.now(), addr: '', homeFee: 0, discount: 0, patients: [], nurse: S.me ? S.me.phone : '' };
   S.visits.push(v); S.visitId = v.id; save(); return v;
 }
 const patient = (id) => (visit() || { patients: [] }).patients.find((p) => p.id === id);
@@ -408,6 +755,132 @@ function vTotals(v) {
   const off = Math.round(an * (v.discount || 0) / 100);
   return { an, ex, off, fee: +v.homeFee || 0, total: an - off + ex + (+v.homeFee || 0) };
 }
+/* ---------- История, оплата, отчёт ---------- */
+const PAY = { cash: 'Наличные', card: 'Карта', click: 'Click', payme: 'Payme' };
+// Выезд, из которого ушли, запоминает свою сумму — чтобы смена цен в прайсе не меняла прошлые отчёты
+function closeVisit(v) { if (v && v.patients.length) { v.done = Date.now(); v.sum = vTotals(v).total; } }
+const vSum = (v) => (v.id !== S.visitId && v.sum != null) ? v.sum : vTotals(v).total;
+const dayKey = (d) => { d = new Date(d); const z = (x) => String(x).padStart(2, '0'); return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); };
+const dayLabel = (k) => String(k).split('-').reverse().join('.');
+const myVisits = () => S.visits.filter((v) => v.patients.length && (!v.nurse || !S.me || v.nurse === S.me.phone));
+function dayReport(k) {
+  const r = { day: k, visits: myVisits().filter((v) => dayKey(v.created) === k), patients: 0, tests: 0, total: 0, pay: {} };
+  r.visits.forEach((v) => {
+    const sum = vSum(v), key = v.pay || 'none';
+    r.patients += v.patients.length; r.tests += v.patients.reduce((a, p) => a + p.items.length, 0); r.total += sum; r.pay[key] = (r.pay[key] || 0) + sum;
+  });
+  return r;
+}
+const payRows = (r) => Object.keys(PAY).concat('none').filter((k) => r.pay[k]).map((k) => [k === 'none' ? 'Оплата не указана' : PAY[k], r.pay[k]]);
+const hhmm = (d) => dt(d).slice(11);
+function reportText(r) {
+  const me = S.me || { name: '', branch: '' };
+  return [T('Отчёт за смену') + ' ' + dayLabel(r.day), me.name + ' · ' + me.branch, '',
+    T('Выездов') + ': ' + r.visits.length, T('Пациентов') + ': ' + r.patients, T('Анализов') + ': ' + r.tests, '']
+    .concat(payRows(r).map((x) => T(x[0]) + ': ' + T(fmt(x[1]))), [T('Итого') + ': ' + T(fmt(r.total)), ''],
+      r.visits.map((v) => '№' + v.no + ' ' + hhmm(v.created) + ' · ' + v.patients.map(fioShort).join(', ') + ' · ' + T(fmt(vSum(v))) + (v.pay ? ' · ' + T(PAY[v.pay]) : ''))).join('\n');
+}
+// Строки документа для картинки: чек клиенту и отчёт за смену
+function receiptLines(v) {
+  const t = vTotals(v), me = S.me, L = [{ k: 'logo' }, { k: 'sub', l: T('Расчёт стоимости услуг') }, { k: 'hr' },
+    { k: 'row', l: T('Дата'), r: dt(Date.now()) }, { k: 'row', l: T('Медсестра'), r: me.name }, { k: 'row', l: T('Филиал'), r: me.branch }, { k: 'row', l: T('Выезд №'), r: v.no }, { k: 'hr' }];
+  v.patients.filter((p) => p.items.length || (p.extra || []).length).forEach((p) => {
+    L.push({ k: 'head', l: p.last + ' ' + p.first });
+    p.items.map((id) => P.byId[id]).filter(Boolean).forEach((it) => L.push({ k: 'row', l: it.name, r: fmt(it.price).replace(' сум', '') }));
+    (p.extra || []).forEach((x) => L.push({ k: 'row', l: x.name, r: fmt(x.price).replace(' сум', '') }));
+  });
+  if (t.fee) L.push({ k: 'row', l: T('Выезд на дом'), r: fmt(t.fee).replace(' сум', '') });
+  if (t.off) L.push({ k: 'row', l: T('Скидка') + ' ' + v.discount + '%', r: '− ' + fmt(t.off).replace(' сум', '') });
+  L.push({ k: 'total', l: T('Итого к оплате'), r: T(fmt(t.total)) });
+  if (v.pay) L.push({ k: 'row', l: T('Оплата'), r: T(PAY[v.pay]) });
+  L.push({ k: 'note', l: T('Цены действительны на дату расчёта · прайс от') + ' ' + priceDate() });
+  return L;
+}
+function reportLines(r) {
+  const me = S.me, L = [{ k: 'logo' }, { k: 'sub', l: T('Отчёт за смену') + ' ' + dayLabel(r.day) }, { k: 'hr' },
+    { k: 'row', l: T('Медсестра'), r: me.name }, { k: 'row', l: T('Филиал'), r: me.branch }, { k: 'hr' },
+    { k: 'row', l: T('Выездов'), r: String(r.visits.length) }, { k: 'row', l: T('Пациентов'), r: String(r.patients) }, { k: 'row', l: T('Анализов'), r: String(r.tests) }, { k: 'hr' }];
+  payRows(r).forEach((x) => L.push({ k: 'row', l: T(x[0]), r: T(fmt(x[1])) }));
+  L.push({ k: 'total', l: T('Итого'), r: T(fmt(r.total)) }, { k: 'head', l: T('Выезды') });
+  r.visits.forEach((v) => L.push({ k: 'row', l: '№' + v.no + ' · ' + hhmm(v.created) + ' · ' + v.patients.map(fioShort).join(', ') + (v.pay ? ' · ' + T(PAY[v.pay]) : ''), r: fmt(vSum(v)).replace(' сум', '') }));
+  return L;
+}
+function docCanvas(L) {
+  const W = 720, PAD = 40, F = 'Onest, system-ui, sans-serif', c = document.createElement('canvas'); let g = c.getContext('2d');
+  const font = (k) => k === 'logo' ? '600 44px Poppins, ' + F : k === 'total' ? '800 30px ' + F : k === 'head' ? '800 23px ' + F : k === 'sub' ? '600 23px ' + F : k === 'note' ? '400 19px ' + F : '400 22px ' + F;
+  const wrap = (txt, max) => { const out = []; let cur = ''; String(txt).split(/\s+/).forEach((w) => { const t = cur ? cur + ' ' + w : w; if (cur && g.measureText(t).width > max) { out.push(cur); cur = w; } else cur = t; }); if (cur) out.push(cur); return out; };
+  const plan = () => { let y = PAD; const ops = []; L.forEach((x) => {
+    if (x.k === 'hr') { ops.push({ hr: y + 8 }); y += 22; return; }
+    if (x.k === 'logo') { ops.push({ f: font('logo'), t: 'de factum', x: W / 2, y: y + 44, a: 'center', c: '#0A0A0A' }); y += 66; return; }
+    g.font = font(x.k);
+    const lh = x.k === 'total' ? 40 : x.k === 'note' ? 26 : 30, rw = x.r ? g.measureText(x.r).width + 24 : 0;
+    if (x.k === 'head' || x.k === 'total') y += 12;
+    const lines = wrap(x.l, W - 2 * PAD - rw), center = x.k === 'sub' || x.k === 'note';
+    lines.forEach((ln, i) => ops.push({ f: font(x.k), t: ln, x: center ? W / 2 : PAD, y: y + (i + 1) * lh - 8, a: center ? 'center' : 'left', c: x.k === 'head' || x.k === 'total' ? '#075E6C' : x.k === 'note' ? '#475569' : '#0F172A' }));
+    if (x.r) ops.push({ f: x.k === 'total' ? font('total') : '600 22px ' + F, t: x.r, x: W - PAD, y: y + lh - 8, a: 'right', c: x.k === 'total' ? '#075E6C' : '#0F172A' });
+    y += lines.length * lh + (x.k === 'row' ? 8 : 10);
+  }); return { ops, h: y + PAD - 10 }; };
+  const pl = plan(); c.width = W; c.height = pl.h; g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, W, pl.h);
+  pl.ops.forEach((o) => { if (o.hr != null) { g.fillStyle = '#E2E8F0'; g.fillRect(PAD, o.hr, W - 2 * PAD, 2); return; } g.font = o.f; g.textAlign = o.a; g.fillStyle = o.c; g.fillText(o.t, o.x, o.y); });
+  return c;
+}
+async function sharePng(canvas, name, title) {
+  try {
+    if (IS_APK && LP()) { await LP().share({ title, files: [{ name, data: canvas.toDataURL('image/png').split(',')[1] }] }); return; }
+    const file = await new Promise((ok) => canvas.toBlob((b) => ok(new File([b], name, { type: 'image/png' })), 'image/png'));
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title }); return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; a.click(); toast('Картинка сохранена');
+  } catch (e) { if (!e || e.name !== 'AbortError') toast(e && e.message ? e.message : 'Не удалось отправить'); }
+}
+async function docShare(L, name, title) { try { await Promise.all([document.fonts.load('600 44px Poppins', 'de'), document.fonts.load('800 30px Onest', 'Жё1'), document.fonts.load('400 22px Onest', 'Жё1')]); } catch (e) {} await sharePng(docCanvas(L), name, title); }
+async function copyText(txt) {
+  try { await navigator.clipboard.writeText(txt); toast('Текст скопирован'); }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e2) {} ta.remove(); toast(ok ? 'Текст скопирован' : 'Не удалось скопировать'); }
+}
+
+/* ---------- Подготовка к анализам (общие правила) ---------- */
+const PREP = [
+  [/слюн/i, null, 'За 30 минут не есть, не пить, не чистить зубы'],
+  [/суточн/i, null, 'Суточная моча: сбор за 24 часа'],
+  [/нечипоренко|анализ мочи/i, /^Исследование мочи$/, 'Утренняя моча, средняя порция'],
+  [/спермограмм/i, /эякулят/i, 'Воздержание 2–7 дней'],
+  [null, /^Исследования кала$/, 'Свежий кал в чистом контейнере'],
+  [/аллерген|immunocap|гликиров|антител|через час|инсулиноподобн|натрийуретич|инкретин/i, null, ''],
+  [/глюкозотолерант/i, null, 'Строго натощак, тест длится 2 часа'],
+  [/постпрандиальн/i, null, 'Через 2 часа после еды'],
+  [/глюкоз|инсулин|homa|пептид|липид|холестерин|триглицерид|липопротеин/i, null, 'Натощак 8–12 часов'],
+  [/кортизол/i, null, 'Утром до 10:00, натощак'],
+  [/пролактин/i, null, 'Утром, натощак, в покое'],
+  [/фолликулостимулир|лютеинизир|эстрадиол/i, null, 'Женщинам: 2–5 день цикла, если врач не назначил иначе'],
+  [/^прогестерон/i, null, 'Женщинам: 21–23 день цикла, если врач не назначил иначе'],
+  [/тестостерон/i, null, 'Утром, натощак'],
+  [/простатспецифич|пса /i, null, '2 дня без половых контактов и велосипеда'],
+  [null, /^Коагулограмма$/, 'Натощак'],
+  [/железо|ферритин/i, null, 'Утром, натощак'],
+  [null, /^Биохимические исследования$/, 'Натощак 8–12 часов'],
+  [null, /щитовидной/i, 'Желательно утром, натощак'],
+  [/общий анализ крови/i, null, 'Желательно натощак или через 3 часа после лёгкой еды']
+];
+function prepFor(it) {
+  const cat = (P.catById[it.cat] || {}).name || '';
+  for (const [n, c, txt] of PREP) if ((n && n.test(it.name)) || (c && c.test(cat))) return txt;
+  return '';
+}
+const prepList = (p) => [...new Set(p.items.map((id) => P.byId[id]).filter(Boolean).map(prepFor).filter((x) => x && !(p.sex === 'm' && /^Женщинам/.test(x))))];
+
+/* ---------- Наборы анализов ---------- */
+const SETS = [
+  { name: 'Щитовидная железа', ids: [457, 456, 459, 454] },
+  { name: 'Печень', ids: [332, 326, 893, 347, 340] },
+  { name: 'Почки', ids: [348, 325, 328, 684] },
+  { name: 'Сахар и диабет', ids: [342, 468, 460] },
+  { name: 'Анемия', ids: [892, 300, 10633, 296, 299] },
+  { name: 'Базовый: кровь, моча, глюкоза', ids: [892, 684, 342] }
+];
+const allSets = () => SETS.map((x, i) => ({ ...x, key: 'b' + i })).concat((S.sets || []).map((x, i) => ({ ...x, key: 'o' + i, own: true })));
+const setItems = (x) => x.ids.map((id) => P.byId[id]).filter(Boolean);
+
 function groupTubes(p) {
   const groups = {};
   p.items.forEach((id) => {
@@ -423,13 +896,14 @@ function groupTubes(p) {
 /* ---------- Рендер ---------- */
 function render() {
   const app = document.getElementById('app');
-  const views = { auth: vAuth, printer: vPrinter, scan: vScan, visit: vVisit, patient: vPatient, catalog: vCatalog, tubes: vTubes, client: vClient, profile: vProfile };
+  const views = { history: vHistory, auth: vAuth, printer: vPrinter, scan: vScan, visit: vVisit, patient: vPatient, catalog: vCatalog, tubes: vTubes, client: vClient, profile: vProfile };
   if (!S.me) UI.view = 'auth';
   // горизонтальные ленты (категории) не должны убегать в начало при перерисовке того же экрана
   const strip = UI._view === UI.view && app.querySelector ? app.querySelector('.cats') : null, stripX = strip ? strip.scrollLeft : 0;
   UI._view = UI.view;
   app.innerHTML = (views[UI.view] || vVisit)();
   if (stripX) { const n = app.querySelector('.cats'); if (n) n.scrollLeft = stripX; }
+  trDom(app);
   if (UI.view === 'tubes') drawBarcodes();
   if (UI.view === 'catalog' && UI._focus) { const i = document.getElementById('q'); if (i) { i.focus(); const l = i.value.length; i.setSelectionRange(l, l); } UI._focus = false; }
   window.scrollTo(0, UI._keepScroll ? window.scrollY : 0); UI._keepScroll = false;
@@ -443,6 +917,7 @@ function vAuth() {
   <div class="hero">
     ${logo(46)}
     <span style="font-size:12px;font-weight:600;letter-spacing:3px;color:var(--brand-deep);text-transform:uppercase">Прайс для медсестёр</span>
+    <div class="seg" style="grid-template-columns:repeat(2,auto);padding:2px;border-radius:11px">${[['ru', 'Русский'], ['uz', 'O‘zbekcha']].map((x) => `<button type="button" class="${(S.lang || 'ru') === x[0] ? 'on' : ''}" data-act="lang" data-v="${x[0]}" data-notr style="height:30px;font-size:12.5px;border-radius:9px;padding:0 12px">${x[1]}</button>`).join('')}</div>
   </div>
   <form class="body" style="padding-bottom:40px" data-submit="${reg ? 'register' : 'login'}" autocomplete="on">
     <div><h1 class="h1">${reg ? 'Регистрация' : 'Вход для медсестёр'}</h1><div class="sub" style="margin-top:6px">${reg ? 'Данные сотрудника для расчётов и этикеток' : 'Прайс и расчёт стоимости услуг на выезде'}</div></div>
@@ -488,7 +963,7 @@ function vVisit() {
       <button data-act="geo" aria-label="Определить адрес по геолокации" ${UI.geoBusy ? 'disabled' : ''} style="width:40px;height:40px;border-radius:12px;border:0;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0;${UI.geoBusy ? 'opacity:.55' : ''}">${UI.geoBusy ? '<span class="spin"></span>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>'}</button></div>
     ${v.geo ? `<a href="https://yandex.uz/maps/?pt=${v.geo.lon},${v.geo.lat}&z=17&l=map" target="_blank" rel="noopener" class="sub" style="text-decoration:none;color:var(--brand-deep);font-weight:600;margin-top:-4px">Точка на карте: ${v.geo.lat.toFixed(5)}, ${v.geo.lon.toFixed(5)} · ±${v.geo.acc} м ›</a>` : ''}
   </div>
-  <div class="body" style="padding-bottom:240px">
+  <div class="body" style="padding-bottom:260px">
     ${v.patients.map((p) => {
       const tubes = groupTubes(p); const marked = tubes.length && tubes.every((x) => x.stuck);
       return `<div class="card pad" style="display:flex;flex-direction:column;gap:12px">
@@ -497,6 +972,7 @@ function vVisit() {
           <b class="num">${fmt(pSum(p))}</b></div>
         ${(p.extra || []).length ? `<div class="sub" style="margin-top:-4px">${p.extra.map((x) => esc(x.name) + ' · ' + fmt(x.price)).join('; ')}${p.pid ? ' · ID ' + esc(p.pid) : ''}</div>` : ''}
         ${tubes.length ? `<div class="chips">${tubes.map((x) => `<span class="chip">${I.tube(x.cap)}${esc(x.name.replace(/ \((ЭДТА|ПЦР)\)/, ''))}${x.no ? ' (' + String(x.no).padStart(2, '0') + ')' : ''}${x.tests.length > 1 ? ' ×' + x.tests.length : ''}</span>`).join('')}</div>` : ''}
+        ${prepList(p).length ? `<div class="note warn" style="padding:9px 12px;font-size:12.5px"><span><b>Подготовка:</b> <span data-notr>${prepList(p).map((x) => esc(T(x))).join('; ')}</span></span></div>` : ''}
         <div class="grid2">
           <button class="btn light small" data-act="catalog" data-v="${p.id}">${I.plus('#0F172A', 15)} Анализы</button>
           ${p.items.length ? `<button class="btn small" data-act="tubes" data-v="${p.id}" style="${marked ? 'background:var(--okbg);color:var(--ok);box-shadow:none' : ''}">${marked ? I.check('#0F6B3A') + ' Промаркировано' : I.bars() + ' Пробирки'}</button>` : `<button class="btn light small" data-act="editPatient" data-v="${p.id}">Изменить</button>`}
@@ -513,15 +989,18 @@ function vVisit() {
       <button class="btn light small" data-act="newPatient">${I.plus('#0F172A', 15)} Вручную</button>
     </div>
     ${v.patients.length ? `<button class="btn light small" data-act="newVisit" style="color:var(--muted)">Завершить и начать новый выезд</button>` : ''}
+    <button class="btn light small" data-act="history">История выездов и отчёт за смену</button>
     ${UI.newVer ? `<button class="btn small" data-act="appUpdate">Доступно обновление ${esc(UI.newVer)} — обновить</button>` : `<div class="sub" style="text-align:center;font-size:12px">Версия ${APP_VERSION} от ${APP_DATE}</div>`}
   </div>
   <div class="bottom"><div>
     <div class="sum-row"><span>Анализы${v.patients.length ? ', ' + v.patients.length + ' ' + plural(v.patients.length, 'пациент', 'пациента', 'пациентов') : ''}</span><span class="num">${fmt(t.an)}</span></div>
     ${t.ex ? `<div class="sum-row"><span>Вызов на дом и прочее</span><span class="num">${fmt(t.ex)}</span></div>` : ''}
-    <div class="row between" style="gap:8px"><span class="sub">Скидка</span>
+    <div class="row between" style="gap:8px"><span class="sub">Скидка${t.off ? ` <b class="num" style="color:var(--ok);font-weight:600">− ${fmt(t.off)}</b>` : ''}</span>
       <div class="seg" style="grid-template-columns:repeat(4,44px);padding:2px;border-radius:11px">${[0, 5, 10, 15].map((d) => `<button class="${(v.discount || 0) === d ? 'on' : ''}" data-act="disc" data-v="${d}" style="height:28px;font-size:12px;border-radius:9px">${d ? d + '%' : 'Нет'}</button>`).join('')}</div>
     </div>
-    ${t.off ? `<div class="sum-row"><span>Скидка ${v.discount}%</span><span class="num" style="color:var(--ok)">− ${fmt(t.off)}</span></div>` : ''}
+    <div class="row between" style="gap:8px"><span class="sub">Оплата</span>
+      <div class="seg" style="grid-template-columns:repeat(4,auto);padding:2px;border-radius:11px">${Object.keys(PAY).map((k) => `<button class="${v.pay === k ? 'on' : ''}" data-act="pay" data-v="${k}" style="height:28px;font-size:12px;border-radius:9px;padding:0 9px">${PAY[k]}</button>`).join('')}</div>
+    </div>
     <div class="total"><span style="font-weight:700">Итого</span><b>${fmt(t.total)}</b></div>
     <button class="btn" data-act="go" data-v="client" ${t.total ? '' : 'disabled'}>${I.eye} Показать клиенту</button>
   </div></div>`;
@@ -570,9 +1049,16 @@ function vCatalog() {
     hits = P.items.map((it) => [it, score(it)]).filter((x) => x[1] >= 0)
       .sort((a, b) => b[1] - a[1] || a[0].name.length - b[0].name.length).map((x) => x[0]);
   }
-  const list = UI.cat ? P.items.filter((it) => it.cat === UI.cat) : P.items.filter((it) => sel.has(it.id));
+  const list = UI.cat > 0 ? P.items.filter((it) => it.cat === UI.cat) : P.items.filter((it) => sel.has(it.id));
   const hl = (name) => { if (!q) return esc(name); const w = q.split(/\s+/)[0]; const i = name.toLowerCase().replace(/ё/g, 'е').indexOf(w); return i < 0 ? esc(name) : esc(name.slice(0, i)) + '<mark>' + esc(name.slice(i, i + w.length)) + '</mark>' + esc(name.slice(i + w.length)); };
-  const row = (it) => `<button class="item ${sel.has(it.id) ? 'on' : ''}" data-act="toggle" data-v="${it.id}"><span class="check">${sel.has(it.id) ? I.check() : ''}</span><span class="item-t"><b>${esc(it.name)}</b><span>${esc((P.catById[it.cat] || {}).name || '')}</span></span><span class="price">${fmt(it.price)}</span></button>`;
+  const row = (it) => `<button class="item ${sel.has(it.id) ? 'on' : ''}" data-act="toggle" data-v="${it.id}"><span class="check">${sel.has(it.id) ? I.check() : ''}</span><span class="item-t"><b>${esc(it.name)}</b><span>${esc((P.catById[it.cat] || {}).name || '')}</span>${prepFor(it) ? `<span class="prep">${esc(prepFor(it))}</span>` : ''}</span><span class="price">${fmt(it.price)}</span></button>`;
+  const setCard = (x) => { const its = setItems(x), sum = its.reduce((a, it) => a + it.price, 0), have = its.every((it) => sel.has(it.id));
+    return `<div class="card pad" style="display:flex;flex-direction:column;gap:8px">
+      <div class="row between"><b style="font-size:16px"${x.own ? ' data-notr' : ''}>${esc(x.name)}</b><b class="num">${fmt(sum)}</b></div>
+      <div class="sub" data-notr style="line-height:1.45">${its.map((it) => esc(it.name.replace(/ \(.*$/, ''))).join(' · ')}</div>
+      <div class="row between"><span class="sub">${its.length} ${plural(its.length, 'анализ', 'анализа', 'анализов')}</span>
+        <span class="row">${x.own ? `<button class="linkbtn" data-act="setDel" data-v="${x.key}" style="color:var(--bad)">Удалить</button>` : ''}
+        <button class="btn small" style="width:auto;padding:0 16px" data-act="setAdd" data-v="${x.key}" ${have || !its.length ? 'disabled' : ''}>${have ? 'Уже добавлено' : 'Добавить'}</button></span></div></div>`; };
   return `
   <div class="top">
     <div class="row"><button class="iconbtn" data-act="go" data-v="visit" aria-label="Назад">${I.back}</button>
@@ -589,11 +1075,16 @@ function vCatalog() {
   <div class="body" style="padding-bottom:140px">
     <div class="cats">
       <button class="cat ${!UI.cat ? 'on' : ''}" data-act="cat" data-v="0">Выбрано <small>${p.items.length}</small></button>
+      <button class="cat ${UI.cat === -1 ? 'on' : ''}" data-act="cat" data-v="-1">Наборы <small>${allSets().length}</small></button>
       ${P.cats.filter((c) => c.n).map((c) => `<button class="cat ${UI.cat === c.id ? 'on' : ''}" data-act="cat" data-v="${c.id}">${esc(c.name)} <small>${c.n}</small></button>`).join('')}
     </div>
     ${!P.items.length ? `<div class="note warn">Прайс загружается… Нужен интернет при первом запуске.</div>` : ''}
+    ${UI.cat === -1 ? `<div class="row between" style="padding:0 4px"><span class="h2">Наборы анализов</span><span class="sub">${allSets().length}</span></div>
+    ${allSets().map(setCard).join('')}
+    <div class="note info">Свой набор: отметьте анализы, откройте «Выбрано» и нажмите «Сохранить как набор».</div>` : `
     <div class="row between" style="padding:0 4px"><span class="h2">${UI.cat ? esc(P.catById[UI.cat].name) : 'Выбранные анализы'}</span><span class="sub">${list.length}</span></div>
     <div class="list">${list.map(row).join('') || `<div class="empty">Пока ничего не выбрано.<br>Найдите анализ через поиск или выберите категорию выше.</div>`}</div>
+    ${!UI.cat && p.items.length > 1 ? `<button class="btn light small" data-act="setSave">Сохранить как набор</button>` : ''}`}
   </div>
   <div class="bottom"><div><div class="row between">
     <div><div class="sub">${p.items.length} ${plural(p.items.length, 'анализ', 'анализа', 'анализов')} выбрано</div><b style="font-size:22px;font-weight:800" class="num">${fmt(pSum(p))}</b></div>
@@ -603,7 +1094,7 @@ function vCatalog() {
 
 function labelHtml(p, t, i) {
   const v = visit();
-  return `<div class="label"><svg class="bc" data-code="${t.code}"></svg><div class="code">${t.code}</div>
+  return `<div class="label" data-notr><svg class="bc" data-code="${t.code}"></svg><div class="code">${t.code}</div>
     <div class="l1">${dt(v.created)}</div><div class="l2">${esc(p.pid || p.order)} ${esc(fioShort(p))}</div>
     <div class="l3">${esc(t.name)}</div><div class="l4">${esc(t.an)}</div></div>`;
 }
@@ -663,10 +1154,42 @@ function vClient() {
           ${(p.extra || []).map((x) => `<div class="rline"><span style="line-height:1.35">${esc(x.name)}</span><b class="num" style="font-weight:600">${fmt(x.price).replace(' сум', '')}</b></div>`).join('')}`).join('')}
         ${t.fee ? `<div class="rline"><span>Выезд на дом</span><b class="num" style="font-weight:600">${fmt(t.fee).replace(' сум', '')}</b></div>` : ''}
         ${t.off ? `<div class="rline" style="color:var(--ok)"><span>Скидка ${v.discount}%</span><b class="num">− ${fmt(t.off).replace(' сум', '')}</b></div>` : ''}
+        ${v.pay ? `<div class="rline"><span>Оплата</span><b style="font-weight:600">${PAY[v.pay]}</b></div>` : ''}
       </div>
       <div class="paybox"><span style="font-size:13px;opacity:.85">Итого<br>к оплате</span><b>${fmt(t.total).replace(' сум', '')} <span style="font-size:16px">сум</span></b></div>
     </div>
     <div class="sub" style="text-align:center">Цены действительны на дату расчёта · прайс от ${esc(priceDate())}</div>
+    <button class="btn" data-act="receipt" style="background:#fff;color:var(--brand-deep);box-shadow:none;border:1px solid var(--soft)">${I.share.replace('#0F172A', '#075E6C')} Отправить чек клиенту</button>
+  </div>`;
+}
+
+function vHistory() {
+  const today = dayKey(Date.now()), k = UI.day || today, r = dayReport(k);
+  const days = [...new Set(myVisits().map((v) => dayKey(v.created)))].sort();
+  return header('Выезды и отчёт', esc(S.me.name), 'visit') + `
+  <div class="body" style="padding-bottom:40px">
+    <div class="row between">
+      <button class="iconbtn" data-act="dayShift" data-v="-1" aria-label="Предыдущий день">${I.back}</button>
+      <div style="text-align:center"><b style="font-size:18px">${dayLabel(k)}</b><div class="sub">${k === today ? 'Сегодня' : 'Отчёт за день'}</div></div>
+      <button class="iconbtn" data-act="dayShift" data-v="1" aria-label="Следующий день" ${k >= today ? 'disabled style="opacity:.35"' : ''}><span style="display:flex;transform:rotate(180deg)">${I.back}</span></button>
+    </div>
+    <div class="card pad" style="display:flex;flex-direction:column;gap:12px">
+      <div class="stat3"><div><b>${r.visits.length}</b><span>Выездов</span></div><div><b>${r.patients}</b><span>Пациентов</span></div><div><b>${r.tests}</b><span>Анализов</span></div></div>
+      ${payRows(r).map((x) => `<div class="sum-row"><span>${x[0]}</span><span class="num">${fmt(x[1])}</span></div>`).join('')}
+      <div class="total" style="margin:0"><span style="font-weight:700">Итого за день</span><b>${fmt(r.total)}</b></div>
+    </div>
+    ${r.visits.length ? `<div class="grid2">
+      <button class="btn small" data-act="reportShare">${I.share.replace('#0F172A', '#fff')} Отправить отчёт</button>
+      <button class="btn light small" data-act="reportCopy">Скопировать текст</button>
+    </div>
+    <div class="list">${r.visits.slice().reverse().map((v) => `<button class="vrow" data-act="openVisit" data-v="${v.id}">
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+        <b style="font-size:15px">№${v.no} · ${hhmm(v.created)}${v.id === S.visitId ? ' <span class="paytag">текущий</span>' : ''}</b>
+        <span class="sub" data-notr>${v.patients.map((p) => esc(fioShort(p))).join(', ')}${v.addr ? ' · ' + esc(v.addr) : ''}</span>
+        <span>${v.pay ? `<span class="paytag">${PAY[v.pay]}</span>` : `<span class="paytag none">Оплата не указана</span>`}</span>
+      </span><b class="num">${fmt(vSum(v))}</b></button>`).join('')}</div>
+    <div class="sub" style="text-align:center">Нажмите на выезд, чтобы открыть его снова</div>` : `<div class="note info">В этот день выездов нет.${days.length ? ' Последний день с выездами: ' + dayLabel(days[days.length - 1]) + '.' : ''}</div>
+    ${days.length && days[days.length - 1] !== k ? `<button class="btn light small" data-act="dayGo" data-v="${days[days.length - 1]}">Открыть ${dayLabel(days[days.length - 1])}</button>` : ''}`}
   </div>`;
 }
 
@@ -684,6 +1207,9 @@ function vProfile() {
       <div class="row between"><span>Выездов на телефоне</span><b>${S.visits.length}</b></div>
       <button class="btn light small" data-act="reloadPrices">${I.sync} Проверить обновление цен</button>
     </div>
+    <div class="card pad row between"><span>Язык</span>
+      <div class="seg" style="grid-template-columns:repeat(2,auto);padding:2px;border-radius:11px">${[['ru', 'Русский'], ['uz', 'O‘zbekcha']].map((x) => `<button class="${(S.lang || 'ru') === x[0] ? 'on' : ''}" data-act="lang" data-v="${x[0]}" data-notr style="height:32px;font-size:13px;border-radius:9px;padding:0 12px">${x[1]}</button>`).join('')}</div></div>
+    <button class="btn light" data-act="history">История выездов и отчёт за смену</button>
     <button class="card pad row" data-act="go" data-v="printer" style="width:100%;text-align:left;cursor:pointer">
       <span style="width:44px;height:44px;border-radius:14px;background:var(--tint);display:flex;align-items:center;justify-content:center;flex-shrink:0">${I.print('#075E6C')}</span>
       <span style="flex:1"><b style="font-size:16px;display:block">Принтер этикеток</b><span class="sub">${S.printer && S.printer.address ? esc(S.printer.name) + ' · ' + (S.printer.proto === 'escpos' ? 'ESC/POS' : 'TSPL') : 'Не настроен'}</span></span>
@@ -706,7 +1232,7 @@ document.addEventListener('click', (e) => {
     case 'go': go(v); break;
     case 'newPatient': UI.editPatient = null; go('patient'); break;
     case 'editPatient': UI.editPatient = { ...patient(v) }; go('patient'); break;
-    case 'delPatient': { const dp = patient(v); if (dp && confirm('Удалить пациента ' + dp.last + ' ' + dp.first + ' и его анализы?')) { vis.patients = vis.patients.filter((p) => p.id !== v); save(); UI._keepScroll = UI.view === 'visit'; go('visit'); toast('Пациент удалён'); } break; }
+    case 'delPatient': { const dp = patient(v); if (dp && ask('Удалить пациента ' + dp.last + ' ' + dp.first + ' и его анализы?')) { vis.patients = vis.patients.filter((p) => p.id !== v); save(); UI._keepScroll = UI.view === 'visit'; go('visit'); toast('Пациент удалён'); } break; }
     case 'sex': { const f = document.querySelector('form[data-submit="patient"]'); UI.editPatient = { ...(UI.editPatient || {}), ...formObj(f), sex: v }; render(); break; }
     case 'catalog': go('catalog', { patientId: v, q: '', cat: 0 }); break;
     case 'tubes': go('tubes', { patientId: v }); break;
@@ -729,7 +1255,19 @@ document.addEventListener('click', (e) => {
     case 'prTest': printTest(); break;
     case 'prForget': S.printer = null; save(); render(); break;
     case 'disc': vis.discount = +v; save(); UI._keepScroll = true; render(); break;
-    case 'newVisit': if (confirm('Завершить текущий выезд и начать новый?')) { newVisit(); go('visit'); } break;
+    case 'newVisit': if (ask('Завершить текущий выезд и начать новый?')) { closeVisit(vis); newVisit(); go('visit'); } break;
+    case 'pay': vis.pay = vis.pay === v ? '' : v; save(); UI._keepScroll = true; render(); break;
+    case 'history': go('history', { day: dayKey(Date.now()) }); break;
+    case 'dayShift': { const d = new Date((UI.day || dayKey(Date.now())) + 'T12:00:00'); d.setDate(d.getDate() + (+v)); if (dayKey(d) <= dayKey(Date.now())) { UI.day = dayKey(d); render(); } break; }
+    case 'dayGo': UI.day = v; render(); break;
+    case 'openVisit': if (v !== S.visitId) { closeVisit(vis); S.visitId = v; save(); } go('visit'); break;
+    case 'reportShare': { const r = dayReport(UI.day || dayKey(Date.now())); docShare(reportLines(r), 'otchet-' + r.day + '.png', T('Отчёт за смену')); break; }
+    case 'reportCopy': copyText(reportText(dayReport(UI.day || dayKey(Date.now())))); break;
+    case 'receipt': docShare(receiptLines(vis), 'chek-' + vis.no + '.png', T('Расчёт стоимости услуг')); break;
+    case 'lang': S.lang = v; save(); UI._keepScroll = true; render(); break;
+    case 'setAdd': { const p = patient(UI.patientId), x = allSets().find((q) => q.key === v); if (!p || !x) break; const add = setItems(x).map((it) => it.id).filter((id) => !p.items.includes(id)); p.items.push(...add); save(); UI._keepScroll = true; render(); toast('Добавлено анализов: ' + add.length); break; }
+    case 'setDel': { const i = +String(v).slice(1); if (ask('Удалить этот набор?')) { S.sets.splice(i, 1); save(); UI._keepScroll = true; render(); } break; }
+    case 'setSave': { const p = patient(UI.patientId); const name = (prompt(T('Название набора'), '') || '').trim().slice(0, 40); if (!p || !name) break; S.sets = S.sets || []; S.sets.push({ name, ids: p.items.slice() }); save(); toast('Набор сохранён'); break; }
     case 'reloadPrices': loadPrices(true); break;
     case 'appCheck': checkUpdate(true); break;
     case 'appUpdate': overlay(''); applyUpdate(); break;
@@ -787,7 +1325,7 @@ document.addEventListener('submit', (e) => {
     if (!sh.last || !sh.first) { toast('Заполните фамилию и имя'); return; }
     if (sh.order && !/^\d{5,8}$/.test(sh.order)) { toast('ID счёта — только цифры (5–8)'); return; }
     const dup = sh.order && v.patients.find((x) => String(x.order) === sh.order);
-    if (dup && !confirm('Пациент с этим ID счёта уже есть в выезде. Заменить его?')) return;
+    if (dup && !ask('Пациент с этим ID счёта уже есть в выезде. Заменить его?')) return;
     if (dup) v.patients = v.patients.filter((x) => x !== dup);
     const p = { id: uid(), last: sh.last, first: sh.first, middle: sh.middle, dob: sh.dob, sex: sh.sex || 'f', phone: sh.phone, pid: sh.pid, scanned: true,
       items: m.items.map((x) => x.id), extra: m.extra.filter((x) => x.price > 0).map((x) => ({ name: x.name, price: x.price })) };
@@ -807,7 +1345,7 @@ function scanKeep() { // переносим правки из формы в со
   if ('phone' in o) sh.phone = o.phone.replace(/\D/g, '').slice(-9);
   UI.scan.match.extra.forEach((x, i) => { if (('xp' + i) in o) x.price = +o['xp' + i].replace(/\D/g, '') || 0; });
 }
-function overlay(html) { document.getElementById('overlay').innerHTML = html ? `<div class="ovl"><div>${html}</div></div>` : ''; }
+function overlay(html) { const o = document.getElementById('overlay'); o.innerHTML = html ? `<div class="ovl"><div>${html}</div></div>` : ''; trDom(o); }
 async function scanFile(file) {
   if (!file) return;
   if (!P.items.length) { toast('Прайс ещё не загружен — нужен интернет'); return; }
@@ -1103,11 +1641,11 @@ document.addEventListener('click', async (e) => {
 
 /* ---------- Кнопка «Назад» ---------- */
 // Куда ведёт «Назад» с каждого экрана. null — выходить некуда (главный экран).
-const BACK = { patient: 'visit', catalog: 'visit', tubes: 'visit', client: 'visit', profile: 'visit', scan: 'visit', printer: 'profile' };
+const BACK = { history: 'visit', patient: 'visit', catalog: 'visit', tubes: 'visit', client: 'visit', profile: 'visit', scan: 'visit', printer: 'profile' };
 // Возвращает true, если «Назад» обработано внутри приложения
 function goBack() {
   const ov = document.getElementById('overlay'), inst = document.getElementById('install');
-  if (ov && ov.querySelector && ov.querySelector('.ovl')) { if (document.getElementById('scanBar') || /Не закрывайте приложение/.test(ov.textContent)) return true; overlay(''); return true; } // во время распознавания и обновления «Назад» ничего не делает
+  if (ov && ov.querySelector && ov.querySelector('.ovl')) { if (document.getElementById('scanBar') || /Не закрывайте приложение|Ilovani yopmang/.test(ov.textContent)) return true; overlay(''); return true; } // во время распознавания и обновления «Назад» ничего не делает
   if (inst && inst.querySelector && inst.querySelector('.install')) { instSet('later'); inst.innerHTML = ''; return true; }
   if (UI.view === 'catalog' && UI.q) { UI.q = ''; render(); return true; }
   if (UI.view === 'auth' && UI.authMode === 'reg') { UI.authMode = 'login'; UI.err = ''; render(); return true; }
