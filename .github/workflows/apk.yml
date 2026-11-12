@@ -81,7 +81,9 @@ jobs:
           if [ -n "$KEYSTORE_B64" ]; then
             echo "$KEYSTORE_B64" | base64 -d > "$HOME/.android/debug.keystore"
             echo "Подпись: постоянный ключ из секрета KEYSTORE_B64"
+            echo "SIGN=постоянный ключ" >> "$GITHUB_ENV"
           else
+            echo "SIGN=ВРЕМЕННЫЙ ключ (секрет KEYSTORE_B64 не задан)" >> "$GITHUB_ENV"
             echo "::warning::Секрет KEYSTORE_B64 не задан — APK подписан временным ключом. Следующую сборку нельзя будет установить поверх этой."
           fi
 
@@ -92,6 +94,9 @@ jobs:
           ./gradlew assembleDebug --no-daemon -q
           cp app/build/outputs/apk/debug/app-debug.apk ../defactum-nurse.apk
           ls -la ../defactum-nurse.apk
+          FP=$(keytool -printcert -jarfile ../defactum-nurse.apk | grep -i "SHA256:" | head -1 | sed 's/.*SHA256: *//')
+          echo "Отпечаток подписи: $FP"
+          echo "FP=$FP" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -103,4 +108,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="v${{ steps.ver.outputs.name }}-b${{ github.run_number }}"
-          gh release create "$TAG" defactum-nurse.apk defactum-nurse-web.zip --latest --title "de factum ${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})" --notes "APK для Android. Скачайте файл defactum-nurse.apk и установите."
+          gh release create "$TAG" defactum-nurse.apk defactum-nurse-web.zip --latest --title "de factum ${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})" --notes "APK для Android. Скачайте файл defactum-nurse.apk и установите.
+
+Подпись: $SIGN
+Отпечаток SHA-256: $FP"
