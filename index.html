@@ -99,6 +99,7 @@ a{color:var(--brand)}
 .drop-h b{font-weight:700;text-transform:uppercase;letter-spacing:.6px}
 .sugg{width:100%;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px;border:0;border-top:1px solid #F1F5F9;background:#fff;text-align:left;min-height:60px}
 mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radius:4px;padding:0 2px}
+.linkbtn{border:0;background:none;padding:6px 2px;min-height:36px;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
 .cats{display:flex;gap:8px;overflow-x:auto;padding:2px 16px 4px;margin:0 -16px;scrollbar-width:none}
 .cats::-webkit-scrollbar{display:none}
 .cat{height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line2);background:#fff;white-space:nowrap;font-weight:500;flex-shrink:0;display:flex;align-items:center;gap:6px}
@@ -199,7 +200,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.26', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.27', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -499,6 +500,10 @@ function vVisit() {
         <div class="grid2">
           <button class="btn light small" data-act="catalog" data-v="${p.id}">${I.plus('#0F172A', 15)} Анализы</button>
           ${p.items.length ? `<button class="btn small" data-act="tubes" data-v="${p.id}" style="${marked ? 'background:var(--okbg);color:var(--ok);box-shadow:none' : ''}">${marked ? I.check('#0F6B3A') + ' Промаркировано' : I.bars() + ' Пробирки'}</button>` : `<button class="btn light small" data-act="editPatient" data-v="${p.id}">Изменить</button>`}
+        </div>
+        <div class="row between" style="margin-top:-2px">
+          <button class="linkbtn" data-act="editPatient" data-v="${p.id}">Изменить данные</button>
+          <button class="linkbtn" data-act="delPatient" data-v="${p.id}" style="color:var(--bad)" aria-label="Удалить пациента ${esc(p.last)} ${esc(p.first)}">${I.trash.replace('#64748B', 'currentColor').replace(/width="18" height="18"/, 'width="16" height="16"')} Удалить</button>
         </div></div>`;
     }).join('')}
     ${!v.patients.length ? `<div class="note info">Сфотографируйте лист заказа из Aurora или добавьте пациента вручную. Можно несколько пациентов на один выезд.</div>` : ''}
@@ -701,7 +706,7 @@ document.addEventListener('click', (e) => {
     case 'go': go(v); break;
     case 'newPatient': UI.editPatient = null; go('patient'); break;
     case 'editPatient': UI.editPatient = { ...patient(v) }; go('patient'); break;
-    case 'delPatient': if (confirm('Удалить пациента и его анализы?')) { vis.patients = vis.patients.filter((p) => p.id !== v); save(); go('visit'); } break;
+    case 'delPatient': { const dp = patient(v); if (dp && confirm('Удалить пациента ' + dp.last + ' ' + dp.first + ' и его анализы?')) { vis.patients = vis.patients.filter((p) => p.id !== v); save(); UI._keepScroll = UI.view === 'visit'; go('visit'); toast('Пациент удалён'); } break; }
     case 'sex': { const f = document.querySelector('form[data-submit="patient"]'); UI.editPatient = { ...(UI.editPatient || {}), ...formObj(f), sex: v }; render(); break; }
     case 'catalog': go('catalog', { patientId: v, q: '', cat: 0 }); break;
     case 'tubes': go('tubes', { patientId: v }); break;
