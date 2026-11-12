@@ -1,0 +1,6 @@
+{
+  "appId": "uz.defactum.nurse",
+  "appName": "de factum",
+  "webDir": "www",
+  "android": { "backgroundColor": "#FFFFFF" }
+}

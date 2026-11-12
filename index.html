@@ -199,9 +199,15 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.14', APP_DATE = '12.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.15', APP_DATE = '12.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
-const PRICES_URLS = ['data/prices.json', 'https://raw.githubusercontent.com/coderuz2026/defactum-nurse-price/main/data/prices.json'];
+// Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
+const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
+const SITE = 'https://coderuz2026.github.io/defactum-nurse-price/';
+const APK_URL = 'https://github.com/coderuz2026/defactum-nurse-price/releases/latest/download/defactum-nurse.apk';
+const PRICES_REMOTE = 'https://raw.githubusercontent.com/coderuz2026/defactum-nurse-price/main/data/prices.json';
+// В APK сначала берём свежий прайс из интернета, вшитый в приложение — запасной; на сайте наоборот (он и так свежий)
+const PRICES_URLS = IS_APK ? [PRICES_REMOTE, SITE + 'data/prices.json', 'data/prices.json'] : ['data/prices.json', PRICES_REMOTE];
 const BRANCHES = ['DeFactum Central', 'DeFactum KIDS'];
 const LS = 'df_nurse_v1';
 
@@ -582,14 +588,14 @@ function vProfile() {
   <div class="body">
     <div class="card pad row"><span class="avatar" style="width:56px;height:56px;font-size:18px">${esc(initials(me.name))}</span><div><b style="font-size:17px">${esc(me.name)}</b><div class="sub">+998 ${esc(me.phone)} · ${esc(me.branch)}</div></div></div>
     <div class="card pad" style="display:flex;flex-direction:column;gap:10px">
-      <div class="row between"><span>Версия приложения</span><b>${APP_VERSION} от ${APP_DATE}</b></div>
+      <div class="row between"><span>Версия приложения</span><b>${APP_VERSION} от ${APP_DATE}${IS_APK ? ' · APK' : ''}</b></div>
       ${UI.newVer ? `<button class="btn small" data-act="appUpdate">Обновить до версии ${esc(UI.newVer)}</button>` : `<button class="btn light small" data-act="appCheck">${I.sync} Проверить обновление приложения</button>`}
       <div class="row between"><span>Версия прайса</span><b>${esc(P.version || '—')}</b></div>
       <div class="row between"><span>Услуг в прайсе</span><b>${P.items.length}</b></div>
       <div class="row between"><span>Выездов на телефоне</span><b>${S.visits.length}</b></div>
       <button class="btn light small" data-act="reloadPrices">${I.sync} Проверить обновление цен</button>
     </div>
-    ${isStandalone() ? `<div class="note ok">Приложение установлено на этот телефон.</div>` : `<button class="btn ghost" data-act="instShow">Установить на телефон</button>`}
+    ${IS_APK ? '' : isStandalone() ? `<div class="note ok">Приложение установлено на этот телефон.</div>` : `<button class="btn ghost" data-act="instShow">Установить на телефон</button>`}
     <button class="btn light" data-act="logout" style="color:var(--bad)">Выйти</button>
   </div>`;
 }
@@ -845,7 +851,7 @@ const instState = () => { try { return localStorage.getItem(INST.key); } catch (
 const instSet = (v) => { try { localStorage.setItem(INST.key, v); } catch (e) {} };
 function showInstall(force) {
   const box = document.getElementById('install'); if (!box) return;
-  if (isStandalone()) { box.innerHTML = ''; return; }
+  if (IS_APK || isStandalone()) { box.innerHTML = ''; return; }
   if (!force && instState()) return;
   if (!force && !isIOS() && !isAndroid()) return;
   const ios = isIOS();
@@ -876,13 +882,14 @@ document.addEventListener('click', async (e) => {
 const verNum = (v) => String(v).split('.').reduce((s, x) => s * 1000 + (+x || 0), 0);
 async function checkUpdate(manual) {
   try {
-    const r = await fetch('index.html?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) throw 0;
+    const r = await fetch((IS_APK ? SITE : '') + 'index.html?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) throw 0;
     const m = (await r.text()).match(/APP_VERSION = '([\d.]+)'/);
     if (m && verNum(m[1]) > verNum(APP_VERSION)) { UI.newVer = m[1]; UI._keepScroll = true; if (UI.view === 'visit' || UI.view === 'profile') render(); if (manual) toast('Доступна версия ' + m[1]); }
     else if (manual) toast('У вас последняя версия: ' + APP_VERSION);
   } catch (e) { if (manual) toast('Нет связи — не удалось проверить'); }
 }
 async function applyUpdate() {
+  if (IS_APK) { toast('Скачивается новая версия — откройте файл и установите'); location.href = APK_URL; return; }
   try { if ('serviceWorker' in navigator) { const reg = await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); } if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map((k) => caches.delete(k))); } } catch (e) {}
   location.reload();
 }
@@ -895,7 +902,8 @@ render();
 loadPrices(false);
 setTimeout(() => checkUpdate(false), 4000);
 setTimeout(() => showInstall(), document.documentElement.classList.contains('nosplash') ? 1200 : 3800); // iPhone: события нет — показываем инструкцию; Android: окно появится по событию или подсказкой
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(() => { if (S.me) setTimeout(() => Scan.warmup(), 6000); }).catch(() => {});
+if (IS_APK) setTimeout(() => { if (S.me) Scan.warmup(); }, 6000);
+else if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(() => { if (S.me) setTimeout(() => Scan.warmup(), 6000); }).catch(() => {});
 </script>
 </body>
 </html>

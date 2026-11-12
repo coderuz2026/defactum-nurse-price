@@ -1,0 +1,92 @@
+name: Сборка APK
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['README.md', 'tools/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Версия приложения
+        id: ver
+        run: |
+          VER=$(grep -o "APP_VERSION = '[0-9.]*'" index.html | grep -o "[0-9.]*" | head -1)
+          echo "name=$VER" >> "$GITHUB_OUTPUT"
+          echo "Версия $VER, сборка ${{ github.run_number }}"
+
+      - name: Проверка расчётов
+        run: node tools/calc_test.js | tail -3
+
+      - name: Веб-часть
+        run: |
+          mkdir -p www
+          cp -r index.html scan.js manifest.webmanifest icon.svg icon-180.png icon-192.png icon-512.png data vendor www/
+
+      - name: Проект Android
+        run: |
+          npm install --no-audit --no-fund
+          npx cap add android
+          # разрешение на геолокацию (кнопка «адрес выезда»)
+          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />#' android/app/src/main/AndroidManifest.xml
+          grep -c ACCESS_FINE_LOCATION android/app/src/main/AndroidManifest.xml
+          # фирменная иконка
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          cp -r apk/res/* android/app/src/main/res/
+          # номер версии
+          sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/; s/versionName \"1.0\"/versionName \"${{ steps.ver.outputs.name }}\"/" android/app/build.gradle
+          grep -n "versionCode\|versionName" android/app/build.gradle
+          npx cap sync android
+
+      - name: Ключ подписи
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$HOME/.android/debug.keystore"
+            echo "Подпись: постоянный ключ из секрета KEYSTORE_B64"
+          else
+            echo "::warning::Секрет KEYSTORE_B64 не задан — APK подписан временным ключом. Следующую сборку нельзя будет установить поверх этой."
+          fi
+
+      - name: Сборка
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon -q
+          cp app/build/outputs/apk/debug/app-debug.apk ../defactum-nurse.apk
+          ls -la ../defactum-nurse.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: defactum-nurse-apk
+          path: defactum-nurse.apk
+
+      - name: Публикация
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${{ steps.ver.outputs.name }}-b${{ github.run_number }}"
+          gh release create "$TAG" defactum-nurse.apk --latest --title "de factum ${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})" --notes "APK для Android. Скачайте файл defactum-nurse.apk и установите."
