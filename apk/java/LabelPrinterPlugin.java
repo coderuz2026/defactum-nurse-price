@@ -24,7 +24,17 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
+import android.content.SharedPreferences;
+
+import com.getcapacitor.plugin.WebView;
+
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -41,6 +51,9 @@ import java.util.UUID;
     permissions = { @Permission(alias = "bt", strings = { Manifest.permission.BLUETOOTH_CONNECT }) }
 )
 public class LabelPrinterPlugin extends Plugin {
+
+    /** Уровень «родной» части. Если в новой версии он выше — нужен новый APK, иначе хватает обновления веб-части. */
+    private static final int NATIVE_LEVEL = 2;
 
     private static final UUID SPP = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
@@ -191,5 +204,149 @@ public class LabelPrinterPlugin extends Plugin {
         } catch (Exception e) {
             call.reject("Не удалось передать этикетки: " + e.getMessage());
         }
+    }
+
+    // ---------------------------------------------------------------- Обновление приложения
+
+    @PluginMethod
+    public void info(PluginCall call) {
+        JSObject res = new JSObject();
+        res.put("native", NATIVE_LEVEL);
+        try {
+            res.put("apkVersion", getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0).versionName);
+        } catch (Exception ignored) { }
+        call.resolve(res);
+    }
+
+    private void progress(String phase, int percent) {
+        JSObject o = new JSObject();
+        o.put("phase", phase);
+        o.put("percent", percent);
+        notifyListeners("progress", o);
+    }
+
+    /** Скачивает файл с показом процентов. */
+    private void download(String address, File target) throws IOException {
+        HttpURLConnection c = null;
+        try {
+            URL url = new URL(address);
+            for (int hop = 0; hop < 6; hop++) { // GitHub отдаёт файл через переадресацию на другой сервер
+                c = (HttpURLConnection) url.openConnection();
+                c.setInstanceFollowRedirects(false);
+                c.setConnectTimeout(20000);
+                c.setReadTimeout(30000);
+                c.setRequestProperty("User-Agent", "defactum-nurse");
+                int code = c.getResponseCode();
+                if (code >= 300 && code < 400 && c.getHeaderField("Location") != null) {
+                    url = new URL(url, c.getHeaderField("Location"));
+                    c.disconnect();
+                    continue;
+                }
+                if (code != 200) throw new IOException("Сервер ответил " + code);
+                break;
+            }
+            long total = c.getContentLength(), done = 0;
+            int last = -1;
+            byte[] buf = new byte[64 * 1024];
+            try (InputStream in = new BufferedInputStream(c.getInputStream()); FileOutputStream out = new FileOutputStream(target)) {
+                int n;
+                while ((n = in.read(buf)) > 0) {
+                    out.write(buf, 0, n);
+                    done += n;
+                    int pct = total > 0 ? (int) (done * 100 / total) : -1;
+                    if (pct != last) { last = pct; progress("download", pct); }
+                }
+            }
+            if (total > 0 && done != total) throw new IOException("Файл скачан не полностью");
+        } finally {
+            if (c != null) c.disconnect();
+        }
+    }
+
+    private static void deleteTree(File f) {
+        File[] kids = f.listFiles();
+        if (kids != null) for (File k : kids) deleteTree(k);
+        f.delete();
+    }
+
+    /** Обновление веб-части: скачать архив, распаковать во внутреннюю память и переключить приложение на новую папку. */
+    @PluginMethod
+    public void updateWeb(final PluginCall call) {
+        final String url = call.getString("url");
+        final String version = call.getString("version", "new").replaceAll("[^0-9A-Za-z._-]", "_");
+        if (url == null) { call.reject("Нет адреса обновления"); return; }
+        new Thread(() -> {
+            File zip = new File(getContext().getCacheDir(), "update-web.zip");
+            File root = new File(getContext().getFilesDir(), "web");
+            File dir = new File(root, version + "-" + System.currentTimeMillis());
+            try {
+                download(url, zip);
+                progress("unpack", 0);
+                if (!dir.mkdirs()) throw new IOException("Не удалось создать папку обновления");
+                String base = dir.getCanonicalPath() + File.separator;
+                long size = zip.length(), read = 0;
+                int last = -1;
+                byte[] buf = new byte[64 * 1024];
+                try (ZipInputStream zin = new ZipInputStream(new BufferedInputStream(new java.io.FileInputStream(zip)))) {
+                    ZipEntry e;
+                    while ((e = zin.getNextEntry()) != null) {
+                        File out = new File(dir, e.getName());
+                        if (!out.getCanonicalPath().startsWith(base)) throw new IOException("Недопустимый путь в архиве");
+                        if (e.isDirectory()) { out.mkdirs(); continue; }
+                        File parent = out.getParentFile();
+                        if (parent != null) parent.mkdirs();
+                        try (FileOutputStream fo = new FileOutputStream(out)) {
+                            int n;
+                            while ((n = zin.read(buf)) > 0) fo.write(buf, 0, n);
+                        }
+                        read += e.getCompressedSize() > 0 ? e.getCompressedSize() : 0;
+                        int pct = size > 0 ? (int) Math.min(100, read * 100 / size) : -1;
+                        if (pct != last) { last = pct; progress("unpack", pct); }
+                    }
+                }
+                if (!new File(dir, "index.html").exists() || !new File(dir, "scan.js").exists()) throw new IOException("В обновлении нет нужных файлов");
+                zip.delete();
+                // старые папки обновлений больше не нужны
+                File[] olds = root.listFiles();
+                if (olds != null) for (File f : olds) if (!f.equals(dir)) deleteTree(f);
+                final String path = dir.getAbsolutePath();
+                SharedPreferences prefs = getContext().getSharedPreferences(WebView.WEBVIEW_PREFS_NAME, Context.MODE_PRIVATE);
+                prefs.edit().putString(WebView.CAP_SERVER_PATH, path).apply();
+                progress("apply", 100);
+                JSObject res = new JSObject();
+                res.put("path", path);
+                call.resolve(res);
+                // переключаем приложение на новую версию (страница перезагрузится сама)
+                getActivity().runOnUiThread(() -> getBridge().setServerBasePath(path));
+            } catch (Exception e) {
+                deleteTree(dir);
+                zip.delete();
+                call.reject("Обновление не удалось: " + e.getMessage());
+            }
+        }).start();
+    }
+
+    /** Обновление всего приложения: скачать APK и открыть установку. */
+    @PluginMethod
+    public void updateApk(final PluginCall call) {
+        final String url = call.getString("url");
+        if (url == null) { call.reject("Нет адреса обновления"); return; }
+        new Thread(() -> {
+            try {
+                File dir = new File(getContext().getCacheDir(), "update");
+                if (!dir.exists() && !dir.mkdirs()) throw new IOException("Не удалось создать папку");
+                File apk = new File(dir, "defactum-nurse.apk");
+                download(url, apk);
+                progress("install", 100);
+                Uri uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", apk);
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setDataAndType(uri, "application/vnd.android.package-archive");
+                i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+                call.resolve();
+            } catch (Exception e) {
+                call.reject("Обновление не удалось: " + e.getMessage());
+            }
+        }).start();
     }
 }

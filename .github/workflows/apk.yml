@@ -43,6 +43,12 @@ jobs:
         run: |
           mkdir -p www
           cp -r index.html scan.js manifest.webmanifest icon.svg icon-180.png icon-192.png icon-512.png data vendor www/
+          # Android при упаковке APK сам распаковывает .gz — делаем это заранее, чтобы APK и архив обновления были одинаковыми
+          gunzip www/vendor/tesseract/lang/*.gz
+          ls -la www/vendor/tesseract/lang
+          # архив веб-части для обновления «по воздуху»
+          (cd www && zip -qr ../defactum-nurse-web.zip .)
+          ls -la defactum-nurse-web.zip
 
       - name: Проект Android
         run: |
@@ -52,7 +58,7 @@ jobs:
           sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />#' android/app/src/main/AndroidManifest.xml
           grep -c ACCESS_FINE_LOCATION android/app/src/main/AndroidManifest.xml
           # Bluetooth для печати этикеток
-          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />\n    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />#' android/app/src/main/AndroidManifest.xml
+          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />\n    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />#' android/app/src/main/AndroidManifest.xml
           grep -c BLUETOOTH_CONNECT android/app/src/main/AndroidManifest.xml
           # наш модуль печати (Java)
           JAVA_DIR=android/app/src/main/java/uz/defactum/nurse
@@ -97,4 +103,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="v${{ steps.ver.outputs.name }}-b${{ github.run_number }}"
-          gh release create "$TAG" defactum-nurse.apk --latest --title "de factum ${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})" --notes "APK для Android. Скачайте файл defactum-nurse.apk и установите."
+          gh release create "$TAG" defactum-nurse.apk defactum-nurse-web.zip --latest --title "de factum ${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})" --notes "APK для Android. Скачайте файл defactum-nurse.apk и установите."
