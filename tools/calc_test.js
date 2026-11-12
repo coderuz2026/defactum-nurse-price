@@ -7,7 +7,7 @@ const Scan = require('../scan.js');
 const stub = { Scan, location: { protocol: 'https:', hostname: 'example.org' }, sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
   document: { documentElement: { classList: { contains: () => true, add() {} } }, addEventListener() {}, getElementById: () => ({ innerHTML: '', addEventListener() {}, remove() {} }), querySelectorAll: () => [], querySelector: () => null, body: { appendChild() {} }, createElement: () => ({ remove() {} }) },
   window: { scrollTo() {}, scrollY: 0, addEventListener() {} }, navigator: { userAgent: '' }, fetch: async () => ({ ok: false }), setTimeout, clearTimeout, console, Date, Math, JSON };
-const fn = new Function(...Object.keys(stub), src + '\nreturn {verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
+const fn = new Function(...Object.keys(stub), src + '\nreturn {vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
 const A = fn(...Object.values(stub));
 const prices = JSON.parse(fs.readFileSync('data/prices.json', 'utf8'));
 A.setPrices(prices);
@@ -129,6 +129,15 @@ eq('«бозовнадом» распознаётся как «Вызов на �
 eq('ошибки: два чтения ФИО разошлись', lv(A.scanProblems({ sheet: Object.assign({}, sh, { fioAlt: 'Каримева Лола Тахировна' }), match: mt, sheetTotal: mt.total, fioCheck: 'diff', check: { dob: 'same', phone: 'diff' } })), ['err:ФИО прочитано двумя способами по-разному', 'err:Телефон прочитан по-разному']);
 eq('ошибки: ФИО не перепроверено — предупреждение', lv(A.scanProblems({ sheet: sh, match: mt, sheetTotal: mt.total, fioCheck: 'none' })), ['warn:ФИО не удалось перепроверить']);
 eq('ФИО: метка и обрывки отбрасываются', ['Фис Каримова Лола Тахировна', 'ФИО: Нназарова Дилноза Рустамовна | 1D пациента: 123456', 'DUNO: Юсупова Севара Бахтияровна Пе'].map((l) => { const r = Scan.parseSheet(l + '\nПол: Женщина', ''); return [r.last, r.first, r.middle].join(' '); }), ['Каримова Лола Тахировна', 'Назарова Дилноза Рустамовна', 'Юсупова Севара Бахтияровна']);
+// экраны отрисовываются без ошибок (в т.ч. «Показать клиенту» с пациентом с листа и строкой «Вызов на дом»)
+A.S.me = { name: 'Рахимова Нигора', branch: 'DeFactum Central', phone: '901234567' };
+const draw = (f) => { try { return f(); } catch (e) { return 'ОШИБКА: ' + e.message; } };
+const cl = draw(A.vClient);
+eq('экран клиента: рисуется, есть анализы, «Вызов на дом» и итог', [/ОШИБКА/.test(cl), /Ферритин/.test(cl), /Вызов на дом/.test(cl), /872 000/.test(cl)], [false, true, true, true]);
+eq('экран выезда рисуется', /ОШИБКА/.test(draw(A.vVisit)), false);
+eq('экран профиля рисуется', /ОШИБКА/.test(draw(A.vProfile)), false);
+A.UI.scan = { sheet: sh, match: mt, sheetTotal: mt.total, text: '', fioCheck: 'same', check: {} };
+eq('экран проверки листа рисуется', /ОШИБКА/.test(draw(A.vScan)), false);
 // пропажа строки должна быть заметна: сумма не сходится
 const broken = Scan.matchSheet(Scan.parseSheet(SHEET.replace(/\n2 Ферритин[^\n]*/, ''), ''), prices.items);
 eq('лист без одной строки: предупреждение', [broken.ok, broken.total, broken.sum], [false, 960000, 810000]);

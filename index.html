@@ -199,7 +199,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.16', APP_DATE = '12.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.17', APP_DATE = '12.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -571,8 +571,8 @@ function vClient() {
       <div style="padding:4px 20px">
         ${v.patients.filter((p) => p.items.length || (p.extra || []).length).map((p) => `
           ${v.patients.length > 1 ? `<div style="padding:12px 0 2px;font-weight:800;font-size:14px;color:var(--brand-deep)">${esc(p.last)} ${esc(p.first)}</div>` : ''}
-          ${p.items.map((id) => P.byId[id]).filter(Boolean).map((it) => `<div class="rline"><span style="line-height:1.35">${esc(it.name)}</span><b class="num" style="font-weight:600">${fmt(it.price).replace(' сум', '')}</b></div>`).join('')}`).join('')}
-          ${(p.extra || []).map((x) => `<div class="rline"><span style="line-height:1.35">${esc(x.name)}</span><b class="num" style="font-weight:600">${fmt(x.price).replace(' сум', '')}</b></div>`).join('')}
+          ${p.items.map((id) => P.byId[id]).filter(Boolean).map((it) => `<div class="rline"><span style="line-height:1.35">${esc(it.name)}</span><b class="num" style="font-weight:600">${fmt(it.price).replace(' сум', '')}</b></div>`).join('')}
+          ${(p.extra || []).map((x) => `<div class="rline"><span style="line-height:1.35">${esc(x.name)}</span><b class="num" style="font-weight:600">${fmt(x.price).replace(' сум', '')}</b></div>`).join('')}`).join('')}
         ${t.fee ? `<div class="rline"><span>Выезд на дом</span><b class="num" style="font-weight:600">${fmt(t.fee).replace(' сум', '')}</b></div>` : ''}
         ${t.off ? `<div class="rline" style="color:var(--ok)"><span>Скидка ${v.discount}%</span><b class="num">− ${fmt(t.off).replace(' сум', '')}</b></div>` : ''}
       </div>
