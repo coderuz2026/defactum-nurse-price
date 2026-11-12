@@ -199,7 +199,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.25', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.26', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -424,7 +424,11 @@ function render() {
   const app = document.getElementById('app');
   const views = { auth: vAuth, printer: vPrinter, scan: vScan, visit: vVisit, patient: vPatient, catalog: vCatalog, tubes: vTubes, client: vClient, profile: vProfile };
   if (!S.me) UI.view = 'auth';
+  // горизонтальные ленты (категории) не должны убегать в начало при перерисовке того же экрана
+  const strip = UI._view === UI.view && app.querySelector ? app.querySelector('.cats') : null, stripX = strip ? strip.scrollLeft : 0;
+  UI._view = UI.view;
   app.innerHTML = (views[UI.view] || vVisit)();
+  if (stripX) { const n = app.querySelector('.cats'); if (n) n.scrollLeft = stripX; }
   if (UI.view === 'tubes') drawBarcodes();
   if (UI.view === 'catalog' && UI._focus) { const i = document.getElementById('q'); if (i) { i.focus(); const l = i.value.length; i.setSelectionRange(l, l); } UI._focus = false; }
   window.scrollTo(0, UI._keepScroll ? window.scrollY : 0); UI._keepScroll = false;
@@ -701,7 +705,7 @@ document.addEventListener('click', (e) => {
     case 'sex': { const f = document.querySelector('form[data-submit="patient"]'); UI.editPatient = { ...(UI.editPatient || {}), ...formObj(f), sex: v }; render(); break; }
     case 'catalog': go('catalog', { patientId: v, q: '', cat: 0 }); break;
     case 'tubes': go('tubes', { patientId: v }); break;
-    case 'cat': UI.cat = +v; UI._keepScroll = false; render(); break;
+    case 'cat': UI.cat = +v; UI._keepScroll = true; render(); break;
     case 'clearQ': UI.q = ''; UI._focus = true; render(); break;
     case 'toggle': {
       const p = patient(UI.patientId); const id = +v; const i = p.items.indexOf(id);
