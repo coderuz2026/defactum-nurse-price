@@ -162,6 +162,14 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 .scanbtn{min-height:64px;border-radius:20px;border:0;background:var(--brand);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 16px;width:100%;text-align:left;box-shadow:0 10px 24px rgba(11,127,144,.25)}
 .scanbtn b{font-size:15.5px;font-weight:700;display:block}.scanbtn span.t{font-size:12.5px;opacity:.85}
 .flag{height:22px;padding:0 8px;border-radius:7px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;background:#FFF7E6;color:#7A4B00}
+.problems{background:var(--badbg);border:1.5px solid #F04438;border-radius:18px;padding:14px 16px;color:#7A271A;display:flex;flex-direction:column;gap:10px}
+.problems h3{margin:0;font-size:16px;font-weight:800;color:var(--bad);display:flex;align-items:center;gap:8px}
+.problems ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.4}
+.problems .tips{font-size:13px;color:#7A271A;border-top:1px dashed #F7A29B;padding-top:8px}
+.bad-field{border-color:#F04438!important;background:#FFFBFA!important}
+.item.bad{background:#FFFBFA;box-shadow:inset 3px 0 0 #F04438}
+.flag.red{background:var(--badbg);color:var(--bad)}
+.btn.red{background:#D92D20;box-shadow:0 10px 24px rgba(217,45,32,.25)}
 @media print{#splash{display:none}}
 @media print{
   body *{visibility:hidden}
@@ -610,7 +618,8 @@ document.addEventListener('click', (e) => {
     case 'newVisit': if (confirm('Завершить текущий выезд и начать новый?')) { newVisit(); go('visit'); } break;
     case 'reloadPrices': loadPrices(true); break;
     case 'geo': locate(); break;
-    case 'scanCam': document.getElementById('scanCam').click(); break;
+    case 'scanCam': overlay(''); document.getElementById('scanCam').click(); break;
+    case 'scanClose': overlay(''); break;
     case 'scanPick': document.getElementById('scanPick').click(); break;
     case 'scanDel': scanKeep(); UI.scan.match.items.splice(+v, 1); UI._keepScroll = true; render(); break;
     case 'scanDelExtra': scanKeep(); UI.scan.match.extra.splice(+v, 1); UI._keepScroll = true; render(); break;
@@ -706,28 +715,62 @@ async function scanFile(file) {
       if (m2.ok || miss(m2) < miss(match)) { ['last', 'first', 'middle', 'sex', 'dob', 'phone', 'pid', 'order', 'orderDate', 'callTime', 'address', 'comment'].forEach((k) => { if (!sh2[k]) sh2[k] = sheet[k]; }); sheet = sh2; match = m2; text = t2; }
     }
     overlay('');
-    UI.scan = { sheet, match, text, sheetTotal: match.total, showText: false };
+    if (!match.items.length && !sheet.last && !sheet.order) { scanFail(['На фото не найден лист заказа de factum', res.srcLong < 1000 ? 'Фото слишком маленькое — снимайте камерой' : 'Текст не читается: размыто, темно или лист не целиком в кадре', 'Держите телефон ровно над листом, при хорошем свете']); return; }
+    UI.scan = { sheet, match, text, sheetTotal: match.total, showText: false, confidence: res.confidence, srcLong: res.srcLong };
     go('scan');
   } catch (e) {
-    overlay(''); toast('Не получилось распознать: ' + (e && e.message ? e.message : 'ошибка'));
+    scanFail(['Фото не удалось обработать' + (e && e.message ? ': ' + e.message : ''), navigator.onLine === false ? 'Нет интернета: при первом сканировании он нужен, чтобы загрузить модуль распознавания' : 'Попробуйте ещё раз; если повторится — закройте и откройте приложение']);
   }
 }
 ['scanCam', 'scanPick'].forEach((id) => { const el = document.getElementById(id); if (el && el.addEventListener) el.addEventListener('change', () => { const f = el.files && el.files[0]; el.value = ''; scanFile(f); }); });
+const WARN_ICON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D92D20" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 17H2z"/><path d="M12 10v5M12 18h.01"/></svg>`;
+function scanFail(reasons) {
+  overlay(`<span style="width:56px;height:56px;border-radius:28px;background:var(--badbg);display:flex;align-items:center;justify-content:center">${WARN_ICON}</span>
+    <b style="font-size:18px;color:var(--bad)">Лист не распознан</b>
+    <ul style="margin:0;padding-left:20px;text-align:left;font-size:14px;line-height:1.45;color:#7A271A">${reasons.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
+    <button class="btn red" data-act="scanCam">Сфотографировать заново</button>
+    <button class="btn light small" data-act="scanClose">Закрыть</button>`);
+}
+// Что пошло не так при распознавании: err — нужно переснять или исправить, warn — проверить глазами
+function scanProblems(sc) {
+  const sh = sc.sheet, m = sc.match, out = [];
+  const sum = m.items.reduce((s, x) => s + x.price, 0) + m.extra.reduce((s, x) => s + (+x.price || 0), 0);
+  const total = sc.sheetTotal;
+  const err = (t) => out.push({ level: 'err', text: t }), warn = (t) => out.push({ level: 'warn', text: t });
+  if (sc.srcLong && sc.srcLong < 1000) err('Фото слишком маленькое (' + sc.srcLong + ' px) — снимайте камерой, а не пересылайте сжатую картинку');
+  if (sc.confidence != null && sc.confidence < 55) err('Текст читается плохо (чёткость ' + Math.round(sc.confidence) + '%) — фото размыто, тёмное или с бликом');
+  if (!sh.last || !sh.first) err('Не прочитано ФИО пациента');
+  if (!m.items.length) err('Анализы не распознаны — таблица услуг не попала в кадр или не читается');
+  if (m.items.length && !total) err('Не прочитана строка «Итого» — нельзя сверить сумму. Нижняя часть листа должна быть в кадре');
+  if (m.items.length && total && total !== sum) err('Сумма не сошлась: на листе ' + fmt(total) + ', распознано ' + fmt(sum) + (total > sum ? ' — не хватает ' + fmt(total - sum) + ' (пропущена строка)' : ' — лишние ' + fmt(sum - total)));
+  m.extra.forEach((x) => { if (!/^Вызов на дом$/.test(x.name)) err('Строка не найдена в прайсе: «' + x.name.slice(0, 40) + '»'); else if (!x.price) err('Не прочитана цена строки «Вызов на дом»'); });
+  if (!sh.order) err('Не прочитан ID счёта — без него штрихкоды не совпадут с Aurora');
+  m.items.forEach((x) => { if (!x.sure) warn('Проверьте по листу: «' + x.name.slice(0, 44) + '»'); });
+  if (!sh.dob) warn('Не прочитана дата рождения');
+  if (!sh.pid) warn('Не прочитан ID пациента');
+  return out;
+}
 function vScan() {
   const sc = UI.scan; if (!sc) return vVisit();
   const sh = sc.sheet, m = sc.match;
   const sum = m.items.reduce((s, x) => s + x.price, 0) + m.extra.reduce((s, x) => s + x.price, 0);
   const total = sc.sheetTotal, ok = !!total && total === sum && m.items.length > 0;
   const unsure = m.items.filter((x) => !x.sure).length;
+  const probs = scanProblems(sc), errs = probs.filter((x) => x.level === 'err'), warns = probs.filter((x) => x.level === 'warn');
   const nothing = !m.items.length && !sh.last;
   return header('Лист заказа', sh.orderDate ? 'Заказ от ' + esc(sh.orderDate) + (sh.callTime ? ' · ' + esc(sh.callTime) : '') : 'Проверьте распознанные данные', 'visit') + `
   <form class="body" data-submit="scan" style="padding-bottom:150px">
-    ${nothing ? `<div class="note err">Не удалось прочитать лист. Переснимите: лист целиком в кадре, ровно, без тени и бликов.</div>` :
-      ok ? `<div class="note ok" style="align-items:center">${I.check('#0F6B3A', 18)}<span><b>Сумма сошлась с листом: ${fmt(sum)}</b><br>Все строки распознаны. Сверьте ФИО и нажмите «Добавить».</span></div>` :
-      `<div class="note warn"><span><b>Проверьте внимательно.</b> ${total ? `На листе итого ${fmt(total)}, распознано на ${fmt(sum)}.` : `Итог на листе не прочитан, распознано на ${fmt(sum)}.`} Сверьте строки с бумагой, лишнее удалите, недостающее добавьте после сохранения через «Анализы».</span></div>`}
+    ${errs.length ? `<div class="problems" role="alert">
+        <h3>${WARN_ICON}${nothing ? 'Лист не распознан' : 'Есть ошибки: ' + errs.length}</h3>
+        <ul>${errs.map((x) => `<li>${esc(x.text)}</li>`).join('')}</ul>
+        <div class="tips"><b>Как переснять:</b> лист целиком в кадре, телефон ровно над листом, хороший свет, без тени от руки и бликов, текст резкий.</div>
+        <button type="button" class="btn red" data-act="scanCam">${I.cam} Сфотографировать заново</button>
+      </div>` :
+      `<div class="note ok" style="align-items:center">${I.check('#0F6B3A', 18)}<span><b>Сумма сошлась с листом: ${fmt(sum)}</b><br>Все строки распознаны. Сверьте ФИО и нажмите «Добавить».</span></div>`}
+    ${warns.length ? `<div class="note warn"><span><b>Проверьте глазами:</b><br>${warns.map((x) => esc(x.text)).join('<br>')}</span></div>` : ''}
     <div class="grid2" style="gap:10px">
-      <label class="field"><span>Фамилия</span><input class="input" name="last" value="${esc(sh.last)}" required></label>
-      <label class="field"><span>Имя</span><input class="input" name="first" value="${esc(sh.first)}" required></label>
+      <label class="field"><span>Фамилия</span><input class="input ${sh.last ? '' : 'bad-field'}" name="last" value="${esc(sh.last)}" required></label>
+      <label class="field"><span>Имя</span><input class="input ${sh.first ? '' : 'bad-field'}" name="first" value="${esc(sh.first)}" required></label>
     </div>
     <label class="field"><span>Отчество</span><input class="input" name="middle" value="${esc(sh.middle)}"></label>
     <div class="grid2" style="gap:10px">
@@ -736,21 +779,21 @@ function vScan() {
     </div>
     <div class="grid2" style="gap:10px">
       <label class="field"><span>ID пациента</span><input class="input" name="pid" value="${esc(sh.pid)}" inputmode="numeric"></label>
-      <label class="field"><span>ID счёта (для штрихкода)</span><input class="input" name="order" value="${esc(sh.order)}" inputmode="numeric" placeholder="6 цифр" style="${sh.order ? '' : 'border-color:#E0A100'}"></label>
+      <label class="field"><span>ID счёта (для штрихкода)</span><input class="input" name="order" value="${esc(sh.order)}" inputmode="numeric" placeholder="6 цифр" ${sh.order ? '' : 'style="border-color:#F04438;background:#FFFBFA"'}></label>
     </div>
-    ${sh.order ? '' : `<div class="note warn">ID счёта не прочитан. Впишите его с листа (рядом со штрихкодом) — иначе штрихкоды на пробирках не совпадут с Aurora.</div>`}
     <label class="field"><span>Телефон</span><span class="phone"><b>+998</b><i></i><input name="phone" value="${esc(sh.phone)}" type="tel" inputmode="numeric"></span></label>
     <label class="field"><span>Адрес выезда</span><input class="input" name="address" value="${esc(sh.address)}" style="font-size:14.5px"></label>
     ${sh.comment ? `<div class="note info">Комментарий: ${esc(sh.comment)}</div>` : ''}
     <div class="row between" style="padding:0 4px"><span class="h2">Анализы</span><span class="sub">${m.items.length}${unsure ? ' · проверить: ' + unsure : ''}</span></div>
-    <div class="list">${m.items.map((x, i) => `<div class="item" style="cursor:default"><span class="check" style="background:var(--brand);border-color:var(--brand)">${I.check()}</span><span class="item-t"><b>${esc(x.name)}</b>${x.sure ? '' : `<span><span class="flag">проверьте по листу</span></span>`}</span><span class="price">${fmt(x.price)}</span><button type="button" class="del" data-act="scanDel" data-v="${i}" aria-label="Убрать">${I.x()}</button></div>`).join('') || `<div class="empty">Анализы не распознаны</div>`}</div>
+    <div class="list">${m.items.map((x, i) => `<div class="item ${x.sure ? '' : 'bad'}" style="cursor:default"><span class="check" style="background:var(--brand);border-color:var(--brand)">${I.check()}</span><span class="item-t"><b>${esc(x.name)}</b>${x.sure ? '' : `<span><span class="flag red">проверьте по листу</span></span>`}</span><span class="price">${fmt(x.price)}</span><button type="button" class="del" data-act="scanDel" data-v="${i}" aria-label="Убрать">${I.x()}</button></div>`).join('') || `<div class="empty">Анализы не распознаны</div>`}</div>
     ${m.extra.length ? `<div class="row between" style="padding:0 4px"><span class="h2">Не из прайса</span><span class="sub">${m.extra.length}</span></div>
-    <div class="list">${m.extra.map((x, i) => `<div class="item" style="cursor:default"><span class="item-t"><b>${esc(x.name)}</b>${x.price ? '' : `<span><span class="flag">впишите цену с листа</span></span>`}</span><input class="input num" name="xp${i}" value="${x.price || ''}" inputmode="numeric" placeholder="цена" aria-label="Цена" style="width:104px;height:44px;text-align:right;font-size:15px;font-weight:700;padding:0 10px"><button type="button" class="del" data-act="scanDelExtra" data-v="${i}" aria-label="Убрать">${I.x()}</button></div>`).join('')}</div>` : ''}
+    <div class="list">${m.extra.map((x, i) => `<div class="item ${x.price && x.name === 'Вызов на дом' ? '' : 'bad'}" style="cursor:default"><span class="item-t"><b>${esc(x.name)}</b>${x.price ? (x.name === 'Вызов на дом' ? '' : `<span><span class="flag red">нет в прайсе</span></span>`) : `<span><span class="flag red">впишите цену с листа</span></span>`}</span><input class="input num" name="xp${i}" value="${x.price || ''}" inputmode="numeric" placeholder="цена" aria-label="Цена" style="width:104px;height:44px;text-align:right;font-size:15px;font-weight:700;padding:0 10px"><button type="button" class="del" data-act="scanDelExtra" data-v="${i}" aria-label="Убрать">${I.x()}</button></div>`).join('')}</div>` : ''}
     <button type="button" class="btn light small" data-act="scanText">${sc.showText ? 'Скрыть распознанный текст' : 'Показать распознанный текст'}</button>
     ${sc.showText ? `<pre style="white-space:pre-wrap;font-size:11.5px;line-height:1.4;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin:0;overflow:auto">${esc(sc.text)}</pre>` : ''}
     <div class="bottom"><div>
       <div class="total" style="border:0;padding:0"><span style="font-weight:700">Итого</span><b>${fmt(sum)}</b></div>
-      <div class="grid2"><button type="button" class="btn light" data-act="scanCam">Переснять</button><button class="btn" type="submit" ${m.items.length || m.extra.length ? '' : 'disabled'}>Добавить</button></div>
+      ${errs.length ? `<div class="sub" style="color:var(--bad);font-weight:600;text-align:center">Есть ошибки (${errs.length}) — лучше переснять лист</div>` : ''}
+      <div class="grid2"><button type="button" class="btn ${errs.length ? 'red' : 'light'}" data-act="scanCam">Переснять</button><button class="btn ${errs.length ? 'light' : ''}" type="submit" ${m.items.length && sh.last ? '' : 'disabled'}>${errs.length ? 'Всё равно добавить' : 'Добавить'}</button></div>
     </div></div>
   </form>`;
 }

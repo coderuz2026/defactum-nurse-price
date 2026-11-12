@@ -7,7 +7,7 @@ const Scan = require('../scan.js');
 const stub = { Scan, sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
   document: { documentElement: { classList: { contains: () => true, add() {} } }, addEventListener() {}, getElementById: () => ({ innerHTML: '', addEventListener() {}, remove() {} }), querySelectorAll: () => [], querySelector: () => null, body: { appendChild() {} }, createElement: () => ({ remove() {} }) },
   window: { scrollTo() {}, scrollY: 0, addEventListener() {} }, navigator: { userAgent: '' }, fetch: async () => ({ ok: false }), setTimeout, clearTimeout, console, Date, Math, JSON };
-const fn = new Function(...Object.keys(stub), src + '\nreturn {fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
+const fn = new Function(...Object.keys(stub), src + '\nreturn {scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
 const A = fn(...Object.values(stub));
 const prices = JSON.parse(fs.readFileSync('data/prices.json', 'utf8'));
 A.setPrices(prices);
@@ -115,6 +115,15 @@ eq('лист: штрихкод = ID счёта + контейнер', g3.map((x)
 eq('лист: подпись на этикетке', A.fioShort(p3), 'Каримова Л.Т.');
 const v2 = A.newVisit(); v2.patients.push(p3); v2.discount = 10;
 eq('скидка не трогает «Вызов на дом»', A.vTotals(v2), { an: 880000, ex: 80000, off: 88000, fee: 0, total: 872000 });
+// ошибки распознавания показываются списком
+const lv = (x) => x.map((y) => y.level + ':' + y.text.split(/[:—(«]/)[0].trim());
+eq('ошибки: чистый лист — нет ошибок', A.scanProblems({ sheet: sh, match: mt, sheetTotal: mt.total, confidence: 70, srcLong: 3000 }), []);
+const shB = Scan.parseSheet(SHEET.replace(/\n2 Ферритин[^\n]*/, '').replace('Каримова Лола Тахировна', ''), ''), mB = Scan.matchSheet(shB, prices.items);
+eq('ошибки: нет ФИО, сумма, ID счёта', lv(A.scanProblems({ sheet: shB, match: mB, sheetTotal: mB.total, confidence: 40, srcLong: 720 })).filter((x) => x.startsWith('err')),
+  ['err:Фото слишком маленькое', 'err:Текст читается плохо', 'err:Не прочитано ФИО пациента', 'err:Сумма не сошлась', 'err:Не прочитан ID счёта']);
+eq('ошибки: пропущенная строка — сколько не хватает', A.scanProblems({ sheet: shB, match: mB, sheetTotal: mB.total }).find((x) => /Сумма/.test(x.text)).text, 'Сумма не сошлась: на листе 960 000 сум, распознано 810 000 сум — не хватает 150 000 сум (пропущена строка)');
+const mE = Scan.matchSheet(Scan.parseSheet('какой-то текст', ''), prices.items);
+eq('ошибки: не лист', lv(A.scanProblems({ sheet: Scan.parseSheet('какой-то текст', ''), match: mE, sheetTotal: null })).slice(0, 2), ['err:Не прочитано ФИО пациента', 'err:Анализы не распознаны']);
 // пропажа строки должна быть заметна: сумма не сходится
 const broken = Scan.matchSheet(Scan.parseSheet(SHEET.replace(/\n2 Ферритин[^\n]*/, ''), ''), prices.items);
 eq('лист без одной строки: предупреждение', [broken.ok, broken.total, broken.sum], [false, 960000, 810000]);

@@ -154,6 +154,7 @@ const Scan = (() => {
       }
       g.putImageData(img, 0, 0);
     }
+    c._srcLong = long;
     return c;
   }
   async function recognize(file, onProgress, opt) {
@@ -173,7 +174,7 @@ const Scan = (() => {
       }
     }
     if (onProgress) onProgress(1, 'done');
-    return { text: data.text, idText, confidence: data.confidence, canvas, lines: (data.lines || []).map((l) => ({ text: l.text, y0: l.bbox.y0, y1: l.bbox.y1 })) };
+    return { text: data.text, idText, confidence: data.confidence, srcLong: canvas._srcLong, canvas, lines: (data.lines || []).map((l) => ({ text: l.text, y0: l.bbox.y0, y1: l.bbox.y1 })) };
   }
   // Повторное чтение только таблицы услуг, крупнее: помогает, когда строка не прочиталась с общего снимка
   async function rescanTable(res, zoom) {
