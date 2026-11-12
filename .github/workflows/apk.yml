@@ -77,11 +77,16 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
         run: |
-          mkdir -p "$HOME/.android"
           if [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > "$HOME/.android/debug.keystore"
-            echo "Подпись: постоянный ключ из секрета KEYSTORE_B64"
+            echo "$KEYSTORE_B64" | tr -d ' \n\r' | base64 -d > android/app/nurse.keystore || { echo "::error::Секрет KEYSTORE_B64 повреждён: это не base64"; exit 1; }
+            KEYFP=$(keytool -list -v -keystore android/app/nurse.keystore -storepass android -alias androiddebugkey 2>/dev/null | grep -i "SHA256:" | head -1 | sed 's/.*SHA256: *//')
+            if [ -z "$KEYFP" ]; then echo "::error::Секрет KEYSTORE_B64 повреждён: ключ не читается. Вставьте содержимое файла KEYSTORE_B64.txt целиком."; exit 1; fi
+            echo "Ключ из секрета, отпечаток: $KEYFP"
+            echo "KEYFP=$KEYFP" >> "$GITHUB_ENV"
             echo "SIGN=постоянный ключ" >> "$GITHUB_ENV"
+            # подпись задаём явно, не полагаясь на папку по умолчанию
+            printf '\nandroid {\n    signingConfigs {\n        debug {\n            storeFile file("nurse.keystore")\n            storePassword "android"\n            keyAlias "androiddebugkey"\n            keyPassword "android"\n        }\n    }\n}\n' >> android/app/build.gradle
+            tail -12 android/app/build.gradle
           else
             echo "SIGN=ВРЕМЕННЫЙ ключ (секрет KEYSTORE_B64 не задан)" >> "$GITHUB_ENV"
             echo "::warning::Секрет KEYSTORE_B64 не задан — APK подписан временным ключом. Следующую сборку нельзя будет установить поверх этой."
@@ -95,8 +100,9 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk ../defactum-nurse.apk
           ls -la ../defactum-nurse.apk
           FP=$(keytool -printcert -jarfile ../defactum-nurse.apk | grep -i "SHA256:" | head -1 | sed 's/.*SHA256: *//')
-          echo "Отпечаток подписи: $FP"
+          echo "Отпечаток подписи APK: $FP"
           echo "FP=$FP" >> "$GITHUB_ENV"
+          if [ -n "$KEYFP" ] && [ "$FP" != "$KEYFP" ]; then echo "::error::APK подписан не тем ключом: $FP вместо $KEYFP"; exit 1; fi
 
       - uses: actions/upload-artifact@v4
         with:
