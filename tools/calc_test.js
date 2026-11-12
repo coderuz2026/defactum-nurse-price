@@ -95,10 +95,10 @@ const SHEET = [
   '2 Вызов на дом 1.0 в0090.00 о 80000.90 Пациент',
   'Итого: 960 000', 'Скидки: О', 'Сумма к оплате: 960 000'
 ].join('\n');
-const sh = Scan.parseSheet(SHEET, '| 1D счета: 353014');
+const sh = Scan.parseSheet(SHEET, '| 1D счета: 123987');
 eq('лист: ФИО', [sh.last, sh.first, sh.middle], ['Каримова', 'Лола', 'Тахировна']);
 eq('лист: пол, дата рождения, телефон', [sh.sex, sh.dob, sh.phone], ['f', '06.04.1992', '901112233']);
-eq('лист: ID пациента и ID счёта', [sh.pid, sh.order], ['123456', '353014']);
+eq('лист: ID пациента и ID счёта', [sh.pid, sh.order], ['123456', '123987']);
 eq('лист: адрес и время', [sh.address, sh.callTime, sh.orderDate], ['Чиланзарский район, 5 квартал, дом 10, Квартира 7', '06:30-08:00', '11.11.2026']);
 eq('лист: 10 строк услуг', sh.rows.length, 10);
 const mt = Scan.matchSheet(sh, prices.items);
@@ -111,7 +111,7 @@ const p3 = { id: 'c3', last: sh.last, first: sh.first, middle: sh.middle, pid: s
 eq('лист: сумма пациента = итог листа', A.pSum(p3), 960000);
 const g3 = A.groupTubes(p3);
 eq('лист: контейнеры 01, 02, 35', g3.map((x) => x.no), [1, 2, 35]);
-eq('лист: штрихкод = ID счёта + контейнер', g3.map((x) => x.code), ['35301401', '35301402', '35301435']);
+eq('лист: штрихкод = ID счёта + контейнер', g3.map((x) => x.code), ['12398701', '12398702', '12398735']);
 eq('лист: подпись на этикетке', A.fioShort(p3), 'Каримова Л.Т.');
 const v2 = A.newVisit(); v2.patients.push(p3); v2.discount = 10;
 eq('скидка не трогает «Вызов на дом»', A.vTotals(v2), { an: 880000, ex: 80000, off: 88000, fee: 0, total: 872000 });
@@ -126,6 +126,9 @@ const mE = Scan.matchSheet(Scan.parseSheet('какой-то текст', ''), pr
 eq('ошибки: не лист', lv(A.scanProblems({ sheet: Scan.parseSheet('какой-то текст', ''), match: mE, sheetTotal: null })).slice(0, 2), ['err:Не прочитано ФИО пациента', 'err:Анализы не распознаны']);
 const mV = Scan.matchSheet(Scan.parseSheet(SHEET.replace('2 Вызов на дом 1.0 в0090.00 о 80000.90', 'я бозовнадом 10 80000.00 0 80000.0'), ''), prices.items);
 eq('«бозовнадом» распознаётся как «Вызов на дом»', [mV.extra.map((x) => x.name + ' ' + x.price), mV.ok], [['Вызов на дом 80000'], true]);
+eq('ошибки: два чтения ФИО разошлись', lv(A.scanProblems({ sheet: Object.assign({}, sh, { fioAlt: 'Каримева Лола Тахировна' }), match: mt, sheetTotal: mt.total, fioCheck: 'diff', check: { dob: 'same', phone: 'diff' } })), ['err:ФИО прочитано двумя способами по-разному', 'err:Телефон прочитан по-разному']);
+eq('ошибки: ФИО не перепроверено — предупреждение', lv(A.scanProblems({ sheet: sh, match: mt, sheetTotal: mt.total, fioCheck: 'none' })), ['warn:ФИО не удалось перепроверить']);
+eq('ФИО: метка и обрывки отбрасываются', ['Фис Каримова Лола Тахировна', 'ФИО: Нназарова Дилноза Рустамовна | 1D пациента: 123456', 'DUNO: Юсупова Севара Бахтияровна Пе'].map((l) => { const r = Scan.parseSheet(l + '\nПол: Женщина', ''); return [r.last, r.first, r.middle].join(' '); }), ['Каримова Лола Тахировна', 'Назарова Дилноза Рустамовна', 'Юсупова Севара Бахтияровна']);
 // пропажа строки должна быть заметна: сумма не сходится
 const broken = Scan.matchSheet(Scan.parseSheet(SHEET.replace(/\n2 Ферритин[^\n]*/, ''), ''), prices.items);
 eq('лист без одной строки: предупреждение', [broken.ok, broken.total, broken.sum], [false, 960000, 810000]);

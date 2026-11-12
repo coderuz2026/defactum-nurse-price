@@ -697,26 +697,15 @@ async function scanFile(file) {
   if (!P.items.length) { toast('Прайс ещё не загружен — нужен интернет'); return; }
   overlay(`${MARK(48)}<b style="font-size:17px">Читаю лист заказа…</b><div class="bar"><i id="scanBar"></i></div><span class="sub" id="scanMsg">Подготовка. Первый раз — до минуты.</span>`);
   try {
-    const res = await Scan.recognize(file, (pr, st) => {
+    const res = await Scan.read(file, P.items, (pr, st) => {
       const b = document.getElementById('scanBar'), m = document.getElementById('scanMsg');
       if (b) b.style.width = Math.round(pr * 100) + '%';
-      if (m) m.textContent = st === 'recognizing text' ? 'Распознаю текст…' : st === 'done' ? 'Готово' : 'Загружаю модуль распознавания…';
+      if (m) m.textContent = st === 'recognizing text' ? 'Распознаю текст…' : st === 'retry' ? 'Уточняю таблицу анализов…' : st === 'done' ? 'Готово' : 'Загружаю модуль распознавания…';
     });
-    let sheet = Scan.parseSheet(res.text, res.idText);
-    let match = Scan.matchSheet(sheet, P.items);
-    let text = res.text;
-    // Сумма не сошлась с «Итого» — перечитываем таблицу услуг крупнее (до трёх попыток) и берём вариант, где сошлась
-    const miss = (m) => (m.total ? Math.abs(m.total - m.sum) : 1e12) - m.items.length;
-    for (const zoom of [1.6, 1.3, 2]) {
-      if (match.ok) break;
-      const msg = document.getElementById('scanMsg'); if (msg) msg.textContent = 'Уточняю таблицу анализов…';
-      const t2 = await Scan.rescanTable(res, zoom); if (!t2) break;
-      const sh2 = Scan.parseSheet(t2, res.idText), m2 = Scan.matchSheet(sh2, P.items);
-      if (m2.ok || miss(m2) < miss(match)) { ['last', 'first', 'middle', 'sex', 'dob', 'phone', 'pid', 'order', 'orderDate', 'callTime', 'address', 'comment'].forEach((k) => { if (!sh2[k]) sh2[k] = sheet[k]; }); sheet = sh2; match = m2; text = t2; }
-    }
+    const sheet = res.sheet, match = res.match, text = res.text;
     overlay('');
     if (!match.items.length && !sheet.last && !sheet.order) { scanFail(['На фото не найден лист заказа de factum', res.srcLong < 1000 ? 'Фото слишком маленькое — снимайте камерой' : 'Текст не читается: размыто, темно или лист не целиком в кадре', 'Держите телефон ровно над листом, при хорошем свете']); return; }
-    UI.scan = { sheet, match, text, sheetTotal: match.total, showText: false, confidence: res.confidence, srcLong: res.srcLong };
+    UI.scan = { sheet, match, text, sheetTotal: match.total, showText: false, confidence: res.confidence, srcLong: res.srcLong, fioCheck: res.fioCheck, check: res.check, ms: Math.round(res.timings.total) };
     go('scan');
   } catch (e) {
     scanFail(['Фото не удалось обработать' + (e && e.message ? ': ' + e.message : ''), navigator.onLine === false ? 'Нет интернета: при первом сканировании он нужен, чтобы загрузить модуль распознавания' : 'Попробуйте ещё раз; если повторится — закройте и откройте приложение']);
@@ -746,6 +735,12 @@ function scanProblems(sc) {
   m.extra.forEach((x) => { if (!/^Вызов на дом$/.test(x.name)) (total && total === sum ? warn : err)('Строка не найдена в прайсе: «' + x.name.slice(0, 40) + '»' + (total && total === sum ? ' — сумма сошлась, проверьте название' : '')); else if (!x.price) err('Не прочитана цена строки «Вызов на дом»'); });
   if (!sh.order) err('Не прочитан ID счёта — без него штрихкоды не совпадут с Aurora');
   m.items.forEach((x) => { if (!x.sure) warn('Проверьте по листу: «' + x.name.slice(0, 44) + '»'); });
+  // контрольное чтение ФИО, даты рождения и телефона
+  if (sh.last && sc.fioCheck === 'diff') err('ФИО прочитано двумя способами по-разному: «' + [sh.last, sh.first, sh.middle].filter(Boolean).join(' ') + '» и «' + sh.fioAlt + '» — сверьте по буквам или переснимите');
+  else if (sh.last && sc.fioCheck && sc.fioCheck !== 'same') warn('ФИО не удалось перепроверить — сверьте с листом по буквам');
+  const ck = sc.check || {};
+  if (ck.dob === 'diff') err('Дата рождения прочитана по-разному: ' + sh.dob + ' и ' + sh.dobAlt + ' — сверьте с листом');
+  if (ck.phone === 'diff') err('Телефон прочитан по-разному: ' + sh.phone + ' и ' + sh.phoneAlt + ' — сверьте с листом');
   if (!sh.dob) warn('Не прочитана дата рождения');
   if (!sh.pid) warn('Не прочитан ID пациента');
   return out;
@@ -766,7 +761,7 @@ function vScan() {
         <div class="tips"><b>Как переснять:</b> лист целиком в кадре, телефон ровно над листом, хороший свет, без тени от руки и бликов, текст резкий.</div>
         <button type="button" class="btn red" data-act="scanCam">${I.cam} Сфотографировать заново</button>
       </div>` :
-      `<div class="note ok" style="align-items:center">${I.check('#0F6B3A', 18)}<span><b>Сумма сошлась с листом: ${fmt(sum)}</b><br>Все строки распознаны. Сверьте ФИО и нажмите «Добавить».</span></div>`}
+      `<div class="note ok" style="align-items:center">${I.check('#0F6B3A', 18)}<span><b>Сумма сошлась с листом: ${fmt(sum)}</b><br>Все строки распознаны${sc.fioCheck === 'same' ? ', ФИО перепроверено' : ''}. Нажмите «Добавить».</span></div>`}
     ${warns.length ? `<div class="note warn"><span><b>Проверьте глазами:</b><br>${warns.map((x) => esc(x.text)).join('<br>')}</span></div>` : ''}
     <div class="grid2" style="gap:10px">
       <label class="field"><span>Фамилия</span><input class="input ${sh.last ? '' : 'bad-field'}" name="last" value="${esc(sh.last)}" required></label>
