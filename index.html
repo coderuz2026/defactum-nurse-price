@@ -199,7 +199,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.17', APP_DATE = '12.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.18', APP_DATE = '12.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -280,6 +280,7 @@ const I = {
   search: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`,
   x: (c = '#64748B') => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
   cam: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>`,
+  share: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F172A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4.1M8.6 13.4l6.8 4.1"/></svg>`,
   trash: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>`,
   bars: (c = '#fff') => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 5v14M7 5v14M11 5v14M14 5v14M18 5v14M20 5v14"/></svg>`,
   eye: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`,
@@ -350,7 +351,7 @@ function groupTubes(p) {
 /* ---------- Рендер ---------- */
 function render() {
   const app = document.getElementById('app');
-  const views = { auth: vAuth, scan: vScan, visit: vVisit, patient: vPatient, catalog: vCatalog, tubes: vTubes, client: vClient, profile: vProfile };
+  const views = { auth: vAuth, printer: vPrinter, scan: vScan, visit: vVisit, patient: vPatient, catalog: vCatalog, tubes: vTubes, client: vClient, profile: vProfile };
   if (!S.me) UI.view = 'auth';
   app.innerHTML = (views[UI.view] || vVisit)();
   if (UI.view === 'tubes') drawBarcodes();
@@ -546,7 +547,11 @@ function vTubes() {
   </div>
   <div class="bottom"><div>
     <div class="row"><span style="flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden;display:flex"><span style="width:${tubes.length ? Math.round(done / tubes.length * 100) : 0}%;background:#22A55B"></span></span><span class="sub" style="font-weight:600">Наклеено ${done} из ${tubes.length}</span></div>
-    <button class="btn" data-act="print">${I.print()} Печать этикеток (${tubes.length})</button>
+    <div class="row" style="gap:8px">
+      <button class="btn" style="flex:1" data-act="print" ${UI.printing ? 'disabled' : ''}>${UI.printing ? '<span class="spin"></span> Печатаю…' : I.print() + ' Печать этикеток (' + tubes.length + ')'}</button>
+      <button class="btn light" style="width:56px;flex-shrink:0" data-act="shareLabels" aria-label="Передать этикетки картинками в другое приложение">${I.share}</button>
+    </div>
+    <button class="sub" data-act="go" data-v="printer" style="border:0;background:none;padding:0;color:var(--brand-deep);font-weight:600">${S.printer && S.printer.address ? 'Принтер: ' + esc(S.printer.name) + ' ›' : 'Принтер не выбран — настроить ›'}</button>
   </div></div>`;
 }
 function drawBarcodes() {
@@ -595,6 +600,11 @@ function vProfile() {
       <div class="row between"><span>Выездов на телефоне</span><b>${S.visits.length}</b></div>
       <button class="btn light small" data-act="reloadPrices">${I.sync} Проверить обновление цен</button>
     </div>
+    <button class="card pad row" data-act="go" data-v="printer" style="width:100%;text-align:left;cursor:pointer">
+      <span style="width:44px;height:44px;border-radius:14px;background:var(--tint);display:flex;align-items:center;justify-content:center;flex-shrink:0">${I.print('#075E6C')}</span>
+      <span style="flex:1"><b style="font-size:16px;display:block">Принтер этикеток</b><span class="sub">${S.printer && S.printer.address ? esc(S.printer.name) + ' · ' + (S.printer.proto === 'escpos' ? 'ESC/POS' : 'TSPL') : 'Не настроен'}</span></span>
+      <span style="font-size:22px;color:#94A3B8">›</span>
+    </button>
     ${IS_APK ? '' : isStandalone() ? `<div class="note ok">Приложение установлено на этот телефон.</div>` : `<button class="btn ghost" data-act="instShow">Установить на телефон</button>`}
     <button class="btn light" data-act="logout" style="color:var(--bad)">Выйти</button>
   </div>`;
@@ -624,7 +634,16 @@ document.addEventListener('click', (e) => {
       save(); if (el.dataset.keep) { UI.q = ''; } UI._keepScroll = true; render(); break;
     }
     case 'stick': { const p = patient(UI.patientId); p.stuck = p.stuck || {}; p.stuck[v] = !p.stuck[v]; save(); UI._keepScroll = true; render(); break; }
-    case 'print': window.print(); break;
+    case 'print': printLabels(patient(UI.patientId)); break;
+    case 'shareLabels': shareLabels(patient(UI.patientId)); break;
+    case 'prList': printerList(true); break;
+    case 'prBt': if (IS_APK) LP().openSettings().catch(() => toast('Откройте настройки Bluetooth вручную')); break;
+    case 'prPick': S.printer = Object.assign({ proto: 'tspl', invert: false, gap: 2 }, S.printer || {}, { address: v, name: el.dataset.name }); save(); UI._keepScroll = true; render(); break;
+    case 'prProto': S.printer = Object.assign({ invert: false, gap: 2 }, S.printer || {}, { proto: v }); save(); UI._keepScroll = true; render(); break;
+    case 'prInvert': S.printer = Object.assign({ proto: 'tspl', gap: 2 }, S.printer || {}, { invert: !(S.printer && S.printer.invert) }); save(); UI._keepScroll = true; render(); break;
+    case 'prGap': S.printer = Object.assign({ proto: 'tspl', invert: false }, S.printer || {}, { gap: +v }); save(); UI._keepScroll = true; render(); break;
+    case 'prTest': printTest(); break;
+    case 'prForget': S.printer = null; save(); render(); break;
     case 'disc': vis.discount = +v; save(); UI._keepScroll = true; render(); break;
     case 'newVisit': if (confirm('Завершить текущий выезд и начать новый?')) { newVisit(); go('visit'); } break;
     case 'reloadPrices': loadPrices(true); break;
@@ -804,6 +823,126 @@ function vScan() {
       <div class="grid2"><button type="button" class="btn ${errs.length ? 'red' : 'light'}" data-act="scanCam">Переснять</button><button class="btn ${errs.length ? 'light' : ''}" type="submit" ${m.items.length && sh.last ? '' : 'disabled'}>${errs.length ? 'Всё равно добавить' : 'Добавить'}</button></div>
     </div></div>
   </form>`;
+}
+
+/* ---------- Этикетки: картинка 40×30 мм, печать по Bluetooth, передача в другое приложение ---------- */
+const LBL = { w: 320, h: 240 }; // 40×30 мм при 203 точках на дюйм (8 точек на мм)
+const LP = () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LabelPrinter;
+// Рисует этикетку как в Aurora: штрихкод, номер, дата, «ID Фамилия И.О.», пробирка, анализаторы
+function labelCanvas(L) {
+  const c = document.createElement('canvas'); c.width = LBL.w; c.height = LBL.h;
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, LBL.w, LBL.h); g.fillStyle = '#000'; g.imageSmoothingEnabled = false;
+  if (window.JsBarcode) {
+    const b = document.createElement('canvas');
+    let mod = 3; JsBarcode(b, L.code, { format: 'CODE128', width: mod, height: 96, margin: 0, displayValue: false });
+    if (b.width > LBL.w - 28) { mod = 2; JsBarcode(b, L.code, { format: 'CODE128', width: mod, height: 96, margin: 0, displayValue: false }); }
+    g.drawImage(b, Math.round((LBL.w - b.width) / 2), 8);
+  }
+  const F = "'DF Label', Arial, sans-serif", line = (t, y, font, x, align) => { g.font = font; g.textAlign = align || 'left'; g.textBaseline = 'alphabetic'; g.fillText(t, x == null ? 12 : x, y, LBL.w - 24); };
+  line(L.code, 132, '700 27px ' + F, LBL.w / 2, 'center');
+  line(L.date, 153, '400 15px ' + F, 20);
+  line(L.who, 176, '400 19px ' + F);
+  line(L.tube, 200, '700 19px ' + F);
+  line(L.an, 219, '400 12px ' + F);
+  return c;
+}
+const labelData = (p, t) => ({ code: t.code, date: dt(visit().created), who: (p.pid || p.order) + ' ' + fioShort(p), tube: t.name, an: t.an });
+// Картинка → чёрно-белые строки по 1 биту на точку (1 = чёрная)
+function monoBits(c) {
+  const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, wb = Math.ceil(c.width / 8), out = new Uint8Array(wb * c.height);
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) { const i = (y * c.width + x) * 4; if ((d[i] * 77 + d[i + 1] * 150 + d[i + 2] * 29) >> 8 < 140) out[y * wb + (x >> 3)] |= 0x80 >> (x & 7); }
+  return { bits: out, wb, h: c.height };
+}
+const asciiBytes = (s) => Uint8Array.from(s, (ch) => ch.charCodeAt(0) & 0xFF);
+const concatBytes = (arr) => { const n = arr.reduce((s, a) => s + a.length, 0), o = new Uint8Array(n); let k = 0; arr.forEach((a) => { o.set(a, k); k += a.length; }); return o; };
+// Команды принтера. TSPL — этикеточные принтеры (в данных 0 = чёрная точка), ESC/POS — чековые (1 = чёрная).
+function printerBytes(canvases, cfg) {
+  const parts = [];
+  canvases.forEach((c) => {
+    const m = monoBits(c); let bits = m.bits;
+    if (cfg.proto === 'escpos') {
+      if (cfg.invert) bits = bits.map((b) => ~b & 0xFF);
+      parts.push(Uint8Array.from([0x1B, 0x40, 0x1D, 0x76, 0x30, 0x00, m.wb & 0xFF, m.wb >> 8, m.h & 0xFF, m.h >> 8]), bits, Uint8Array.from([0x1B, 0x64, cfg.gap > 0 ? 2 : 0]));
+    } else {
+      if (!cfg.invert) bits = bits.map((b) => ~b & 0xFF);
+      parts.push(asciiBytes(`SIZE 40 mm,30 mm\r\nGAP ${cfg.gap} mm,0 mm\r\nDIRECTION 1\r\nCLS\r\nBITMAP 0,0,${m.wb},${m.h},0,`), bits, asciiBytes('\r\nPRINT 1,1\r\n'));
+    }
+  });
+  return concatBytes(parts);
+}
+function b64(bytes) { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); }
+async function fontsReady() { try { await Promise.all([document.fonts.load("700 20px 'DF Label'", 'Жё1'), document.fonts.load("400 20px 'DF Label'", 'Жё1')]); } catch (e) {} }
+async function sendToPrinter(canvases) {
+  const cfg = S.printer;
+  if (!IS_APK) { toast('Печать на Bluetooth-принтер работает в приложении APK'); return false; }
+  if (!LP()) { toast('Модуль печати не найден — обновите приложение'); return false; }
+  if (!cfg || !cfg.address) { toast('Сначала выберите принтер'); go('printer'); return false; }
+  try { await LP().print({ address: cfg.address, data: b64(printerBytes(canvases, cfg)) }); return true; }
+  catch (e) { toast(e && e.message ? e.message : 'Ошибка печати'); return false; }
+}
+async function printLabels(p) {
+  if (!p || UI.printing) return;
+  if (!IS_APK) { window.print(); return; }
+  if (!S.printer || !S.printer.address) { toast('Сначала выберите принтер'); go('printer'); return; }
+  const tubes = groupTubes(p); if (!tubes.length) return;
+  UI.printing = true; UI._keepScroll = true; render();
+  await fontsReady();
+  const ok = await sendToPrinter(tubes.map((t) => labelCanvas(labelData(p, t))));
+  UI.printing = false; UI._keepScroll = true; if (UI.view === 'tubes') render();
+  if (ok) toast('Отправлено на принтер: ' + tubes.length + ' ' + plural(tubes.length, 'этикетка', 'этикетки', 'этикеток'));
+}
+async function printTest() {
+  await fontsReady();
+  const d = new Date(), ok = await sendToPrinter([labelCanvas({ code: '12345602', date: dt(d), who: '123456 Тестова Т.Т.', tube: 'Проверка печати', an: 'de factum · ' + APP_VERSION })]);
+  if (ok) toast('Тестовая этикетка отправлена на принтер');
+}
+async function shareLabels(p) {
+  if (!p) return; const tubes = groupTubes(p); if (!tubes.length) return;
+  await fontsReady();
+  // для программ принтеров картинку увеличиваем вдвое — так её удобнее масштабировать
+  const big = (c) => { const o = document.createElement('canvas'); o.width = c.width * 2; o.height = c.height * 2; const g = o.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(c, 0, 0, o.width, o.height); return o; };
+  const files = tubes.map((t) => ({ name: `${t.code}.png`, canvas: big(labelCanvas(labelData(p, t))) }));
+  try {
+    if (IS_APK && LP()) { await LP().share({ title: 'Этикетки', files: files.map((f) => ({ name: f.name, data: f.canvas.toDataURL('image/png').split(',')[1] })) }); return; }
+    const blobs = await Promise.all(files.map((f) => new Promise((ok) => f.canvas.toBlob((b) => ok(new File([b], f.name, { type: 'image/png' })), 'image/png'))));
+    if (navigator.canShare && navigator.canShare({ files: blobs })) { await navigator.share({ files: blobs, title: 'Этикетки' }); return; }
+    blobs.forEach((f) => { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); });
+    toast('Этикетки сохранены картинками');
+  } catch (e) { if (!e || e.name !== 'AbortError') toast(e && e.message ? e.message : 'Не удалось передать этикетки'); }
+}
+async function printerList(manual) {
+  if (!IS_APK || !LP()) return;
+  try { UI.bt = await LP().list(); } catch (e) { UI.bt = { error: e && e.message ? e.message : 'Нет доступа к Bluetooth', devices: [] }; }
+  if (UI.view === 'printer') { UI._keepScroll = true; render(); }
+  if (manual && UI.bt && !UI.bt.error) toast('Найдено сопряжённых устройств: ' + UI.bt.devices.length);
+}
+function vPrinter() {
+  const pr = S.printer || {}, bt = UI.bt;
+  if (IS_APK && !bt && !UI._btAsked) { UI._btAsked = true; setTimeout(() => printerList(false), 50); }
+  return header('Принтер этикеток', 'Портативный Bluetooth-принтер, этикетка 40×30 мм', 'profile') + `
+  <div class="body">
+    ${!IS_APK ? `<div class="note warn"><span><b>Печать напрямую работает только в приложении APK.</b><br>В версии для браузера этикетки можно передать картинками в программу принтера — кнопка рядом с «Печать этикеток».</span></div>` : `
+    <div class="card pad" style="display:flex;flex-direction:column;gap:10px">
+      <b style="font-size:16px">1. Сопряжение</b>
+      <span class="sub" style="line-height:1.45">Включите принтер. В настройках Bluetooth телефона найдите его и подключите (PIN обычно 0000 или 1234). Потом вернитесь сюда и нажмите «Обновить список».</span>
+      <div class="grid2"><button class="btn light small" data-act="prBt">Настройки Bluetooth</button><button class="btn light small" data-act="prList">${I.sync} Обновить список</button></div>
+    </div>
+    <div class="row between" style="padding:0 4px"><span class="h2">2. Выберите принтер</span><span class="sub">${bt && bt.devices ? bt.devices.length : ''}</span></div>
+    ${bt && bt.error ? `<div class="note err">${esc(bt.error)}</div>` : ''}
+    ${bt && bt.enabled === false ? `<div class="note err">Bluetooth выключен — включите его и обновите список.</div>` : ''}
+    <div class="list">${bt && bt.devices && bt.devices.length ? bt.devices.map((d) => `<button class="item ${pr.address === d.address ? 'on' : ''}" data-act="prPick" data-v="${esc(d.address)}" data-name="${esc(d.name)}"><span class="check" style="border-radius:13px">${pr.address === d.address ? I.check() : ''}</span><span class="item-t"><b>${esc(d.name)}</b><span>${esc(d.address)}</span></span></button>`).join('') : `<div class="empty">${bt ? 'Сопряжённых устройств нет. Подключите принтер в настройках Bluetooth.' : 'Загружаю список…'}</div>`}</div>
+    ${pr.address ? `
+    <div class="h2" style="padding:0 4px">3. Настройки печати</div>
+    <div class="card pad" style="display:flex;flex-direction:column;gap:14px">
+      <div class="field"><span>Язык принтера</span><div class="seg" style="grid-template-columns:1fr 1fr"><button class="${pr.proto !== 'escpos' ? 'on' : ''}" data-act="prProto" data-v="tspl">TSPL (этикеточный)</button><button class="${pr.proto === 'escpos' ? 'on' : ''}" data-act="prProto" data-v="escpos">ESC/POS (чековый)</button></div></div>
+      <div class="field"><span>Зазор между этикетками</span><div class="seg" style="grid-template-columns:repeat(4,1fr)">${[0, 2, 3, 5].map((x) => `<button class="${(pr.gap == null ? 2 : pr.gap) === x ? 'on' : ''}" data-act="prGap" data-v="${x}">${x ? x + ' мм' : 'нет'}</button>`).join('')}</div></div>
+      <button class="opt ${pr.invert ? 'on' : ''}" data-act="prInvert" style="width:100%"><span class="dot"></span>Поменять чёрное и белое (если этикетка печатается негативом)</button>
+      <button class="btn" data-act="prTest">${I.print()} Тестовая печать</button>
+      <span class="sub" style="line-height:1.45">Если принтер молчит или печатает мусор — переключите язык принтера и попробуйте ещё раз.</span>
+      <button class="btn light small" data-act="prForget" style="color:var(--bad)">Забыть принтер</button>
+    </div>` : ''}
+    <div class="note info"><span>Подходят принтеры с обычным Bluetooth, которые понимают команды TSPL или ESC/POS. Принтеры со своим закрытым протоколом (например, Niimbot) напрямую не печатают — для них передайте этикетки картинками в их программу.</span></div>`}
+  </div>`;
 }
 
 /* ---------- Адрес по геолокации ---------- */

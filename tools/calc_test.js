@@ -4,10 +4,10 @@ const html = fs.readFileSync('index.html', 'utf8');
 const src = html.match(/<script>\n'use strict';([\s\S]*?)<\/script>/)[1];
 const store = {};
 const Scan = require('../scan.js');
-const stub = { Scan, location: { protocol: 'https:', hostname: 'example.org' }, sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
+const stub = { Scan, btoa: (x) => Buffer.from(x, 'binary').toString('base64'), location: { protocol: 'https:', hostname: 'example.org' }, sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
   document: { documentElement: { classList: { contains: () => true, add() {} } }, addEventListener() {}, getElementById: () => ({ innerHTML: '', addEventListener() {}, remove() {} }), querySelectorAll: () => [], querySelector: () => null, body: { appendChild() {} }, createElement: () => ({ remove() {} }) },
   window: { scrollTo() {}, scrollY: 0, addEventListener() {} }, navigator: { userAgent: '' }, fetch: async () => ({ ok: false }), setTimeout, clearTimeout, console, Date, Math, JSON };
-const fn = new Function(...Object.keys(stub), src + '\nreturn {vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
+const fn = new Function(...Object.keys(stub), src + '\nreturn {printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
 const A = fn(...Object.values(stub));
 const prices = JSON.parse(fs.readFileSync('data/prices.json', 'utf8'));
 A.setPrices(prices);
@@ -138,6 +138,16 @@ eq('экран выезда рисуется', /ОШИБКА/.test(draw(A.vVisit
 eq('экран профиля рисуется', /ОШИБКА/.test(draw(A.vProfile)), false);
 A.UI.scan = { sheet: sh, match: mt, sheetTotal: mt.total, text: '', fioCheck: 'same', check: {} };
 eq('экран проверки листа рисуется', /ОШИБКА/.test(draw(A.vScan)), false);
+eq('экран принтера рисуется', /ОШИБКА/.test(draw(A.vPrinter)), false);
+// команды принтера: этикетка 320×240 точек, первая точка чёрная
+const fakeCanvas = { width: 320, height: 240, getContext: () => ({ getImageData: () => { const d = new Uint8Array(320 * 240 * 4).fill(255); d[0] = d[1] = d[2] = 0; return { data: d }; } }) };
+const tspl = A.printerBytes([fakeCanvas], { proto: 'tspl', invert: false, gap: 2 }), head = 'SIZE 40 mm,30 mm\r\nGAP 2 mm,0 mm\r\nDIRECTION 1\r\nCLS\r\nBITMAP 0,0,40,240,0,';
+eq('TSPL: заголовок, размер данных, конец', [Buffer.from(tspl.slice(0, head.length)).toString(), tspl.length, Buffer.from(tspl.slice(-13)).toString()], [head, head.length + 40 * 240 + 13, '\r\nPRINT 1,1\r\n']);
+eq('TSPL: чёрная точка = бит 0', [tspl[head.length], tspl[head.length + 1]], [0x7F, 0xFF]);
+const esc = A.printerBytes([fakeCanvas, fakeCanvas], { proto: 'escpos', invert: false, gap: 2 });
+eq('ESC/POS: команда растра и размер', [Array.from(esc.slice(0, 10)), esc.length], [[0x1B, 0x40, 0x1D, 0x76, 0x30, 0, 40, 0, 240, 0], 2 * (10 + 9600 + 3)]);
+eq('ESC/POS: чёрная точка = бит 1', [esc[10], esc[11]], [0x80, 0x00]);
+eq('base64 без потерь', Buffer.from(A.b64(tspl), 'base64').equals(Buffer.from(tspl)), true);
 // пропажа строки должна быть заметна: сумма не сходится
 const broken = Scan.matchSheet(Scan.parseSheet(SHEET.replace(/\n2 Ферритин[^\n]*/, ''), ''), prices.items);
 eq('лист без одной строки: предупреждение', [broken.ok, broken.total, broken.sum], [false, 960000, 810000]);
