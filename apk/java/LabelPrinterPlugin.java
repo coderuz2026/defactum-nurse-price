@@ -53,7 +53,7 @@ import java.util.UUID;
 public class LabelPrinterPlugin extends Plugin {
 
     /** Уровень «родной» части. Если в новой версии он выше — нужен новый APK, иначе хватает обновления веб-части. */
-    private static final int NATIVE_LEVEL = 2;
+    private static final int NATIVE_LEVEL = 3;
 
     private static final UUID SPP = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 

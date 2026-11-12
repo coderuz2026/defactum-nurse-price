@@ -6,8 +6,8 @@ const store = {};
 const Scan = require('../scan.js');
 const stub = { Scan, btoa: (x) => Buffer.from(x, 'binary').toString('base64'), location: { protocol: 'https:', hostname: 'example.org' }, sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
   document: { documentElement: { classList: { contains: () => true, add() {} } }, addEventListener() {}, getElementById: () => ({ innerHTML: '', addEventListener() {}, remove() {} }), querySelectorAll: () => [], querySelector: () => null, body: { appendChild() {} }, createElement: () => ({ remove() {} }) },
-  window: { scrollTo() {}, scrollY: 0, addEventListener() {} }, navigator: { userAgent: '' }, fetch: async () => ({ ok: false }), setTimeout, clearTimeout, console, Date, Math, JSON };
-const fn = new Function(...Object.keys(stub), src + '\nreturn {updateResult, printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
+  window: { scrollTo() {}, scrollY: 0, addEventListener() {}, Capacitor: null }, navigator: { userAgent: '' }, fetch: async () => ({ ok: false }), setTimeout, clearTimeout, console, Date, Math, JSON };
+const fn = new Function(...Object.keys(stub), src + '\nreturn {goBack, updateResult, printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
 const A = fn(...Object.values(stub));
 const prices = JSON.parse(fs.readFileSync('data/prices.json', 'utf8'));
 A.setPrices(prices);
@@ -148,6 +148,16 @@ const esc = A.printerBytes([fakeCanvas, fakeCanvas], { proto: 'escpos', invert: 
 eq('ESC/POS: команда растра и размер', [Array.from(esc.slice(0, 10)), esc.length], [[0x1B, 0x40, 0x1D, 0x76, 0x30, 0, 40, 0, 240, 0], 2 * (10 + 9600 + 3)]);
 eq('ESC/POS: чёрная точка = бит 1', [esc[10], esc[11]], [0x80, 0x00]);
 eq('base64 без потерь', Buffer.from(A.b64(tspl), 'base64').equals(Buffer.from(tspl)), true);
+// кнопка «Назад»: возврат по экранам, с главного — выход
+const backFrom = (view, extra) => { Object.assign(A.UI, { view, q: '', authMode: 'login' }, extra || {}); const handled = A.goBack(); return [handled, A.UI.view]; };
+eq('назад: пробирки → выезд', backFrom('tubes'), [true, 'visit']);
+eq('назад: анализы → выезд', backFrom('catalog'), [true, 'visit']);
+eq('назад: анализы с поиском → сначала очистить поиск', [backFrom('catalog', { q: 'ттг' }), A.UI.q], [[true, 'catalog'], '']);
+eq('назад: экран клиента → выезд', backFrom('client'), [true, 'visit']);
+eq('назад: принтер → профиль → выезд', [backFrom('printer'), backFrom('profile')], [[true, 'profile'], [true, 'visit']]);
+eq('назад: проверка листа → выезд', backFrom('scan'), [true, 'visit']);
+eq('назад: с главного экрана — выход из приложения', backFrom('visit'), [false, 'visit']);
+eq('назад: регистрация → вход, со входа — выход', [backFrom('auth', { authMode: 'reg' }), A.UI.authMode, backFrom('auth')], [[true, 'auth'], 'login', [false, 'auth']]);
 // пропажа строки должна быть заметна: сумма не сходится
 const broken = Scan.matchSheet(Scan.parseSheet(SHEET.replace(/\n2 Ферритин[^\n]*/, ''), ''), prices.items);
 eq('лист без одной строки: предупреждение', [broken.ok, broken.total, broken.sum], [false, 960000, 810000]);

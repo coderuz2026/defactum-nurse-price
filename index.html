@@ -199,12 +199,12 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.21', APP_DATE = '12.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.22', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
 const SITE = 'https://coderuz2026.github.io/defactum-nurse-price/';
-const APK_NATIVE = 2; // уровень «родной» части APK; повышать, когда меняется Java-код (тогда обновление идёт установкой APK)
+const APK_NATIVE = 3; // уровень «родной» части APK; повышать, когда меняется Java-код (тогда обновление идёт установкой APK)
 const WEB_ZIP_URL = 'https://github.com/coderuz2026/defactum-nurse-price/releases/latest/download/defactum-nurse-web.zip';
 const APK_URL = 'https://github.com/coderuz2026/defactum-nurse-price/releases/latest/download/defactum-nurse.apk';
 const PRICES_REMOTE = 'https://raw.githubusercontent.com/coderuz2026/defactum-nurse-price/main/data/prices.json';
@@ -1018,6 +1018,30 @@ document.addEventListener('click', async (e) => {
   if (a === 'instGo' && INST.evt) { const ev = INST.evt; INST.evt = null; ev.prompt(); try { const r = await ev.userChoice; instSet(r.outcome === 'accepted' ? 'installed' : 'later'); } catch (x) {} box.innerHTML = ''; return; }
   instSet('later'); box.innerHTML = '';
 });
+
+/* ---------- Кнопка «Назад» ---------- */
+// Куда ведёт «Назад» с каждого экрана. null — выходить некуда (главный экран).
+const BACK = { patient: 'visit', catalog: 'visit', tubes: 'visit', client: 'visit', profile: 'visit', scan: 'visit', printer: 'profile' };
+// Возвращает true, если «Назад» обработано внутри приложения
+function goBack() {
+  const ov = document.getElementById('overlay'), inst = document.getElementById('install');
+  if (ov && ov.querySelector && ov.querySelector('.ovl')) { if (document.getElementById('scanBar') || /Не закрывайте приложение/.test(ov.textContent)) return true; overlay(''); return true; } // во время распознавания и обновления «Назад» ничего не делает
+  if (inst && inst.querySelector && inst.querySelector('.install')) { instSet('later'); inst.innerHTML = ''; return true; }
+  if (UI.view === 'catalog' && UI.q) { UI.q = ''; render(); return true; }
+  if (UI.view === 'auth' && UI.authMode === 'reg') { UI.authMode = 'login'; UI.err = ''; render(); return true; }
+  const to = BACK[UI.view];
+  if (!to) return false;
+  if (UI.view === 'scan') UI.scan = null;
+  go(to); return true;
+}
+window.__dfBack = goBack; // вызывается из Android-оболочки
+// В браузере и PWA: держим одну «запасную» запись в истории и ловим возврат на неё
+if (!IS_APK && window.history && history.pushState) {
+  try {
+    history.pushState({ df: 1 }, '');
+    window.addEventListener('popstate', () => { if (goBack()) history.pushState({ df: 1 }, ''); else history.back(); }); // с главного экрана — обычный выход
+  } catch (e) {}
+}
 
 /* ---------- Версия и обновление приложения ---------- */
 const verNum = (v) => String(v).split('.').reduce((s, x) => s * 1000 + (+x || 0), 0);
