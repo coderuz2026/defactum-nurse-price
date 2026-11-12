@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=Poppins:wght@500;600&display=swap&subset=cyrillic" rel="stylesheet">
 <script src="vendor/JsBarcode.all.min.js"></script>
+<script src="scan.js"></script>
 <style>
 @font-face{font-family:'DF Label';font-weight:400;font-style:normal;font-display:block;src:url(vendor/fonts/arimo-cyrillic-400-normal.woff2) format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
 @font-face{font-family:'DF Label';font-weight:400;font-style:normal;font-display:block;src:url(vendor/fonts/arimo-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+2013-2014,U+2018-201D,U+2022,U+2026}
@@ -155,6 +156,12 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 @media (prefers-reduced-motion:reduce){#splash,#splash *{animation-duration:.01s!important;animation-delay:0s!important}#splash{animation:spOut .3s ease .9s forwards!important}}
 .spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.ovl{position:fixed;inset:0;z-index:300;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:24px}
+.ovl>div{width:100%;max-width:340px;background:#fff;border-radius:24px;padding:24px 22px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.bar{width:100%;height:8px;border-radius:4px;background:var(--line);overflow:hidden}.bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#A9D046,#2FA98C,#0A93B2);border-radius:4px;transition:width .3s}
+.scanbtn{min-height:64px;border-radius:20px;border:0;background:var(--brand);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 16px;width:100%;text-align:left;box-shadow:0 10px 24px rgba(11,127,144,.25)}
+.scanbtn b{font-size:15.5px;font-weight:700;display:block}.scanbtn span.t{font-size:12.5px;opacity:.85}
+.flag{height:22px;padding:0 8px;border-radius:7px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;background:#FFF7E6;color:#7A4B00}
 @media print{#splash{display:none}}
 @media print{
   body *{visibility:hidden}
@@ -179,6 +186,9 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 </div>
 <div class="app" id="app"></div>
 <div id="install"></div>
+<div id="overlay"></div>
+<input type="file" id="scanCam" accept="image/*" capture="environment" hidden>
+<input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
 const BRAND = '#0B7F90';
@@ -254,6 +264,7 @@ const I = {
   back: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F172A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`,
   search: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`,
   x: (c = '#64748B') => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
+  cam: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>`,
   trash: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>`,
   bars: (c = '#fff') => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 5v14M7 5v14M11 5v14M14 5v14M18 5v14M20 5v14"/></svg>`,
   eye: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`,
@@ -299,11 +310,15 @@ function newVisit() {
   S.visits.push(v); S.visitId = v.id; save(); return v;
 }
 const patient = (id) => (visit() || { patients: [] }).patients.find((p) => p.id === id);
-const pSum = (p) => p.items.reduce((s, id) => s + ((P.byId[id] || {}).price || 0), 0);
+const pItems = (p) => p.items.reduce((s, id) => s + ((P.byId[id] || {}).price || 0), 0);
+const pExtra = (p) => (p.extra || []).reduce((s, x) => s + (+x.price || 0), 0);
+const pSum = (p) => pItems(p) + pExtra(p);
+const fioShort = (p) => (p.last || '') + (p.first ? ' ' + p.first[0].toUpperCase() + '.' : '') + (p.middle ? p.middle[0].toUpperCase() + '.' : '');
 function vTotals(v) {
-  const an = v.patients.reduce((s, p) => s + pSum(p), 0);
+  const an = v.patients.reduce((s, p) => s + pItems(p), 0);
+  const ex = v.patients.reduce((s, p) => s + pExtra(p), 0); // услуги не из прайса — без скидки
   const off = Math.round(an * (v.discount || 0) / 100);
-  return { an, off, fee: +v.homeFee || 0, total: an - off + (+v.homeFee || 0) };
+  return { an, ex, off, fee: +v.homeFee || 0, total: an - off + ex + (+v.homeFee || 0) };
 }
 function groupTubes(p) {
   const groups = {};
@@ -312,7 +327,7 @@ function groupTubes(p) {
     tubesFor(it, (P.catById[it.cat] || {}).name).forEach((k) => { (groups[k] = groups[k] || { key: k, ...TUBES[k], tests: [] }).tests.push(it.name); });
   });
   p.stuck = p.stuck || {};
-  if (!p.order) { S.order = (S.order || 900000) + 1; p.order = S.order; save(); }
+  if (!p.order) { S.order = (S.order || 900000) + 1; p.order = S.order; save(); } // у пациента с листа p.order = «ID счета» из Aurora
   // Один контейнер у пациента = одна пробирка = один штрихкод: <номер заказа><номер контейнера>
   return Object.values(groups).sort((a, b) => a.no - b.no).map((g) => ({ ...g, code: String(p.order) + String(g.no).padStart(2, '0'), stuck: !!p.stuck[g.key] }));
 }
@@ -320,7 +335,7 @@ function groupTubes(p) {
 /* ---------- Рендер ---------- */
 function render() {
   const app = document.getElementById('app');
-  const views = { auth: vAuth, visit: vVisit, patient: vPatient, catalog: vCatalog, tubes: vTubes, client: vClient, profile: vProfile };
+  const views = { auth: vAuth, scan: vScan, visit: vVisit, patient: vPatient, catalog: vCatalog, tubes: vTubes, client: vClient, profile: vProfile };
   if (!S.me) UI.view = 'auth';
   app.innerHTML = (views[UI.view] || vVisit)();
   if (UI.view === 'tubes') drawBarcodes();
@@ -384,17 +399,23 @@ function vVisit() {
         <div class="row"><span class="avatar">${esc(initials(p.last + ' ' + p.first))}</span>
           <div style="flex:1;min-width:0"><b style="font-size:16px">${esc(p.last)} ${esc(p.first)}</b><div class="sub">${p.sex === 'm' ? 'М' : 'Ж'}${p.dob ? ' · ' + esc(p.dob) : ''} · ${p.items.length} ${plural(p.items.length, 'анализ', 'анализа', 'анализов')}</div></div>
           <b class="num">${fmt(pSum(p))}</b></div>
+        ${(p.extra || []).length ? `<div class="sub" style="margin-top:-4px">${p.extra.map((x) => esc(x.name) + ' · ' + fmt(x.price)).join('; ')}${p.pid ? ' · ID ' + esc(p.pid) : ''}</div>` : ''}
         ${tubes.length ? `<div class="chips">${tubes.map((x) => `<span class="chip">${I.tube(x.cap)}${esc(x.name.replace(/ \((ЭДТА|ПЦР)\)/, ''))}${x.no ? ' (' + String(x.no).padStart(2, '0') + ')' : ''}${x.tests.length > 1 ? ' ×' + x.tests.length : ''}</span>`).join('')}</div>` : ''}
         <div class="grid2">
           <button class="btn light small" data-act="catalog" data-v="${p.id}">${I.plus('#0F172A', 15)} Анализы</button>
           ${p.items.length ? `<button class="btn small" data-act="tubes" data-v="${p.id}" style="${marked ? 'background:var(--okbg);color:var(--ok);box-shadow:none' : ''}">${marked ? I.check('#0F6B3A') + ' Промаркировано' : I.bars() + ' Пробирки'}</button>` : `<button class="btn light small" data-act="editPatient" data-v="${p.id}">Изменить</button>`}
         </div></div>`;
     }).join('')}
-    ${!v.patients.length ? `<div class="note info">Добавьте пациента, затем выберите ему анализы. Можно несколько пациентов на один выезд.</div>` : ''}
-    <button class="add" data-act="newPatient"><span class="plus">${I.plus('#fff', 15)}</span>Добавить пациента</button>
+    ${!v.patients.length ? `<div class="note info">Сфотографируйте лист заказа из Aurora или добавьте пациента вручную. Можно несколько пациентов на один выезд.</div>` : ''}
+    <button class="scanbtn" data-act="scanCam"><span style="width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0">${I.cam}</span><span style="flex:1"><b>Сфотографировать лист заказа</b><span class="t">ФИО, анализы и сумма заполнятся сами</span></span></button>
+    <div class="grid2">
+      <button class="btn light small" data-act="scanPick">Фото из галереи</button>
+      <button class="btn light small" data-act="newPatient">${I.plus('#0F172A', 15)} Вручную</button>
+    </div>
     ${v.patients.length ? `<button class="btn light small" data-act="newVisit" style="color:var(--muted)">Завершить и начать новый выезд</button>` : ''}
   </div>
   <div class="bottom"><div>
+    ${t.ex ? `<div class="sum-row"><span>Вызов на дом и прочее</span><span class="num">${fmt(t.ex)}</span></div>` : ''}
     <div class="sum-row"><span>Анализы${v.patients.length ? ', ' + v.patients.length + ' ' + plural(v.patients.length, 'пациент', 'пациента', 'пациентов') : ''}</span><span class="num">${fmt(t.an)}</span></div>
     <div class="row between" style="gap:8px"><span class="sub">Скидка</span>
       <div class="seg" style="grid-template-columns:repeat(4,44px);padding:2px;border-radius:11px">${[0, 5, 10, 15].map((d) => `<button class="${(v.discount || 0) === d ? 'on' : ''}" data-act="disc" data-v="${d}" style="height:28px;font-size:12px;border-radius:9px">${d ? d + '%' : 'Нет'}</button>`).join('')}</div>
@@ -413,6 +434,7 @@ function vPatient() {
       <label class="field"><span>Фамилия</span><input class="input" name="last" value="${esc(p.last)}" placeholder="Рахимова" required autocapitalize="words"></label>
       <label class="field"><span>Имя</span><input class="input" name="first" value="${esc(p.first)}" placeholder="Дилноза" required autocapitalize="words"></label>
     </div>
+    <label class="field"><span>Отчество <span style="font-weight:400;color:#64748B">(необязательно)</span></span><input class="input" name="middle" value="${esc(p.middle || '')}" placeholder="Шухратовна" autocapitalize="words"></label>
     <label class="field"><span>Дата рождения</span><input class="input" name="dob" value="${esc(p.dob)}" placeholder="ДД.ММ.ГГГГ" inputmode="numeric" maxlength="10" data-mask="date"></label>
     <div class="field"><span>Пол</span><div class="seg" style="grid-template-columns:1fr 1fr">${[['m', 'Мужской'], ['f', 'Женский']].map(([k, l]) => `<button type="button" class="${p.sex === k ? 'on' : ''}" data-act="sex" data-v="${k}">${l}</button>`).join('')}</div></div>
     <label class="field"><span>Телефон <span style="font-weight:400;color:#64748B">(необязательно)</span></span><span class="phone"><b>+998</b><i></i><input name="phone" value="${esc(p.phone)}" type="tel" inputmode="numeric" placeholder="90 123 45 67"></span></label>
@@ -481,7 +503,7 @@ function vCatalog() {
 function labelHtml(p, t, i) {
   const v = visit();
   return `<div class="label"><svg class="bc" data-code="${t.code}"></svg><div class="code">${t.code}</div>
-    <div class="l1">${dt(v.created)}</div><div class="l2">${p.order} ${esc(shortName(p.last, p.first))}</div>
+    <div class="l1">${dt(v.created)}</div><div class="l2">${esc(p.pid || p.order)} ${esc(fioShort(p))}</div>
     <div class="l3">${esc(t.name)}</div><div class="l4">${esc(t.an)}</div></div>`;
 }
 function vTubes() {
@@ -530,9 +552,10 @@ function vClient() {
         <div><span>Филиал</span><b>${esc(me.branch)}</b></div><div><span>Выезд №</span><b>${v.no}</b></div>
       </div>
       <div style="padding:4px 20px">
-        ${v.patients.filter((p) => p.items.length).map((p) => `
+        ${v.patients.filter((p) => p.items.length || (p.extra || []).length).map((p) => `
           ${v.patients.length > 1 ? `<div style="padding:12px 0 2px;font-weight:800;font-size:14px;color:var(--brand-deep)">${esc(p.last)} ${esc(p.first)}</div>` : ''}
           ${p.items.map((id) => P.byId[id]).filter(Boolean).map((it) => `<div class="rline"><span style="line-height:1.35">${esc(it.name)}</span><b class="num" style="font-weight:600">${fmt(it.price).replace(' сум', '')}</b></div>`).join('')}`).join('')}
+          ${(p.extra || []).map((x) => `<div class="rline"><span style="line-height:1.35">${esc(x.name)}</span><b class="num" style="font-weight:600">${fmt(x.price).replace(' сум', '')}</b></div>`).join('')}
         ${t.fee ? `<div class="rline"><span>Выезд на дом</span><b class="num" style="font-weight:600">${fmt(t.fee).replace(' сум', '')}</b></div>` : ''}
         ${t.off ? `<div class="rline" style="color:var(--ok)"><span>Скидка ${v.discount}%</span><b class="num">− ${fmt(t.off).replace(' сум', '')}</b></div>` : ''}
       </div>
@@ -587,6 +610,12 @@ document.addEventListener('click', (e) => {
     case 'newVisit': if (confirm('Завершить текущий выезд и начать новый?')) { newVisit(); go('visit'); } break;
     case 'reloadPrices': loadPrices(true); break;
     case 'geo': locate(); break;
+    case 'scanCam': document.getElementById('scanCam').click(); break;
+    case 'scanPick': document.getElementById('scanPick').click(); break;
+    case 'scanDel': scanKeep(); UI.scan.match.items.splice(+v, 1); UI._keepScroll = true; render(); break;
+    case 'scanDelExtra': scanKeep(); UI.scan.match.extra.splice(+v, 1); UI._keepScroll = true; render(); break;
+    case 'scanSex': scanKeep(); UI.scan.sheet.sex = v; UI._keepScroll = true; render(); break;
+    case 'scanText': scanKeep(); UI.scan.showText = !UI.scan.showText; UI._keepScroll = true; render(); break;
     case 'logout': S.me = null; save(); UI.authMode = 'login'; go('auth'); break;
   }
 });
@@ -624,12 +653,107 @@ document.addEventListener('submit', (e) => {
   }
   if (kind === 'patient') {
     const v = visit(); const base = UI.editPatient || {};
-    const p = { ...base, last: o.last, first: o.first, dob: o.dob, phone: o.phone, sex: base.sex || 'f' };
+    const p = { ...base, last: o.last, first: o.first, middle: o.middle || '', dob: o.dob, phone: o.phone, sex: base.sex || 'f' };
     if (base.id) { Object.assign(patient(base.id), p); save(); go('visit'); }
     else { p.id = uid(); p.items = []; v.patients.push(p); save(); go('catalog', { patientId: p.id, q: '', cat: 0 }); }
   }
+  if (kind === 'scan') {
+    scanKeep(); const sh = UI.scan.sheet, m = UI.scan.match, v = visit();
+    if (!sh.last || !sh.first) { toast('Заполните фамилию и имя'); return; }
+    if (sh.order && !/^\d{5,8}$/.test(sh.order)) { toast('ID счёта — только цифры (5–8)'); return; }
+    const dup = sh.order && v.patients.find((x) => String(x.order) === sh.order);
+    if (dup && !confirm('Пациент с этим ID счёта уже есть в выезде. Заменить его?')) return;
+    if (dup) v.patients = v.patients.filter((x) => x !== dup);
+    const p = { id: uid(), last: sh.last, first: sh.first, middle: sh.middle, dob: sh.dob, sex: sh.sex || 'f', phone: sh.phone, pid: sh.pid, scanned: true,
+      items: m.items.map((x) => x.id), extra: m.extra.filter((x) => x.price > 0).map((x) => ({ name: x.name, price: x.price })) };
+    if (sh.order) p.order = Number(sh.order);
+    v.patients.push(p);
+    if (!v.addr && sh.address) v.addr = sh.address;
+    save(); UI.scan = null; go('tubes', { patientId: p.id });
+  }
   function fail(m) { UI.err = m; keepForm(); }
 });
+
+/* ---------- Сканирование листа заказа ---------- */
+function scanKeep() { // переносим правки из формы в состояние перед перерисовкой
+  const f = document.querySelector('form[data-submit="scan"]'); if (!f || !UI.scan) return;
+  const o = formObj(f), sh = UI.scan.sheet;
+  ['last', 'first', 'middle', 'dob', 'pid', 'order', 'address'].forEach((k) => { if (k in o) sh[k] = o[k]; });
+  if ('phone' in o) sh.phone = o.phone.replace(/\D/g, '').slice(-9);
+  UI.scan.match.extra.forEach((x, i) => { if (('xp' + i) in o) x.price = +o['xp' + i].replace(/\D/g, '') || 0; });
+}
+function overlay(html) { document.getElementById('overlay').innerHTML = html ? `<div class="ovl"><div>${html}</div></div>` : ''; }
+async function scanFile(file) {
+  if (!file) return;
+  if (!P.items.length) { toast('Прайс ещё не загружен — нужен интернет'); return; }
+  overlay(`${MARK(48)}<b style="font-size:17px">Читаю лист заказа…</b><div class="bar"><i id="scanBar"></i></div><span class="sub" id="scanMsg">Подготовка. Первый раз — до минуты.</span>`);
+  try {
+    const res = await Scan.recognize(file, (pr, st) => {
+      const b = document.getElementById('scanBar'), m = document.getElementById('scanMsg');
+      if (b) b.style.width = Math.round(pr * 100) + '%';
+      if (m) m.textContent = st === 'recognizing text' ? 'Распознаю текст…' : st === 'done' ? 'Готово' : 'Загружаю модуль распознавания…';
+    });
+    let sheet = Scan.parseSheet(res.text, res.idText);
+    let match = Scan.matchSheet(sheet, P.items);
+    let text = res.text;
+    // Сумма не сошлась с «Итого» — перечитываем таблицу услуг крупнее (до трёх попыток) и берём вариант, где сошлась
+    const miss = (m) => (m.total ? Math.abs(m.total - m.sum) : 1e12) - m.items.length;
+    for (const zoom of [1.6, 1.3, 2]) {
+      if (match.ok) break;
+      const msg = document.getElementById('scanMsg'); if (msg) msg.textContent = 'Уточняю таблицу анализов…';
+      const t2 = await Scan.rescanTable(res, zoom); if (!t2) break;
+      const sh2 = Scan.parseSheet(t2, res.idText), m2 = Scan.matchSheet(sh2, P.items);
+      if (m2.ok || miss(m2) < miss(match)) { ['last', 'first', 'middle', 'sex', 'dob', 'phone', 'pid', 'order', 'orderDate', 'callTime', 'address', 'comment'].forEach((k) => { if (!sh2[k]) sh2[k] = sheet[k]; }); sheet = sh2; match = m2; text = t2; }
+    }
+    overlay('');
+    UI.scan = { sheet, match, text, sheetTotal: match.total, showText: false };
+    go('scan');
+  } catch (e) {
+    overlay(''); toast('Не получилось распознать: ' + (e && e.message ? e.message : 'ошибка'));
+  }
+}
+['scanCam', 'scanPick'].forEach((id) => { const el = document.getElementById(id); if (el && el.addEventListener) el.addEventListener('change', () => { const f = el.files && el.files[0]; el.value = ''; scanFile(f); }); });
+function vScan() {
+  const sc = UI.scan; if (!sc) return vVisit();
+  const sh = sc.sheet, m = sc.match;
+  const sum = m.items.reduce((s, x) => s + x.price, 0) + m.extra.reduce((s, x) => s + x.price, 0);
+  const total = sc.sheetTotal, ok = !!total && total === sum && m.items.length > 0;
+  const unsure = m.items.filter((x) => !x.sure).length;
+  const nothing = !m.items.length && !sh.last;
+  return header('Лист заказа', sh.orderDate ? 'Заказ от ' + esc(sh.orderDate) + (sh.callTime ? ' · ' + esc(sh.callTime) : '') : 'Проверьте распознанные данные', 'visit') + `
+  <form class="body" data-submit="scan" style="padding-bottom:150px">
+    ${nothing ? `<div class="note err">Не удалось прочитать лист. Переснимите: лист целиком в кадре, ровно, без тени и бликов.</div>` :
+      ok ? `<div class="note ok" style="align-items:center">${I.check('#0F6B3A', 18)}<span><b>Сумма сошлась с листом: ${fmt(sum)}</b><br>Все строки распознаны. Сверьте ФИО и нажмите «Добавить».</span></div>` :
+      `<div class="note warn"><span><b>Проверьте внимательно.</b> ${total ? `На листе итого ${fmt(total)}, распознано на ${fmt(sum)}.` : `Итог на листе не прочитан, распознано на ${fmt(sum)}.`} Сверьте строки с бумагой, лишнее удалите, недостающее добавьте после сохранения через «Анализы».</span></div>`}
+    <div class="grid2" style="gap:10px">
+      <label class="field"><span>Фамилия</span><input class="input" name="last" value="${esc(sh.last)}" required></label>
+      <label class="field"><span>Имя</span><input class="input" name="first" value="${esc(sh.first)}" required></label>
+    </div>
+    <label class="field"><span>Отчество</span><input class="input" name="middle" value="${esc(sh.middle)}"></label>
+    <div class="grid2" style="gap:10px">
+      <label class="field"><span>Дата рождения</span><input class="input" name="dob" value="${esc(sh.dob)}" placeholder="ДД.ММ.ГГГГ" inputmode="numeric" maxlength="10" data-mask="date"></label>
+      <div class="field"><span>Пол</span><div class="seg" style="grid-template-columns:1fr 1fr">${[['m', 'Муж'], ['f', 'Жен']].map(([k, l]) => `<button type="button" class="${sh.sex === k ? 'on' : ''}" data-act="scanSex" data-v="${k}">${l}</button>`).join('')}</div></div>
+    </div>
+    <div class="grid2" style="gap:10px">
+      <label class="field"><span>ID пациента</span><input class="input" name="pid" value="${esc(sh.pid)}" inputmode="numeric"></label>
+      <label class="field"><span>ID счёта (для штрихкода)</span><input class="input" name="order" value="${esc(sh.order)}" inputmode="numeric" placeholder="6 цифр" style="${sh.order ? '' : 'border-color:#E0A100'}"></label>
+    </div>
+    ${sh.order ? '' : `<div class="note warn">ID счёта не прочитан. Впишите его с листа (рядом со штрихкодом) — иначе штрихкоды на пробирках не совпадут с Aurora.</div>`}
+    <label class="field"><span>Телефон</span><span class="phone"><b>+998</b><i></i><input name="phone" value="${esc(sh.phone)}" type="tel" inputmode="numeric"></span></label>
+    <label class="field"><span>Адрес выезда</span><input class="input" name="address" value="${esc(sh.address)}" style="font-size:14.5px"></label>
+    ${sh.comment ? `<div class="note info">Комментарий: ${esc(sh.comment)}</div>` : ''}
+    <div class="row between" style="padding:0 4px"><span class="h2">Анализы</span><span class="sub">${m.items.length}${unsure ? ' · проверить: ' + unsure : ''}</span></div>
+    <div class="list">${m.items.map((x, i) => `<div class="item" style="cursor:default"><span class="check" style="background:var(--brand);border-color:var(--brand)">${I.check()}</span><span class="item-t"><b>${esc(x.name)}</b>${x.sure ? '' : `<span><span class="flag">проверьте по листу</span></span>`}</span><span class="price">${fmt(x.price)}</span><button type="button" class="del" data-act="scanDel" data-v="${i}" aria-label="Убрать">${I.x()}</button></div>`).join('') || `<div class="empty">Анализы не распознаны</div>`}</div>
+    ${m.extra.length ? `<div class="row between" style="padding:0 4px"><span class="h2">Не из прайса</span><span class="sub">${m.extra.length}</span></div>
+    <div class="list">${m.extra.map((x, i) => `<div class="item" style="cursor:default"><span class="item-t"><b>${esc(x.name)}</b>${x.price ? '' : `<span><span class="flag">впишите цену с листа</span></span>`}</span><input class="input num" name="xp${i}" value="${x.price || ''}" inputmode="numeric" placeholder="цена" aria-label="Цена" style="width:104px;height:44px;text-align:right;font-size:15px;font-weight:700;padding:0 10px"><button type="button" class="del" data-act="scanDelExtra" data-v="${i}" aria-label="Убрать">${I.x()}</button></div>`).join('')}</div>` : ''}
+    <button type="button" class="btn light small" data-act="scanText">${sc.showText ? 'Скрыть распознанный текст' : 'Показать распознанный текст'}</button>
+    ${sc.showText ? `<pre style="white-space:pre-wrap;font-size:11.5px;line-height:1.4;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin:0;overflow:auto">${esc(sc.text)}</pre>` : ''}
+    <div class="bottom"><div>
+      <div class="total" style="border:0;padding:0"><span style="font-weight:700">Итого</span><b>${fmt(sum)}</b></div>
+      <div class="grid2"><button type="button" class="btn light" data-act="scanCam">Переснять</button><button class="btn" type="submit" ${m.items.length || m.extra.length ? '' : 'disabled'}>Добавить</button></div>
+    </div></div>
+  </form>`;
+}
 
 /* ---------- Адрес по геолокации ---------- */
 function formatAddress(d) {
@@ -710,7 +834,7 @@ if (S.me) UI.view = 'visit';
 render();
 loadPrices(false);
 setTimeout(() => showInstall(), document.documentElement.classList.contains('nosplash') ? 1200 : 3800); // iPhone: события нет — показываем инструкцию; Android: окно появится по событию или подсказкой
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(() => { if (S.me) setTimeout(() => Scan.warmup(), 6000); }).catch(() => {});
 </script>
 </body>
 </html>

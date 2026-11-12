@@ -3,10 +3,11 @@ const fs = require('fs');
 const html = fs.readFileSync('index.html', 'utf8');
 const src = html.match(/<script>\n'use strict';([\s\S]*?)<\/script>/)[1];
 const store = {};
-const stub = { sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
+const Scan = require('../scan.js');
+const stub = { Scan, sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
   document: { documentElement: { classList: { contains: () => true, add() {} } }, addEventListener() {}, getElementById: () => ({ innerHTML: '', addEventListener() {}, remove() {} }), querySelectorAll: () => [], querySelector: () => null, body: { appendChild() {} }, createElement: () => ({ remove() {} }) },
   window: { scrollTo() {}, scrollY: 0, addEventListener() {} }, navigator: { userAgent: '' }, fetch: async () => ({ ok: false }), setTimeout, clearTimeout, console, Date, Math, JSON };
-const fn = new Function(...Object.keys(stub), src + '\nreturn {formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
+const fn = new Function(...Object.keys(stub), src + '\nreturn {fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
 const A = fn(...Object.values(stub));
 const prices = JSON.parse(fs.readFileSync('data/prices.json', 'utf8'));
 A.setPrices(prices);
@@ -25,11 +26,11 @@ v.patients.push(p1, p2);
 const s1 = ttg.price + t4.price + oak.price + oam.price + homa.price + alt.price, s2 = oak.price + ttg.price;
 eq('сумма пациента 1', A.pSum(p1), s1);
 eq('сумма пациента 2', A.pSum(p2), s2);
-eq('итог без выезда и скидки', A.vTotals(v), { an: s1 + s2, off: 0, fee: 0, total: s1 + s2 });
+eq('итог без выезда и скидки', A.vTotals(v), { an: s1 + s2, ex: 0, off: 0, fee: 0, total: s1 + s2 });
 v.homeFee = 150000;
 eq('итог с выездом', A.vTotals(v).total, s1 + s2 + 150000);
 v.discount = 10;
-eq('скидка 10% только на анализы', A.vTotals(v), { an: s1 + s2, off: Math.round((s1 + s2) * 0.1), fee: 150000, total: s1 + s2 - Math.round((s1 + s2) * 0.1) + 150000 });
+eq('скидка 10% только на анализы', A.vTotals(v), { an: s1 + s2, ex: 0, off: Math.round((s1 + s2) * 0.1), fee: 150000, total: s1 + s2 - Math.round((s1 + s2) * 0.1) + 150000 });
 v.discount = 15; const t15 = A.vTotals(v);
 eq('скидка 15%: сумма сходится', t15.an - t15.off + t15.fee, t15.total);
 // 3. удалённая из прайса услуга не ломает расчёт
@@ -69,6 +70,55 @@ eq('адрес: улица, дом, район', A.formatAddress({ address: { ro
 eq('адрес: только махалля', A.formatAddress({ address: { neighbourhood: 'махалля Олмазор', city: 'Ташкент' } }), 'махалля Олмазор');
 eq('адрес: только город', A.formatAddress({ address: { city: 'Ташкент' } }), 'Ташкент');
 eq('адрес: пустой ответ', A.formatAddress({}), '');
+// 7. лист заказа Aurora: разбор распознанного текста (данные вымышленные, шумы как у настоящего OCR)
+const SHEET = [
+  'А де factum', '| ИДИ',
+  'ФИО: Каримова Лола Тахировна 1D пациента: 123456',
+  'Пол: Женщина Дата заказа: 11.11.2026',
+  'Дата рождения: 06,04.1992 Время вызова: 06:30-08:00',
+  'Номер телефона: +998 901112233 Бригада: ей у =',
+  'Номер телефона 2: —————', 'Адрес; =',
+  'Адрес выезда: Чиланзарский район, 5 квартал, дом 10, Квартира 7',
+  'Ориентир:', 'Комментарии: позвонить за 10 минут',
+  'Номер дома Номер квартиры Этаж Код домофона',
+  '№ Наименование услуги Kon-so Сумма в т.ч НДС Скидка Сумма к Покрытие', 'оплате',
+  '-— НОНО ННОНННН ООН НО НЩЕ ВОЕН',
+  'Щелочная фосфотаза (Акайпе 1.0 50090.00 О 50000.90 Пациент', 'Phosphatase)',
+  '2 Ферритин (Ferritin) 1.0 15000C.00 [о] 150000.0 Пациент',
+  '$ Тиреотропный гормон TTT (TSH 1.0 100000.00 о 109009.0 Пациент', '3 Generation)',
+  '4 C- реактивный белок (C-Reactive 1.0 70000.00 Го] 70000.0 Пациент', 'Protein) сн',
+  '3 Свободный T4 (Free T4) 1.0 100000.00 © 100000.0 Пациент',
+  '5 Свободный 13 (Free 13} 10 100000.00 0 100000.0 Пациент',
+  '1оОбщий анализ крови развернутый 10 BCO00.00 0 B0000.0 Пациент', '[XN-10C0, Sysmex, Япония)',
+  '3 Коезэтинин (Creatinine) 1.0 50009.00 0 50000.0 Пациент',
+  '1 НОМА Оценка 1.0 180000.00 0 180000.0 Пациёнт', 'инсулинорезистентиости; глюкоза', '(натощак), инсулин (натощак), расчет', 'индекса ВОМАНВ',
+  '2 Вызов на дом 1.0 в0090.00 о 80000.90 Пациент',
+  'Итого: 960 000', 'Скидки: О', 'Сумма к оплате: 960 000'
+].join('\n');
+const sh = Scan.parseSheet(SHEET, '| 1D счета: 353014');
+eq('лист: ФИО', [sh.last, sh.first, sh.middle], ['Каримова', 'Лола', 'Тахировна']);
+eq('лист: пол, дата рождения, телефон', [sh.sex, sh.dob, sh.phone], ['f', '06.04.1992', '901112233']);
+eq('лист: ID пациента и ID счёта', [sh.pid, sh.order], ['123456', '353014']);
+eq('лист: адрес и время', [sh.address, sh.callTime, sh.orderDate], ['Чиланзарский район, 5 квартал, дом 10, Квартира 7', '06:30-08:00', '11.11.2026']);
+eq('лист: 10 строк услуг', sh.rows.length, 10);
+const mt = Scan.matchSheet(sh, prices.items);
+eq('лист: 8 анализов найдены в прайсе', mt.items.map((x) => x.name.split(' (')[0].slice(0, 22)), ['Щелочная фосфотаза', 'Ферритин', 'Тиреотропный гормон ТТ', 'С- реактивный белок', 'Свободный Т4', 'Свободный Т3', 'Общий анализ крови раз', 'Креатинин'].concat(['HOMA Оценка инсулиноре']).slice(0, 9).filter((_, i) => i < mt.items.length));
+eq('лист: анализов 9', mt.items.length, 9);
+eq('лист: «Вызов на дом» отдельной строкой, 80 000', mt.extra, [{ name: 'Вызов на дом', price: 80000, sure: true, raw: '2 Вызов на дом 1.0 в0090.00 о 80000.90 Пациент' }]);
+eq('лист: сумма сошлась с «Итого»', [mt.total, mt.sum, mt.ok], [960000, 960000, true]);
+// лист → пациент → пробирки и штрихкоды
+const p3 = { id: 'c3', last: sh.last, first: sh.first, middle: sh.middle, pid: sh.pid, order: Number(sh.order), items: mt.items.map((x) => x.id), extra: mt.extra.map((x) => ({ name: x.name, price: x.price })) };
+eq('лист: сумма пациента = итог листа', A.pSum(p3), 960000);
+const g3 = A.groupTubes(p3);
+eq('лист: контейнеры 01, 02, 35', g3.map((x) => x.no), [1, 2, 35]);
+eq('лист: штрихкод = ID счёта + контейнер', g3.map((x) => x.code), ['35301401', '35301402', '35301435']);
+eq('лист: подпись на этикетке', A.fioShort(p3), 'Каримова Л.Т.');
+const v2 = A.newVisit(); v2.patients.push(p3); v2.discount = 10;
+eq('скидка не трогает «Вызов на дом»', A.vTotals(v2), { an: 880000, ex: 80000, off: 88000, fee: 0, total: 872000 });
+// пропажа строки должна быть заметна: сумма не сходится
+const broken = Scan.matchSheet(Scan.parseSheet(SHEET.replace(/\n2 Ферритин[^\n]*/, ''), ''), prices.items);
+eq('лист без одной строки: предупреждение', [broken.ok, broken.total, broken.sum], [false, 960000, 810000]);
+eq('пустой текст не ломает разбор', Scan.matchSheet(Scan.parseSheet('', ''), prices.items).ok, false);
 // 6. формат
 eq('формат 855000', A.fmt(855000), '855 000 сум');
 eq('формат 1234567', A.fmt(1234567), '1 234 567 сум');
