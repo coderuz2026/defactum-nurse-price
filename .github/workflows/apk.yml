@@ -108,7 +108,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="v${{ steps.ver.outputs.name }}-b${{ github.run_number }}"
-          gh release create "$TAG" defactum-nurse.apk defactum-nurse-web.zip --latest --title "de factum ${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})" --notes "APK для Android. Скачайте файл defactum-nurse.apk и установите.
-
-Подпись: $SIGN
-Отпечаток SHA-256: $FP"
+          printf 'APK для Android. Скачайте файл defactum-nurse.apk и установите.\n\nПодпись: %s\nОтпечаток SHA-256: %s\n' "$SIGN" "$FP" > notes.md
+          gh release create "$TAG" defactum-nurse.apk defactum-nurse-web.zip --latest --title "de factum ${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})" --notes-file notes.md
