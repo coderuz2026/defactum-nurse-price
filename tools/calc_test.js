@@ -124,6 +124,8 @@ eq('ошибки: нет ФИО, сумма, ID счёта', lv(A.scanProblems({
 eq('ошибки: пропущенная строка — сколько не хватает', A.scanProblems({ sheet: shB, match: mB, sheetTotal: mB.total }).find((x) => /Сумма/.test(x.text)).text, 'Сумма не сошлась: на листе 960 000 сум, распознано 810 000 сум — не хватает 150 000 сум (пропущена строка)');
 const mE = Scan.matchSheet(Scan.parseSheet('какой-то текст', ''), prices.items);
 eq('ошибки: не лист', lv(A.scanProblems({ sheet: Scan.parseSheet('какой-то текст', ''), match: mE, sheetTotal: null })).slice(0, 2), ['err:Не прочитано ФИО пациента', 'err:Анализы не распознаны']);
+const mV = Scan.matchSheet(Scan.parseSheet(SHEET.replace('2 Вызов на дом 1.0 в0090.00 о 80000.90', 'я бозовнадом 10 80000.00 0 80000.0'), ''), prices.items);
+eq('«бозовнадом» распознаётся как «Вызов на дом»', [mV.extra.map((x) => x.name + ' ' + x.price), mV.ok], [['Вызов на дом 80000'], true]);
 // пропажа строки должна быть заметна: сумма не сходится
 const broken = Scan.matchSheet(Scan.parseSheet(SHEET.replace(/\n2 Ферритин[^\n]*/, ''), ''), prices.items);
 eq('лист без одной строки: предупреждение', [broken.ok, broken.total, broken.sum], [false, 960000, 810000]);

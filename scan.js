@@ -99,7 +99,7 @@ const Scan = (() => {
         used.add(best.it.id);
         out.items.push({ id: best.it.id, name: best.it.name, price: best.it.price, sheetPrice: row.price, score: Math.min(1, best.sc), sure: best.sc >= 0.68 && best.sc - second >= 0.04, raw: row.raw });
       } else {
-        const visit = /вызов\s*(на|ha)\s*дом|выезд/i.test(row.name);
+        const visit = /вызов\s*(на|ha)\s*дом|выезд/i.test(row.name) || dice(norm(row.name), norm('Вызов на дом')) >= 0.55; // «бозовнадом» — тоже он
         const clean = visit ? 'Вызов на дом' : (row.name + (row.more ? ' ' + row.more : '')).replace(/\s+/g, ' ').trim();
         if (clean.length >= 3) out.extra.push({ name: clean, price: row.price || 0, sure: !!row.price && visit, raw: row.raw });
       }
