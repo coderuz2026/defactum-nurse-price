@@ -7,7 +7,7 @@ const Scan = require('../scan.js');
 const stub = { Scan, btoa: (x) => Buffer.from(x, 'binary').toString('base64'), location: { protocol: 'https:', hostname: 'example.org' }, sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
   document: { documentElement: { classList: { contains: () => true, add() {} } }, addEventListener() {}, getElementById: () => ({ innerHTML: '', addEventListener() {}, remove() {} }), querySelectorAll: () => [], querySelector: () => null, body: { appendChild() {} }, createElement: () => ({ remove() {} }) },
   window: { scrollTo() {}, scrollY: 0, addEventListener() {}, Capacitor: null }, navigator: { userAgent: '' }, fetch: async () => ({ ok: false }), setTimeout, clearTimeout, console, Date, Math, JSON };
-const fn = new Function(...Object.keys(stub), src + '\nreturn {priceDate, goBack, updateResult, printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
+const fn = new Function(...Object.keys(stub), src + '\nreturn {tubeArt, priceDate, goBack, updateResult, printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
 const A = fn(...Object.values(stub));
 const prices = JSON.parse(fs.readFileSync('data/prices.json', 'utf8'));
 A.setPrices(prices);
@@ -166,6 +166,7 @@ eq('версии сравниваются по числам', [A.verNum('1.14') 
 eq('номер версии совпадает с номером кэша в sw.js', 'df-nurse-v' + A.APP_VERSION.split('.')[1], fs.readFileSync('sw.js', 'utf8').match(/df-nurse-v\d+/)[0]);
 eq('дата прайса с годом', A.priceDate(), prices.version.split('-').reverse().join('.'));
 eq('дата прайса на экране выезда', new RegExp('Прайс ' + A.priceDate().replace(/\./g, '\\.')).test(draw(A.vVisit)), true);
+eq('рисунки контейнеров: для каждого типа есть рисунок', Object.keys(A.TUBES).map((k) => { const svg = A.tubeArt(Object.assign({ key: k }, A.TUBES[k])); return /^<svg[\s\S]*<\/svg>$/.test(svg) && !/undefined|NaN/.test(svg); }).every(Boolean), true);
 // 6. формат
 eq('формат 855000', A.fmt(855000), '855 000 сум');
 eq('формат 1234567', A.fmt(1234567), '1 234 567 сум');
