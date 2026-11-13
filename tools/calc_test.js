@@ -7,7 +7,7 @@ const Scan = require('../scan.js');
 const stub = { Scan, btoa: (x) => Buffer.from(x, 'binary').toString('base64'), location: { protocol: 'https:', hostname: 'example.org' }, sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
   document: { documentElement: { classList: { contains: () => true, add() {} } }, addEventListener() {}, getElementById: () => ({ innerHTML: '', addEventListener() {}, remove() {} }), querySelectorAll: () => [], querySelector: () => null, body: { appendChild() {} }, createElement: () => ({ remove() {} }) },
   window: { scrollTo() {}, scrollY: 0, addEventListener() {}, Capacitor: null }, navigator: { userAgent: '' }, fetch: async () => ({ ok: false }), setTimeout, clearTimeout, console, Date, Math, JSON };
-const fn = new Function(...Object.keys(stub), src + '\nreturn {pMissedIds, pMiss, deliveryInfo, DELIVERY, labelData, vTubes, prepFor, prepList, SETS, setItems, dayReport, dayKey, closeVisit, vSum, reportText, receiptLines, vHistory, vCatalog, PAY, tubeArt, priceDate, goBack, updateResult, printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
+const fn = new Function(...Object.keys(stub), src + '\nreturn {shiftBits, pMissedIds, pMiss, deliveryInfo, DELIVERY, labelData, vTubes, prepFor, prepList, SETS, setItems, dayReport, dayKey, closeVisit, vSum, reportText, receiptLines, vHistory, vCatalog, PAY, tubeArt, priceDate, goBack, updateResult, printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
 const A = fn(...Object.values(stub));
 const prices = JSON.parse(fs.readFileSync('data/prices.json', 'utf8'));
 A.setPrices(prices);
@@ -250,6 +250,19 @@ eq('все анализы готовых наборов есть в прайсе
   const html = A.vTubes();
   eq('экран пробирок: печать без невзятой', /Печать этикеток \(2\)/.test(html), true);
   eq('экран пробирок: кнопки Взято/Не удалось', /data-act="take"/.test(html) && /data-act="miss"/.test(html), true);
+}
+// ---- сдвиг печати
+{
+  const m = { bits: new Uint8Array(40 * 2), wb: 40, h: 2 }; m.bits[0] = 0x80; m.bits[40] = 0x80; // по чёрной точке в левом верхнем углу каждой строки
+  const r = A.shiftBits(m, 24, 0, 344); eq('сдвиг вправо на 3 мм: точка уехала на 24 точки', [r.wb, r.bits[3], r.bits[3] & 0x80], [43, 0x80, 0x80]);
+  const l = A.shiftBits(m, -8, 0, 320); eq('сдвиг влево: край обрезан', l.bits.every((b) => b === 0), true);
+  const d = A.shiftBits(m, 0, 1, 320); eq('сдвиг вниз на 1 точку', [d.bits[0], d.bits[40]], [0, 0x80]);
+  const W = A.printerBytes([fakeCanvas], { proto: 'escpos', invert: false, gap: 2, dx: 3 });
+  eq('ESC/POS +3 мм: ширина картинки 43 байта', [W[6], W[7]], [43, 0]);
+  eq('ESC/POS не шире головки 58 мм', A.printerBytes([fakeCanvas], { proto: 'escpos', gap: 2, dx: 8 })[6], 48);
+  const Tp = Buffer.from(A.printerBytes([fakeCanvas], { proto: 'tspl', invert: false, gap: 2, dx: 3, dy: -1 })).toString('latin1');
+  eq('TSPL +3 мм вправо: BITMAP 24,0', Tp.includes('BITMAP 24,0,40,240,0,'), true);
+  eq('без сдвига команды не меняются', Buffer.from(A.printerBytes([fakeCanvas], { proto: 'tspl', invert: false, gap: 2, dx: 0, dy: 0 })).equals(Buffer.from(A.printerBytes([fakeCanvas], { proto: 'tspl', invert: false, gap: 2 }))), true);
 }
 console.log(fail ? `\nОШИБОК: ${fail}` : '\nВСЕ ТЕСТЫ ПРОШЛИ');
 process.exit(fail ? 1 : 0);

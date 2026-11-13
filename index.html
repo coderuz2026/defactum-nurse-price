@@ -209,7 +209,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.30', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.31', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -972,6 +972,9 @@ document.addEventListener('click', (e) => {
     case 'prInvert': S.printer = Object.assign({ proto: 'tspl', gap: 2 }, S.printer || {}, { invert: !(S.printer && S.printer.invert) }); save(); UI._keepScroll = true; render(); break;
     case 'prGap': S.printer = Object.assign({ proto: 'tspl', invert: false }, S.printer || {}, { gap: +v }); save(); UI._keepScroll = true; render(); break;
     case 'prTest': printTest(); break;
+    case 'prShift': { const pr = S.printer = Object.assign({ proto: 'tspl', invert: false, gap: 2 }, S.printer || {});
+      if (v === 'reset') { pr.dx = 0; pr.dy = 0; } else { const [k, d] = v.split(':'); pr[k] = Math.max(-8, Math.min(8, Math.round(((+pr[k] || 0) + (+d)) * 2) / 2)); }
+      save(); UI._keepScroll = true; render(); break; }
     case 'prForget': S.printer = null; save(); render(); break;
     case 'disc': vis.discount = +v; save(); UI._keepScroll = true; render(); break;
     case 'newVisit': if (ask('Завершить текущий выезд и начать новый?')) { closeVisit(vis); newVisit(); go('visit'); } break;
@@ -1184,6 +1187,7 @@ function labelCanvas(L) {
   line(L.who, 176, '400 19px ' + F);
   line(L.tube, 200, '700 19px ' + F);
   line(L.an, 219, '400 12px ' + F);
+  if (L.frame) { g.fillStyle = '#000'; const k = 8, t = 2; g.fillRect(k, k, LBL.w - 2 * k, t); g.fillRect(k, LBL.h - k - t, LBL.w - 2 * k, t); g.fillRect(k, k, t, LBL.h - 2 * k); g.fillRect(LBL.w - k - t, k, t, LBL.h - 2 * k); }
   return c;
 }
 const labelData = (p, t) => ({ code: t.code, date: t.taken ? 'Взято ' + dt(t.taken) : dt(visit().created), who: (p.pid || p.order) + ' ' + fioShort(p), tube: t.name, an: t.an });
@@ -1196,16 +1200,29 @@ function monoBits(c) {
 const asciiBytes = (s) => Uint8Array.from(s, (ch) => ch.charCodeAt(0) & 0xFF);
 const concatBytes = (arr) => { const n = arr.reduce((s, a) => s + a.length, 0), o = new Uint8Array(n); let k = 0; arr.forEach((a) => { o.set(a, k); k += a.length; }); return o; };
 // Команды принтера. TSPL — этикеточные принтеры (в данных 0 = чёрная точка), ESC/POS — чековые (1 = чёрная).
+// Сдвиг картинки на dx, dy точек (8 точек = 1 мм) в поле шириной w точек: что вышло за край — обрезается
+function shiftBits(m, dx, dy, w) {
+  const wb = Math.ceil(w / 8), out = new Uint8Array(wb * m.h), sw = m.wb * 8;
+  for (let y = 0; y < m.h; y++) { const sy = y - dy; if (sy < 0 || sy >= m.h) continue;
+    for (let x = 0; x < w; x++) { const sx = x - dx; if (sx < 0 || sx >= sw) continue;
+      if (m.bits[sy * m.wb + (sx >> 3)] & (0x80 >> (sx & 7))) out[y * wb + (x >> 3)] |= 0x80 >> (x & 7); } }
+  return { bits: out, wb, h: m.h };
+}
+const HEAD_DOTS = 384; // ширина печатающей головки мини-принтера 58 мм
 function printerBytes(canvases, cfg) {
-  const parts = [];
+  const parts = [], dx = Math.round((+cfg.dx || 0) * 8), dy = Math.round((+cfg.dy || 0) * 8);
   canvases.forEach((c) => {
-    const m = monoBits(c); let bits = m.bits;
+    let m = monoBits(c);
     if (cfg.proto === 'escpos') {
-      if (cfg.invert) bits = bits.map((b) => ~b & 0xFF);
+      // плюс — вправо: слева добавляются пустые точки, минус — левый край обрезается
+      if (dx || dy) m = shiftBits(m, dx, dy, Math.min(HEAD_DOTS, m.wb * 8 + Math.max(dx, 0)));
+      let bits = m.bits; if (cfg.invert) bits = bits.map((b) => ~b & 0xFF);
       parts.push(Uint8Array.from([0x1B, 0x40, 0x1D, 0x76, 0x30, 0x00, m.wb & 0xFF, m.wb >> 8, m.h & 0xFF, m.h >> 8]), bits, Uint8Array.from([0x1B, 0x64, cfg.gap > 0 ? 2 : 0]));
     } else {
-      if (!cfg.invert) bits = bits.map((b) => ~b & 0xFF);
-      parts.push(asciiBytes(`SIZE 40 mm,30 mm\r\nGAP ${cfg.gap} mm,0 mm\r\nDIRECTION 1\r\nCLS\r\nBITMAP 0,0,${m.wb},${m.h},0,`), bits, asciiBytes('\r\nPRINT 1,1\r\n'));
+      // TSPL: сдвиг вправо/вниз — координатой BITMAP, влево/вверх — обрезкой картинки
+      if (dx < 0 || dy < 0) m = shiftBits(m, Math.min(dx, 0), Math.min(dy, 0), m.wb * 8);
+      let bits = m.bits; if (!cfg.invert) bits = bits.map((b) => ~b & 0xFF);
+      parts.push(asciiBytes(`SIZE 40 mm,30 mm\r\nGAP ${cfg.gap} mm,0 mm\r\nDIRECTION 1\r\nCLS\r\nBITMAP ${Math.max(dx, 0)},${Math.max(dy, 0)},${m.wb},${m.h},0,`), bits, asciiBytes('\r\nPRINT 1,1\r\n'));
     }
   });
   return concatBytes(parts);
@@ -1233,7 +1250,7 @@ async function printLabels(p) {
 }
 async function printTest() {
   await fontsReady();
-  const d = new Date(), ok = await sendToPrinter([labelCanvas({ code: '12345602', date: dt(d), who: '123456 Тестова Т.Т.', tube: 'Проверка печати', an: 'de factum · ' + APP_VERSION })]);
+  const d = new Date(), ok = await sendToPrinter([labelCanvas({ code: '12345602', date: dt(d), who: '123456 Тестова Т.Т.', tube: 'Проверка печати', an: 'de factum · ' + APP_VERSION, frame: true })]);
   if (ok) toast('Тестовая этикетка отправлена на принтер');
 }
 async function shareLabels(p) {
@@ -1277,8 +1294,15 @@ function vPrinter() {
       <div class="field"><span>Язык принтера</span><div class="seg" style="grid-template-columns:1fr 1fr"><button class="${pr.proto !== 'escpos' ? 'on' : ''}" data-act="prProto" data-v="tspl">TSPL (этикеточный)</button><button class="${pr.proto === 'escpos' ? 'on' : ''}" data-act="prProto" data-v="escpos">ESC/POS (чековый)</button></div></div>
       <div class="field"><span>Зазор между этикетками</span><div class="seg" style="grid-template-columns:repeat(4,1fr)">${[0, 2, 3, 5].map((x) => `<button class="${(pr.gap == null ? 2 : pr.gap) === x ? 'on' : ''}" data-act="prGap" data-v="${x}">${x ? x + ' мм' : 'нет'}</button>`).join('')}</div></div>
       <button class="opt ${pr.invert ? 'on' : ''}" data-act="prInvert" style="width:100%"><span class="dot"></span>Поменять чёрное и белое (если этикетка печатается негативом)</button>
+      <div class="field"><span>Сдвиг печати</span>
+        ${[['dx', 'Влево', 'Вправо'], ['dy', 'Выше', 'Ниже']].map(([k, a, b]) => { const val = +pr[k] || 0;
+          return `<div class="row" style="gap:8px"><button class="btn light small" style="flex:1" data-act="prShift" data-v="${k}:-0.5">${k === 'dx' ? '←' : '↑'} ${a}</button>
+          <b class="num" style="min-width:76px;text-align:center;font-size:16px">${val > 0 ? '+' : ''}${String(val).replace('.', ',')} мм</b>
+          <button class="btn light small" style="flex:1" data-act="prShift" data-v="${k}:0.5">${b} ${k === 'dx' ? '→' : '↓'}</button></div>`; }).join('')}
+        ${pr.dx || pr.dy ? `<button class="linkbtn" data-act="prShift" data-v="reset" style="align-self:flex-start">Сбросить сдвиг</button>` : ''}
+      </div>
       <button class="btn" data-act="prTest">${I.print()} Тестовая печать</button>
-      <span class="sub" style="line-height:1.45">Если принтер молчит или печатает мусор — переключите язык принтера и попробуйте ещё раз.</span>
+      <span class="sub" style="line-height:1.45">На тестовой этикетке есть рамка в 1 мм от края. Если рамку или текст обрезает с одной стороны — сдвиньте печать в другую сторону и напечатайте ещё раз. Направления — как вы читаете этикетку. Если принтер молчит или печатает мусор — переключите язык принтера.</span>
       <button class="btn light small" data-act="prForget" style="color:var(--bad)">Забыть принтер</button>
     </div>` : ''}
     <div class="note info"><span>Подходят принтеры с обычным Bluetooth, которые понимают команды TSPL или ESC/POS. Принтеры со своим закрытым протоколом (например, Niimbot) напрямую не печатают — для них передайте этикетки картинками в их программу.</span></div>`}
