@@ -204,7 +204,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.34', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.35', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -967,8 +967,10 @@ document.addEventListener('click', (e) => {
     case 'prGap': S.printer = Object.assign({ proto: 'tspl', invert: false }, S.printer || {}, { gap: +v }); save(); UI._keepScroll = true; render(); break;
     case 'prTest': printTest(); break;
     case 'prShift': { const pr = S.printer = Object.assign({ proto: 'tspl', invert: false, gap: 2 }, S.printer || {});
-      if (v === 'reset') { pr.dx = 0; pr.dy = 0; } else { const [k, d] = v.split(':'); pr[k] = Math.max(-8, Math.min(8, Math.round(((+pr[k] || 0) + (+d)) * 2) / 2)); }
+      const suf = '_' + (pr.proto === 'escpos' ? 'escpos' : 'tspl');
+      if (v === 'reset') { pr['dx' + suf] = 0; pr['dy' + suf] = 0; } else { const [k, d] = v.split(':'); pr[k + suf] = Math.max(-8, Math.min(8, Math.round((prOff(pr, k) + (+d)) * 2) / 2)); }
       save(); UI._keepScroll = true; render(); break; }
+    case 'prFeed': S.printer = Object.assign({ proto: 'escpos', invert: false, gap: 2 }, S.printer || {}, { feed: v }); save(); UI._keepScroll = true; render(); break;
     case 'prForget': S.printer = null; save(); render(); break;
     case 'disc': vis.discount = +v; save(); UI._keepScroll = true; render(); break;
     case 'newVisit': if (ask('Завершить текущий выезд и начать новый?')) { closeVisit(vis); newVisit(); go('visit'); } break;
@@ -1225,15 +1227,20 @@ function shiftBits(m, dx, dy, w) {
   return { bits: out, wb, h: m.h };
 }
 const HEAD_DOTS = 384; // ширина печатающей головки мини-принтера 58 мм
+// Сдвиг печати хранится отдельно для каждого языка принтера: в режимах TSPL и ESC/POS один и тот же принтер кладёт картинку по-разному
+const prOff = (cfg, k) => { const v = cfg[k + '_' + (cfg.proto === 'escpos' ? 'escpos' : 'tspl')]; return v != null ? +v : (cfg.proto === 'escpos' ? 0 : +cfg[k] || 0); };
 function printerBytes(canvases, cfg) {
-  const parts = [], dx = Math.round((+cfg.dx || 0) * 8), dy = Math.round((+cfg.dy || 0) * 8);
+  const parts = [], dx = Math.round(prOff(cfg, 'dx') * 8), dy = Math.round(prOff(cfg, 'dy') * 8);
   canvases.forEach((c) => {
     let m = monoBits(c);
     if (cfg.proto === 'escpos') {
       // плюс — вправо: слева добавляются пустые точки, минус — левый край обрезается
       if (dx || dy) m = shiftBits(m, dx, dy, Math.min(HEAD_DOTS, m.wb * 8 + Math.max(dx, 0)));
       let bits = m.bits; if (cfg.invert) bits = bits.map((b) => ~b & 0xFF);
-      parts.push(Uint8Array.from([0x1B, 0x40, 0x1D, 0x76, 0x30, 0x00, m.wb & 0xFF, m.wb >> 8, m.h & 0xFF, m.h >> 8]), bits, Uint8Array.from([0x1B, 0x64, cfg.gap > 0 ? 2 : 0]));
+      // после этикетки: по датчику — GS FF, принтер сам доводит ленту до начала следующей этикетки;
+      // «ровно» — подача на зазор между этикетками (ESC J, в точках), если принтер не понимает GS FF
+      const feed = cfg.feed === 'exact' ? Uint8Array.from([0x1B, 0x4A, Math.min(255, Math.round((cfg.gap == null ? 2 : +cfg.gap) * 8))]) : Uint8Array.from([0x1D, 0x0C]);
+      parts.push(Uint8Array.from([0x1B, 0x40, 0x1D, 0x76, 0x30, 0x00, m.wb & 0xFF, m.wb >> 8, m.h & 0xFF, m.h >> 8]), bits, feed);
     } else {
       // TSPL: сдвиг вправо/вниз — координатой BITMAP, влево/вверх — обрезкой картинки
       if (dx < 0 || dy < 0) m = shiftBits(m, Math.min(dx, 0), Math.min(dy, 0), m.wb * 8);
@@ -1311,12 +1318,16 @@ function vPrinter() {
       <div class="field"><span>Зазор между этикетками</span><div class="seg" style="grid-template-columns:repeat(4,1fr)">${[0, 2, 3, 5].map((x) => `<button class="${(pr.gap == null ? 2 : pr.gap) === x ? 'on' : ''}" data-act="prGap" data-v="${x}">${x ? x + ' мм' : 'нет'}</button>`).join('')}</div></div>
       <button class="opt ${pr.invert ? 'on' : ''}" data-act="prInvert" style="width:100%"><span class="dot"></span>Поменять чёрное и белое (если этикетка печатается негативом)</button>
       <div class="field"><span>Сдвиг печати</span>
-        ${[['dx', 'Влево', 'Вправо'], ['dy', 'Выше', 'Ниже']].map(([k, a, b]) => { const val = +pr[k] || 0;
+        ${[['dx', 'Влево', 'Вправо'], ['dy', 'Выше', 'Ниже']].map(([k, a, b]) => { const val = prOff(pr, k);
           return `<div class="row" style="gap:8px"><button class="btn light small" style="flex:1" data-act="prShift" data-v="${k}:-0.5">${k === 'dx' ? '←' : '↑'} ${a}</button>
           <b class="num" style="min-width:76px;text-align:center;font-size:16px">${val > 0 ? '+' : ''}${String(val).replace('.', ',')} мм</b>
           <button class="btn light small" style="flex:1" data-act="prShift" data-v="${k}:0.5">${b} ${k === 'dx' ? '→' : '↓'}</button></div>`; }).join('')}
-        ${pr.dx || pr.dy ? `<button class="linkbtn" data-act="prShift" data-v="reset" style="align-self:flex-start">Сбросить сдвиг</button>` : ''}
+        ${prOff(pr, 'dx') || prOff(pr, 'dy') ? `<button class="linkbtn" data-act="prShift" data-v="reset" style="align-self:flex-start">Сбросить сдвиг</button>` : ''}
+        <span class="sub">Сдвиг запоминается отдельно для TSPL и ESC/POS.</span>
       </div>
+      ${pr.proto === 'escpos' ? `<div class="field"><span>Подача ленты после этикетки</span><div class="seg" style="grid-template-columns:1fr 1fr">
+        <button class="${pr.feed !== 'exact' ? 'on' : ''}" data-act="prFeed" data-v="sensor">По датчику</button><button class="${pr.feed === 'exact' ? 'on' : ''}" data-act="prFeed" data-v="exact">На зазор</button></div>
+        <span class="sub" style="line-height:1.45">«По датчику» — принтер сам встаёт на начало следующей этикетки. Если после печати лента не двигается или уезжает на несколько этикеток — выберите «На зазор». Перед первой печатью нажмите на принтере кнопку подачи, чтобы лента встала на начало этикетки.</span></div>` : ''}
       <button class="btn" data-act="prTest">${I.print()} Тестовая печать</button>
       <span class="sub" style="line-height:1.45">На тестовой этикетке есть рамка в 1 мм от края. Если рамку или текст обрезает с одной стороны — сдвиньте печать в другую сторону и напечатайте ещё раз. Направления — как вы читаете этикетку. Если принтер молчит или печатает мусор — переключите язык принтера.</span>
       <button class="btn light small" data-act="prForget" style="color:var(--bad)">Забыть принтер</button>
