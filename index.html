@@ -1199,28 +1199,26 @@ function labelCanvas(L) {
     if (g.measureText(t).width > max) { while (t.length > 1 && g.measureText(t + '…').width > max) t = t.slice(0, -1); t += '…'; }
     return t; };
   const text = (t, x, y, size, min, weight, max, align) => { const s = fit(t, size, min, weight, max); g.textAlign = align || 'left'; g.fillText(s, x, y); return g.measureText(s).width; };
-  // список анализов по строкам: название целиком не разрывается
-  const lay = (items, z, maxLines) => { font(z, 700); const lines = []; let cur = '';
-    for (let i = 0; i < items.length; i++) { const t = cur ? cur + ', ' + items[i] : items[i];
-      if (!cur || g.measureText(t).width <= VW) { cur = t; continue; }
-      lines.push(cur + ','); cur = items[i];
-      if (lines.length === maxLines) return { lines, rest: items.length - i }; }
-    if (cur) lines.push(cur);
-    return lines.length <= maxLines ? { lines, rest: 0 } : { lines: lines.slice(0, maxLines), rest: 1 }; };
+  // список анализов по строкам: название целиком не разрывается; что не влезло — «+ещё N» целыми названиями
+  const lines = (items, z) => { font(z, 700); const out = []; let cur = '';
+    items.forEach((it) => { const t = cur ? cur + ', ' + it : it; if (!cur || g.measureText(t).width <= VW) cur = t; else { out.push(cur + ','); cur = it; } });
+    if (cur) out.push(cur); return out; };
+  const lay = (items, z, maxLines) => {
+    if (lines(items, z).length <= maxLines) return { lines: lines(items, z), rest: 0 };
+    for (let n = items.length - 1; n >= 1; n--) { const more = '+ещё ' + (items.length - n), ls = lines(items.slice(0, n).concat(more), z);
+      if (ls.length <= maxLines) return { lines: ls, rest: items.length - n }; }
+    return { lines: [fit(items[0], z, z, 700, VW - 70) + ' +ещё ' + (items.length - 1)], rest: items.length - 1 };
+  };
   // шапка
   g.fillStyle = '#000'; g.fillRect(0, 0, W, 36); g.fillStyle = '#fff';
   const cw = L.code ? text(L.code, W - X, 26, 20, 14, 700, 150, 'right') + 10 : 0;
   text(L.head || 'DE FACTUM · ВЫЕЗД', X, 25, 16, 11, 700, W - 2 * X - cw);
   g.fillStyle = '#000';
-  // анализов много — дата рождения и время забора уходят в одну строку, освобождая место
-  const tests = (L.tests || []).filter(Boolean), sizes = [15, 14, 13, 12];
-  let mode = 'full', pick = null;
-  for (const m of ['full', 'merged']) {
-    const area = 204 - 44 - 32 - (m === 'full' ? 64 : 32);
-    for (const z of sizes) { const r = lay(tests, z, Math.max(1, Math.floor((area - 8) / (z + 3)))); if (!r.rest) { mode = m; pick = { z, area, ...r }; break; } }
-    if (pick) break;
-  }
-  if (!pick) { const area = 204 - 44 - 32 - 32, z = 12, n = Math.floor((area - 8) / (z + 3)); mode = 'merged'; pick = { z, area, ...lay(tests, z, n) }; }
+  // таблица всегда одна и та же (как при 7 анализах): шрифт анализов не меньше 14, что не влезло в 3 строки — «+ещё N»
+  const tests = (L.tests || []).filter(Boolean), area = 204 - 44 - 32 - 32 - 32, maxLines = 3, mode = 'full';
+  let pick = null;
+  for (const z of [15, 14]) { const r = lay(tests, z, maxLines); if (!r.rest) { pick = { z, area, ...r }; break; } }
+  if (!pick) pick = { z: 14, area, ...lay(tests, 14, maxLines) };
   const rows = [['Пациент', 44], ['Рожд.', mode === 'full' ? 32 : 0], ['Пробирка', 32], ['Анализы', pick.area], [mode === 'full' ? (L.timeLabel || 'Взято') : 'Рожд. / ' + (L.timeLabel || 'Взято').toLowerCase(), 32]].filter((r) => r[1]);
   let y = 36;
   rows.forEach(([k, h], i) => {
@@ -1232,7 +1230,7 @@ function labelCanvas(L) {
     else if (k === 'Рожд.') text(L.dob || '—', VX, mid + 6, 18, 13, 700, VW);
     else if (k === 'Пробирка') text((L.no ? String(L.no).padStart(2, '0') + ' · ' : '') + (L.tube || ''), VX, mid + 6, 18, 12, 700, VW);
     else if (k === 'Анализы') { const lh = pick.z + 3, top = y + (h - pick.lines.length * lh) / 2 + pick.z; font(pick.z, 700); g.textAlign = 'left';
-      pick.lines.forEach((ln, j) => { let t = ln; if (pick.rest && j === pick.lines.length - 1) { const more = ' +ещё ' + pick.rest; while (t.length > 1 && g.measureText(t + more).width > VW) t = t.slice(0, -1); t = t.replace(/,?\s*$/, '') + more; } g.fillText(t, VX, top + j * lh); });
+      pick.lines.forEach((ln, j) => g.fillText(ln.replace(/, \+ещё/, ' +ещё').replace(/^\+ещё/, '+ещё'), VX, top + j * lh));
       if (!pick.lines.length) text('—', VX, mid + 5, 15, 12, 700, VW); }
     else text(mode === 'full' ? L.time : [L.dob, L.timeShort || L.time].filter(Boolean).join(' · '), VX, mid + 5, 15, 11, 700, VW);
     y += h; if (i < rows.length - 1) g.fillRect(X, y - 1, W - 2 * X, 1);
