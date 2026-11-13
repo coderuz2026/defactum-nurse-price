@@ -144,8 +144,8 @@ const fakeCanvas = { width: 320, height: 240, getContext: () => ({ getImageData:
 const tspl = A.printerBytes([fakeCanvas], { proto: 'tspl', invert: false, gap: 2 }), head = 'SIZE 40 mm,30 mm\r\nGAP 2 mm,0 mm\r\nDIRECTION 1\r\nCLS\r\nBITMAP 0,0,40,240,0,';
 eq('TSPL: заголовок, размер данных, конец', [Buffer.from(tspl.slice(0, head.length)).toString(), tspl.length, Buffer.from(tspl.slice(-13)).toString()], [head, head.length + 40 * 240 + 13, '\r\nPRINT 1,1\r\n']);
 eq('TSPL: чёрная точка = бит 0', [tspl[head.length], tspl[head.length + 1]], [0x7F, 0xFF]);
-const esc = A.printerBytes([fakeCanvas, fakeCanvas], { proto: 'escpos', invert: false, gap: 2, feed: 'exact' });
-eq('ESC/POS: команда растра и размер', [Array.from(esc.slice(0, 10)), esc.length], [[0x1B, 0x40, 0x1D, 0x76, 0x30, 0, 40, 0, 240, 0], 2 * (10 + 9600 + 3)]);
+const esc = A.printerBytes([fakeCanvas, fakeCanvas], { proto: 'escpos', invert: false, gap: 2 });
+eq('ESC/POS: команда растра и размер', [Array.from(esc.slice(0, 10)), esc.length], [[0x1B, 0x40, 0x1D, 0x76, 0x30, 0, 40, 0, 240, 0], 2 * (10 + 9600 + 2)]);
 eq('ESC/POS: чёрная точка = бит 1', [esc[10], esc[11]], [0x80, 0x00]);
 eq('base64 без потерь', Buffer.from(A.b64(tspl), 'base64').equals(Buffer.from(tspl)), true);
 // кнопка «Назад»: возврат по экранам, с главного — выход
@@ -258,28 +258,22 @@ eq('все анализы готовых наборов есть в прайсе
   const r = A.shiftBits(m, 24, 0, 344); eq('сдвиг вправо на 3 мм: точка уехала на 24 точки', [r.wb, r.bits[3], r.bits[3] & 0x80], [43, 0x80, 0x80]);
   const l = A.shiftBits(m, -8, 0, 320); eq('сдвиг влево: край обрезан', l.bits.every((b) => b === 0), true);
   const d = A.shiftBits(m, 0, 1, 320); eq('сдвиг вниз на 1 точку', [d.bits[0], d.bits[40]], [0, 0x80]);
-  const W = A.printerBytes([fakeCanvas], { proto: 'escpos', invert: false, gap: 2, dx_escpos: 3, feed: 'exact' });
+  const W = A.printerBytes([fakeCanvas], { proto: 'escpos', invert: false, gap: 2, dx_escpos: 3 });
   eq('ESC/POS +3 мм: ширина картинки 43 байта', [W[6], W[7]], [43, 0]);
-  eq('ESC/POS не шире головки 58 мм', A.printerBytes([fakeCanvas], { proto: 'escpos', gap: 2, dx_escpos: 8, feed: 'exact' })[6], 48);
+  eq('ESC/POS не шире головки 58 мм', A.printerBytes([fakeCanvas], { proto: 'escpos', gap: 2, dx_escpos: 8 })[6], 48);
   const Tp = Buffer.from(A.printerBytes([fakeCanvas], { proto: 'tspl', invert: false, gap: 2, dx: 3, dy: -1 })).toString('latin1');
   eq('TSPL +3 мм вправо: BITMAP 24,0', Tp.includes('BITMAP 24,0,40,240,0,'), true);
   eq('без сдвига команды не меняются', Buffer.from(A.printerBytes([fakeCanvas], { proto: 'tspl', invert: false, gap: 2, dx: 0, dy: 0 })).equals(Buffer.from(A.printerBytes([fakeCanvas], { proto: 'tspl', invert: false, gap: 2 }))), true);
 }
 // ---- ESC/POS: подача и сдвиг по режимам
 {
-  const e1 = A.printerBytes([fakeCanvas, fakeCanvas, fakeCanvas], { proto: 'escpos', gap: 2 });
-  // 30 мм + зазор 2 мм − 8 мм до ножа = 24 мм = 192 точки; дальше 3 картинки, между ними зазор 16 точек, в конце GS FF
-  eq('ESC/POS по датчику: в начале — до следующей этикетки', Array.from(e1.slice(0, 5)), [0x1B, 0x40, 0x1B, 0x4A, 192]);
-  eq('ESC/POS по датчику: в конце GS FF', Array.from(e1.slice(-2)), [0x1D, 0x0C]);
-  eq('ESC/POS по датчику: длина задания', e1.length, 5 + 3 * (8 + 9600) + 2 * 3 + 2);
-  eq('ESC/POS по датчику: между этикетками ровно зазор', Array.from(e1.slice(5 + 8 + 9600, 5 + 8 + 9600 + 3)), [0x1B, 0x4A, 16]);
-  eq('подача больше 255 точек — несколькими командами', Array.from(A.printerBytes([fakeCanvas], { proto: 'escpos', gap: 5, tear: 0 }).slice(2, 8)), [0x1B, 0x4A, 255, 0x1B, 0x4A, 25]);
+  const e1 = A.printerBytes([fakeCanvas], { proto: 'escpos', gap: 3 });
+  eq('ESC/POS по датчику: после картинки GS FF', Array.from(e1.slice(-2)), [0x1D, 0x0C]);
   const e2 = A.printerBytes([fakeCanvas], { proto: 'escpos', gap: 3, feed: 'exact' });
   eq('ESC/POS на зазор: ESC J 24 точки (3 мм)', Array.from(e2.slice(-3)), [0x1B, 0x4A, 24]);
-  eq('ESC/POS на зазор: без подачи в начале', Array.from(e2.slice(0, 4)), [0x1B, 0x40, 0x1D, 0x76]);
   eq('старый сдвиг относится к TSPL', [A.prOff({ proto: 'tspl', dx: 2.5 }, 'dx'), A.prOff({ proto: 'escpos', dx: 2.5 }, 'dx')], [2.5, 0]);
   eq('сдвиг ESC/POS хранится отдельно', A.prOff({ proto: 'escpos', dx: 2.5, dx_escpos: 6 }, 'dx'), 6);
-  eq('ESC/POS +8 мм: картинка во всю головку', A.printerBytes([fakeCanvas], { proto: 'escpos', gap: 2, dx_escpos: 8, feed: 'exact' })[6], 48);
+  eq('ESC/POS +8 мм: картинка во всю головку', A.printerBytes([fakeCanvas], { proto: 'escpos', gap: 2, dx_escpos: 8 })[6], 48);
 }
 console.log(fail ? `\nОШИБОК: ${fail}` : '\nВСЕ ТЕСТЫ ПРОШЛИ');
 process.exit(fail ? 1 : 0);

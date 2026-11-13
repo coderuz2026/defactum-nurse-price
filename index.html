@@ -204,7 +204,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.36', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.35', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -970,7 +970,6 @@ document.addEventListener('click', (e) => {
       const suf = '_' + (pr.proto === 'escpos' ? 'escpos' : 'tspl');
       if (v === 'reset') { pr['dx' + suf] = 0; pr['dy' + suf] = 0; } else { const [k, d] = v.split(':'); pr[k + suf] = Math.max(-8, Math.min(8, Math.round((prOff(pr, k) + (+d)) * 2) / 2)); }
       save(); UI._keepScroll = true; render(); break; }
-    case 'prTear': { const pr = S.printer = Object.assign({ proto: 'escpos', invert: false, gap: 2 }, S.printer || {}); pr.tear = Math.max(0, Math.min(25, Math.round(((pr.tear != null ? +pr.tear : TEAR_MM) + (+v)) * 2) / 2)); save(); UI._keepScroll = true; render(); break; }
     case 'prFeed': S.printer = Object.assign({ proto: 'escpos', invert: false, gap: 2 }, S.printer || {}, { feed: v }); save(); UI._keepScroll = true; render(); break;
     case 'prForget': S.printer = null; save(); render(); break;
     case 'disc': vis.discount = +v; save(); UI._keepScroll = true; render(); break;
@@ -1230,26 +1229,18 @@ function shiftBits(m, dx, dy, w) {
 const HEAD_DOTS = 384; // ширина печатающей головки мини-принтера 58 мм
 // Сдвиг печати хранится отдельно для каждого языка принтера: в режимах TSPL и ESC/POS один и тот же принтер кладёт картинку по-разному
 const prOff = (cfg, k) => { const v = cfg[k + '_' + (cfg.proto === 'escpos' ? 'escpos' : 'tspl')]; return v != null ? +v : (cfg.proto === 'escpos' ? 0 : +cfg[k] || 0); };
-// ESC J — подача вперёд на n точек; больше 255 — несколькими командами
-const feedDots = (n) => { const out = []; n = Math.max(0, Math.round(n)); while (n > 0) { const k = Math.min(255, n); out.push(0x1B, 0x4A, k); n -= k; } return Uint8Array.from(out); };
-const TEAR_MM = 8; // от печатающей головки до ножа отрыва у мини-принтеров — около 8 мм
 function printerBytes(canvases, cfg) {
-  const parts = [], dx = Math.round(prOff(cfg, 'dx') * 8), dy = Math.round(prOff(cfg, 'dy') * 8), gapDots = Math.round((cfg.gap == null ? 2 : +cfg.gap) * 8);
-  // ESC/POS «по датчику»: в режиме ESC принтер не умеет отматывать ленту назад. После калибровки (кнопка подачи) начало этикетки
-  // стоит у ножа, а головка — на ~8 мм ниже, внутри этикетки. Поэтому в начале задания докручиваем до начала следующей этикетки
-  // (одна чистая уходит), между этикетками — ровно на зазор, в конце — GS FF: принтер сам ставит следующую этикетку к ножу.
-  const sensor = cfg.proto === 'escpos' && cfg.feed !== 'exact', tear = cfg.tear != null ? +cfg.tear : TEAR_MM;
-  if (sensor) parts.push(Uint8Array.from([0x1B, 0x40]), feedDots(240 + gapDots - tear * 8));
-  canvases.forEach((c, i) => {
+  const parts = [], dx = Math.round(prOff(cfg, 'dx') * 8), dy = Math.round(prOff(cfg, 'dy') * 8);
+  canvases.forEach((c) => {
     let m = monoBits(c);
     if (cfg.proto === 'escpos') {
       // плюс — вправо: слева добавляются пустые точки, минус — левый край обрезается
       if (dx || dy) m = shiftBits(m, dx, dy, Math.min(HEAD_DOTS, m.wb * 8 + Math.max(dx, 0)));
       let bits = m.bits; if (cfg.invert) bits = bits.map((b) => ~b & 0xFF);
-      const raster = [0x1D, 0x76, 0x30, 0x00, m.wb & 0xFF, m.wb >> 8, m.h & 0xFF, m.h >> 8];
-      if (sensor) parts.push(Uint8Array.from(raster), bits, i < canvases.length - 1 ? feedDots(gapDots) : Uint8Array.from([0x1D, 0x0C]));
-      // «На зазор»: каждая этикетка сама по себе — печать и подача на зазор
-      else parts.push(Uint8Array.from([0x1B, 0x40].concat(raster)), bits, feedDots(gapDots));
+      // после этикетки: по датчику — GS FF, принтер сам доводит ленту до начала следующей этикетки;
+      // «ровно» — подача на зазор между этикетками (ESC J, в точках), если принтер не понимает GS FF
+      const feed = cfg.feed === 'exact' ? Uint8Array.from([0x1B, 0x4A, Math.min(255, Math.round((cfg.gap == null ? 2 : +cfg.gap) * 8))]) : Uint8Array.from([0x1D, 0x0C]);
+      parts.push(Uint8Array.from([0x1B, 0x40, 0x1D, 0x76, 0x30, 0x00, m.wb & 0xFF, m.wb >> 8, m.h & 0xFF, m.h >> 8]), bits, feed);
     } else {
       // TSPL: сдвиг вправо/вниз — координатой BITMAP, влево/вверх — обрезкой картинки
       if (dx < 0 || dy < 0) m = shiftBits(m, Math.min(dx, 0), Math.min(dy, 0), m.wb * 8);
@@ -1336,12 +1327,7 @@ function vPrinter() {
       </div>
       ${pr.proto === 'escpos' ? `<div class="field"><span>Подача ленты после этикетки</span><div class="seg" style="grid-template-columns:1fr 1fr">
         <button class="${pr.feed !== 'exact' ? 'on' : ''}" data-act="prFeed" data-v="sensor">По датчику</button><button class="${pr.feed === 'exact' ? 'on' : ''}" data-act="prFeed" data-v="exact">На зазор</button></div>
-        <span class="sub" style="line-height:1.45">«По датчику» — перед печатью нажмите на принтере кнопку подачи: лента встанет к ножу. Первая этикетка задания уйдёт чистой — принтер в режиме ESC не умеет отматывать ленту назад, — остальные печатаются точно по этикеткам.</span></div>
-      ${pr.feed !== 'exact' ? `<div class="field"><span>От головки до ножа</span>
-        <div class="row" style="gap:8px"><button class="btn light small" style="flex:1" data-act="prTear" data-v="-0.5">−</button>
-        <b class="num" style="min-width:76px;text-align:center;font-size:16px">${String(pr.tear != null ? pr.tear : TEAR_MM).replace('.', ',')} мм</b>
-        <button class="btn light small" style="flex:1" data-act="prTear" data-v="0.5">+</button></div>
-        <span class="sub" style="line-height:1.45">Если печать начинается ниже верха этикетки — уменьшите, если выше (шапка обрезана) — увеличьте.</span></div>` : ''}` : ''}
+        <span class="sub" style="line-height:1.45">«По датчику» — принтер сам встаёт на начало следующей этикетки. Если после печати лента не двигается или уезжает на несколько этикеток — выберите «На зазор». Перед первой печатью нажмите на принтере кнопку подачи, чтобы лента встала на начало этикетки.</span></div>` : ''}
       <button class="btn" data-act="prTest">${I.print()} Тестовая печать</button>
       <span class="sub" style="line-height:1.45">На тестовой этикетке есть рамка в 1 мм от края. Если рамку или текст обрезает с одной стороны — сдвиньте печать в другую сторону и напечатайте ещё раз. Направления — как вы читаете этикетку. Если принтер молчит или печатает мусор — переключите язык принтера.</span>
       <button class="btn light small" data-act="prForget" style="color:var(--bad)">Забыть принтер</button>
