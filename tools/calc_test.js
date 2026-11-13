@@ -7,7 +7,7 @@ const Scan = require('../scan.js');
 const stub = { Scan, btoa: (x) => Buffer.from(x, 'binary').toString('base64'), location: { protocol: 'https:', hostname: 'example.org' }, sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
   document: { documentElement: { classList: { contains: () => true, add() {} } }, addEventListener() {}, getElementById: () => ({ innerHTML: '', addEventListener() {}, remove() {} }), querySelectorAll: () => [], querySelector: () => null, body: { appendChild() {} }, createElement: () => ({ remove() {} }) },
   window: { scrollTo() {}, scrollY: 0, addEventListener() {}, Capacitor: null }, navigator: { userAgent: '' }, fetch: async () => ({ ok: false }), setTimeout, clearTimeout, console, Date, Math, JSON };
-const fn = new Function(...Object.keys(stub), src + '\nreturn {shortTest, shiftBits, pMissedIds, pMiss, deliveryInfo, DELIVERY, labelData, vTubes, prepFor, prepList, SETS, setItems, dayReport, dayKey, closeVisit, vSum, reportText, receiptLines, vHistory, vCatalog, PAY, tubeArt, priceDate, goBack, updateResult, printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
+const fn = new Function(...Object.keys(stub), src + '\nreturn {shiftBits, pMissedIds, pMiss, deliveryInfo, DELIVERY, labelData, vTubes, prepFor, prepList, SETS, setItems, dayReport, dayKey, closeVisit, vSum, reportText, receiptLines, vHistory, vCatalog, PAY, tubeArt, priceDate, goBack, updateResult, printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
 const A = fn(...Object.values(stub));
 const prices = JSON.parse(fs.readFileSync('data/prices.json', 'utf8'));
 A.setPrices(prices);
@@ -238,7 +238,6 @@ eq('все анализы готовых наборов есть в прайсе
   const at = new Date('2026-11-13T09:41:00').getTime(); p.taken = { [tubes[0].key]: at };
   eq('этикетка: время забора', (({ timeLabel, time }) => [timeLabel, time])(A.labelData(p, A.groupTubes(p)[0])), ['Взято', '13.11.2026 09:41']);
   eq('этикетка без отметки: время выезда', A.labelData(p, A.groupTubes(p)[1]).timeLabel, 'Выезд');
-  eq('этикетка: короткие названия анализов', A.labelData(p, A.groupTubes(p).find((t) => t.no === 35)).tests, ['Глюкоза', 'АЛТ']);
   eq('этикетка: полное ФИО и номер пробирки', (({ fio, no }) => [fio, no])(A.labelData(p, A.groupTubes(p)[0])), ['Каримова Лола', 1]);
   p.missed = { [tubes[0].key]: 'x' };
   eq('невзятая пробирка не считается взятой', A.groupTubes(p)[0].taken, 0);

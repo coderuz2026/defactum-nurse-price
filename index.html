@@ -204,7 +204,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.33', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.34', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -1166,83 +1166,46 @@ function vScan() {
 const LBL = { w: 320, h: 240 }; // 40×30 мм при 203 точках на дюйм (8 точек на мм)
 const LP = () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LabelPrinter;
 // Рисует этикетку как в Aurora: штрихкод, номер, дата, «ID Фамилия И.О.», пробирка, анализаторы
-// Короткие названия анализов для этикетки: без пояснений в скобках, частые — аббревиатурой
-const SHORT = [
-  [/^Общий анализ крови развернутый/i, 'ОАК'], [/^Общий анализ крови с развернутыми ретикулоцитами/i, 'ОАК + ретикулоциты'], [/^Скорость оседания эритроцитов/i, 'СОЭ'],
-  [/^Аланин-аминотрансфераза/i, 'АЛТ'], [/^Аспартат-аминотрансфераза/i, 'АСТ'], [/^Гамма глутамилтрансфераза/i, 'ГГТ'], [/^Щелочная фосфотаза/i, 'ЩФ'], [/^Кислая Фосфотаза/i, 'Кислая ФФ'],
-  [/^Лактатдегидрогеназа/i, 'ЛДГ'], [/^Креатинкиназа изофермента MB/i, 'КК-МВ'], [/^Креатинкиназа/i, 'КК'], [/^Билирубин и его фракции/i, 'Билирубин'],
-  [/^Липопротеины высокой плотности/i, 'ЛПВП'], [/^Липопротеины низкой плотности/i, 'ЛПНП'], [/^Аполипопротеин A I/i, 'Апо-A1'], [/^Аполипопротеин В/i, 'Апо-B'],
-  [/^Биохимический анализ крови /i, 'Биохимия '], [/^Панкреатическая амилаза/i, 'Амилаза панкр.'], [/^Альфа-Амилаза/i, 'Амилаза'], [/^Кальций ионизированный/i, 'Ca ионизир.'],
-  [/^Тиреотропный гормон/i, 'ТТГ'], [/^Свободный Т4/i, 'Т4 св.'], [/^Свободный Т3/i, 'Т3 св.'], [/^Антитела к тиреопероксидазе/i, 'АТ-ТПО'], [/^Антитела к тиреоглобулину/i, 'АТ-ТГ'],
-  [/^Гликированный гемоглобин/i, 'HbA1c'], [/^С- ?реактивный белок/i, 'СРБ'], [/^Ревматоидный фактор/i, 'РФ'], [/^Антистрептолизин О/i, 'АСЛО'],
-  [/^Международное нормализованное отношение/i, 'МНО'], [/^Простатспецифический антиген общий/i, 'ПСА общ.'], [/^Простатспецифический антиген свободный/i, 'ПСА св.'],
-  [/^Раковый антиген /i, ''], [/^РЭА/i, 'РЭА'], [/^Альфафетопротеин/i, 'АФП'], [/^Адренокортикотропный гормон/i, 'АКТГ'], [/^Фолликулостимулирующий гормон/i, 'ФСГ'], [/^Лютеинизирующий гормон/i, 'ЛГ'],
-  [/^Хорионический гонадотропин/i, 'ХГЧ'], [/^Витамин Д/i, 'Вит. D'], [/^Витамин /i, 'Вит. '], [/^Мозговой натрийуретический пептид/i, 'BNP'], [/^Инсулиноподобный фактор роста-1/i, 'ИФР-1'],
-  [/^Автоматизированный развернутый общий анализ мочи/i, 'ОАМ'], [/^Общий анализ мочи/i, 'ОАМ'], [/^Группа крови \/ резус фактор/i, 'Группа крови, резус']
-];
-function shortTest(name) {
-  let n = String(name);
-  // правило с пробелом на конце заменяет только начало («Витамин В12» → «Вит. В12»), остальные — название целиком
-  for (const [re, to] of SHORT) if (re.test(n)) { n = / $/.test(to) || to === '' ? n.replace(re, to) : to; break; }
-  return n.replace(/\s*\(.*$/, '').replace(/\s*[-–:]\s*$/, '').trim() || String(name);
-}
-
-// Первичная этикетка выезда 40×30 мм — таблица. Нарочно не похожа на этикетку Aurora и без штрихкода:
-// в лаборатории на пробирку клеят этикетку Aurora. Номер заказа (номер счёта + контейнер) — в шапке.
+// Первичная этикетка выезда 40×30 мм — таблица: пациент, дата рождения, пробирка, время. Нарочно не похожа на этикетку Aurora,
+// без штрихкода и без списка анализов: в лаборатории на пробирку клеят этикетку Aurora. Номер заказа (номер счёта + контейнер) — в шапке.
 function labelCanvas(L) {
   const W = LBL.w, H = LBL.h, X = 12, KX = 74, VX = 82, VW = W - VX - X, F = "'DF Label', Arial, sans-serif";
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); g.textBaseline = 'alphabetic';
-  const font = (z, w) => { g.font = `${w} ${z}px ${F}`; };
-  const fit = (t, size, min, weight, max) => { t = String(t || ''); let z = size; font(z, weight);
-    while (z > min && g.measureText(t).width > max) font(--z, weight);
+  // текст: если не влезает — уменьшаем шрифт, а не сжимаем буквы; совсем длинный — обрезаем с многоточием
+  const fit = (t, size, min, weight, max) => { t = String(t || ''); let z = size; g.font = `${weight} ${z}px ${F}`;
+    while (z > min && g.measureText(t).width > max) g.font = `${weight} ${--z}px ${F}`;
     if (g.measureText(t).width > max) { while (t.length > 1 && g.measureText(t + '…').width > max) t = t.slice(0, -1); t += '…'; }
     return t; };
   const text = (t, x, y, size, min, weight, max, align) => { const s = fit(t, size, min, weight, max); g.textAlign = align || 'left'; g.fillText(s, x, y); return g.measureText(s).width; };
-  // список анализов по строкам: название целиком не разрывается; что не влезло — «+ещё N» целыми названиями
-  const lines = (items, z) => { font(z, 700); const out = []; let cur = '';
-    items.forEach((it) => { const t = cur ? cur + ', ' + it : it; if (!cur || g.measureText(t).width <= VW) cur = t; else { out.push(cur + ','); cur = it; } });
-    if (cur) out.push(cur); return out; };
-  const lay = (items, z, maxLines) => {
-    if (lines(items, z).length <= maxLines) return { lines: lines(items, z), rest: 0 };
-    for (let n = items.length - 1; n >= 1; n--) { const more = '+ещё ' + (items.length - n), ls = lines(items.slice(0, n).concat(more), z);
-      if (ls.length <= maxLines) return { lines: ls, rest: items.length - n }; }
-    return { lines: [fit(items[0], z, z, 700, VW - 70) + ' +ещё ' + (items.length - 1)], rest: items.length - 1 };
-  };
   // шапка
-  g.fillStyle = '#000'; g.fillRect(0, 0, W, 36); g.fillStyle = '#fff';
-  const cw = L.code ? text(L.code, W - X, 26, 20, 14, 700, 150, 'right') + 10 : 0;
-  text(L.head || 'DE FACTUM · ВЫЕЗД', X, 25, 16, 11, 700, W - 2 * X - cw);
+  g.fillStyle = '#000'; g.fillRect(0, 0, W, 38); g.fillStyle = '#fff';
+  const cw = L.code ? text(L.code, W - X, 28, 22, 14, 700, 160, 'right') + 10 : 0;
+  text(L.head || 'DE FACTUM · ВЫЕЗД', X, 26, 16, 11, 700, W - 2 * X - cw);
   g.fillStyle = '#000';
-  // таблица всегда одна и та же (как при 7 анализах): шрифт анализов не меньше 14, что не влезло в 3 строки — «+ещё N»
-  const tests = (L.tests || []).filter(Boolean), area = 204 - 44 - 32 - 32 - 32, maxLines = 3, mode = 'full';
-  let pick = null;
-  for (const z of [15, 14]) { const r = lay(tests, z, maxLines); if (!r.rest) { pick = { z, area, ...r }; break; } }
-  if (!pick) pick = { z: 14, area, ...lay(tests, 14, maxLines) };
-  const rows = [['Пациент', 44], ['Рожд.', mode === 'full' ? 32 : 0], ['Пробирка', 32], ['Анализы', pick.area], [mode === 'full' ? (L.timeLabel || 'Взято') : 'Рожд. / ' + (L.timeLabel || 'Взято').toLowerCase(), 32]].filter((r) => r[1]);
-  let y = 36;
-  rows.forEach(([k, h], i) => {
+  // строки таблицы: подпись слева, значение справа (высота строк в сумме = 240 − 38)
+  const fio = (() => { g.font = `700 16px ${F}`; return L.fioShort && g.measureText(L.fio || '').width > VW ? L.fioShort : L.fio; })();
+  const rows = [
+    ['Пациент', 56, fio, 26, 13],
+    ['Рожд.', 46, L.dob || '—', 22, 14],
+    ['Пробирка', 52, (L.no ? String(L.no).padStart(2, '0') + ' · ' : '') + String(L.tube || '').replace(/ крышка/i, ''), 22, 13],
+    [L.timeLabel || 'Взято', 48, L.time, 20, 13]
+  ];
+  let y = 38;
+  rows.forEach(([k, h, v, z, zmin], i) => {
     const mid = y + h / 2;
-    g.font = `400 12px ${F}`; g.textAlign = 'left';
-    if (k.includes('/')) { const [a, b2] = k.split(' / '); text(a, X, mid - 2, 11, 9, 400, KX - X - 4); text(b2, X, mid + 11, 11, 9, 400, KX - X - 4); }
-    else text(k, X, mid + 4, 12, 9, 400, KX - X - 4);
-    if (k === 'Пациент') { font(16, 700); const fio = L.fioShort && g.measureText(L.fio || '').width > VW ? L.fioShort : L.fio; text(fio, VX, mid + 8, 22, 15, 700, VW); }
-    else if (k === 'Рожд.') text(L.dob || '—', VX, mid + 6, 18, 13, 700, VW);
-    else if (k === 'Пробирка') text((L.no ? String(L.no).padStart(2, '0') + ' · ' : '') + (L.tube || ''), VX, mid + 6, 18, 12, 700, VW);
-    else if (k === 'Анализы') { const lh = pick.z + 3, top = y + (h - pick.lines.length * lh) / 2 + pick.z; font(pick.z, 700); g.textAlign = 'left';
-      pick.lines.forEach((ln, j) => g.fillText(ln.replace(/, \+ещё/, ' +ещё').replace(/^\+ещё/, '+ещё'), VX, top + j * lh));
-      if (!pick.lines.length) text('—', VX, mid + 5, 15, 12, 700, VW); }
-    else text(mode === 'full' ? L.time : [L.dob, L.timeShort || L.time].filter(Boolean).join(' · '), VX, mid + 5, 15, 11, 700, VW);
+    text(k, X, mid + 5, 13, 9, 400, KX - X - 4);
+    text(v, VX, mid + z * 0.36, z, zmin, 700, VW);
     y += h; if (i < rows.length - 1) g.fillRect(X, y - 1, W - 2 * X, 1);
   });
-  g.fillRect(KX, 40, 1, H - 44);
+  g.fillRect(KX, 42, 1, H - 46);
   if (L.frame) { const k = 8, t = 2; g.fillRect(k, k, W - 2 * k, t); // рамка в 1 мм от края: видно, если печать обрезает какую-то сторону
     g.fillRect(k, H - k - t, W - 2 * k, t); g.fillRect(k, k, t, H - 2 * k); g.fillRect(W - k - t, k, t, H - 2 * k); }
   return c;
 }
 const shortDt = (d) => dt(d).slice(0, 5) + ' ' + dt(d).slice(11); // 13.11 11:26
 const labelData = (p, t) => ({ code: t.code, no: t.no, fio: [p.last, p.first].filter(Boolean).join(' '), fioShort: fioShort(p), dob: p.dob || (p.pid ? 'ID ' + p.pid : ''),
-  tube: t.name.replace(/ \((ЭДТА|ПЦР)\)$/, ''), tests: [...new Set(t.tests.map(shortTest))],
+  tube: t.name.replace(/ \((ЭДТА|ПЦР)\)$/, ''),
   timeLabel: t.taken ? 'Взято' : 'Выезд', time: dt(t.taken || visit().created), timeShort: (t.taken ? 'взято ' : '') + shortDt(t.taken || visit().created) });
 // Картинка → чёрно-белые строки по 1 биту на точку (1 = чёрная)
 function monoBits(c) {
@@ -1303,7 +1266,7 @@ async function printLabels(p) {
 }
 async function printTest() {
   await fontsReady();
-  const d = new Date(), ok = await sendToPrinter([labelCanvas({ code: '12345602', no: 2, head: 'ПРОВЕРКА ПЕЧАТИ · ' + APP_VERSION, fio: 'Тестова Тамара', dob: '01.01.1990', tube: 'Жёлтая крышка', tests: ['ТТГ', 'Т4 св.'], timeLabel: 'Печать', time: dt(d), frame: true })]);
+  const d = new Date(), ok = await sendToPrinter([labelCanvas({ code: '12345602', no: 2, head: 'ПРОВЕРКА ПЕЧАТИ · ' + APP_VERSION, fio: 'Тестова Тамара', dob: '01.01.1990', tube: 'Жёлтая крышка', timeLabel: 'Печать', time: dt(d), frame: true })]);
   if (ok) toast('Тестовая этикетка отправлена на принтер');
 }
 async function shareLabels(p) {
