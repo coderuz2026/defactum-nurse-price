@@ -236,8 +236,9 @@ eq('все анализы готовых наборов есть в прайсе
     q.missed = { [tt[1].key]: 'Не хватило материала' }; eq('HOMA выпадает без одной из пробирок', A.pMiss(q), homa.price); }
   // время забора на этикетке
   const at = new Date('2026-11-13T09:41:00').getTime(); p.taken = { [tubes[0].key]: at };
-  eq('этикетка: время забора', A.labelData(p, A.groupTubes(p)[0]).date, 'Взято 13.11.2026 09:41');
-  eq('этикетка без отметки: время выезда', A.labelData(p, A.groupTubes(p)[1]).date.startsWith('Взято'), false);
+  eq('этикетка: время забора', A.labelData(p, A.groupTubes(p)[0]).time, 'взято 13.11 09:41');
+  eq('этикетка без отметки: время выезда', A.labelData(p, A.groupTubes(p)[1]).time.startsWith('взято'), false);
+  eq('этикетка: полное ФИО и номер пробирки', (({ fio, no }) => [fio, no])(A.labelData(p, A.groupTubes(p)[0])), ['Каримова Лола', 1]);
   p.missed = { [tubes[0].key]: 'x' };
   eq('невзятая пробирка не считается взятой', A.groupTubes(p)[0].taken, 0);
   p.missed = {};

@@ -130,13 +130,8 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 .tube{display:flex;gap:14px;padding:14px}
 .tube-t{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0}
 .tag{height:24px;padding:0 8px;border-radius:8px;font-size:11.5px;font-weight:700;display:inline-flex;align-items:center}
-.label{width:300px;height:225px;background:#fff;border-radius:4px;box-shadow:0 8px 20px rgba(15,23,42,.14);padding:8px 14px 7px;display:flex;flex-direction:column;font-family:'DF Label',Arial,Helvetica,sans-serif;color:#000;flex-shrink:0}
-.label svg{width:88%;height:96px;display:block;margin:0 auto}
-.label .code{font-size:21px;font-weight:700;text-align:center;line-height:1.05;margin-top:1px}
-.label .l1{font-size:13.5px;line-height:1.2;padding-left:8px}
-.label .l2{font-size:16px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.label .l3{font-size:16px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.label .l4{font-size:10px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label{width:300px;height:225px;background:#fff;border-radius:4px;box-shadow:0 8px 20px rgba(15,23,42,.14);overflow:hidden;flex-shrink:0}
+.label img{width:100%;height:100%;display:block}
 .labels{display:flex;gap:12px;overflow-x:auto;padding:16px;margin:0 -16px;scrollbar-width:none}
 .receipt{background:#fff;border-radius:26px;box-shadow:0 20px 50px rgba(11,127,144,.18);overflow:hidden}
 .meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px 20px;border-bottom:1px solid #F1F5F9}
@@ -209,7 +204,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.31', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.32', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -793,10 +788,7 @@ function vCatalog() {
 }
 
 function labelHtml(p, t, i) {
-  const v = visit();
-  return `<div class="label"><svg class="bc" data-code="${t.code}"></svg><div class="code">${t.code}</div>
-    <div class="l1">${t.taken ? 'Взято ' + dt(t.taken) : dt(v.created)}</div><div class="l2">${esc(p.pid || p.order)} ${esc(fioShort(p))}</div>
-    <div class="l3">${esc(t.name)}</div><div class="l4">${esc(t.an)}</div></div>`;
+  return `<div class="label"><img class="lbl" data-p="${esc(p.id)}" data-k="${esc(t.key)}" alt="Этикетка ${esc(t.code)}"></div>`;
 }
 function vTubes() {
   const p = patient(UI.patientId); if (!p) return vVisit();
@@ -836,9 +828,11 @@ function vTubes() {
     <button class="sub" data-act="go" data-v="printer" style="border:0;background:none;padding:0;color:var(--brand-deep);font-weight:600">${S.printer && S.printer.address ? 'Принтер: ' + esc(S.printer.name) + ' ›' : 'Принтер не выбран — настроить ›'}</button>
   </div></div>`;
 }
-function drawBarcodes() {
-  if (!window.JsBarcode) return;
-  document.querySelectorAll('svg.bc').forEach((el) => { try { JsBarcode(el, el.dataset.code, { format: 'CODE128', displayValue: false, margin: 0, height: 96, width: 2.4 }); el.setAttribute('preserveAspectRatio', 'none'); } catch (e) {} });
+// превью на экране — ровно та картинка, что уйдёт на принтер
+async function drawBarcodes() {
+  const imgs = [...document.querySelectorAll('img.lbl')]; if (!imgs.length || !window.JsBarcode) return;
+  await fontsReady();
+  imgs.forEach((el) => { try { const p = patient(el.dataset.p), t = p && groupTubes(p).find((x) => x.key === el.dataset.k); if (t) el.src = labelCanvas(labelData(p, t)).toDataURL(); } catch (e) {} });
 }
 
 function vClient() {
@@ -1172,25 +1166,46 @@ function vScan() {
 const LBL = { w: 320, h: 240 }; // 40×30 мм при 203 точках на дюйм (8 точек на мм)
 const LP = () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LabelPrinter;
 // Рисует этикетку как в Aurora: штрихкод, номер, дата, «ID Фамилия И.О.», пробирка, анализаторы
+// Первичная этикетка выезда 40×30 мм. Нарочно не похожа на этикетку Aurora: чёрная шапка, ФИО сверху, штрихкод в середине.
+// Штрихкод (номер счёта + номер контейнера) тот же, что в Aurora — сканер в лаборатории читает его как обычно.
 function labelCanvas(L) {
-  const c = document.createElement('canvas'); c.width = LBL.w; c.height = LBL.h;
-  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, LBL.w, LBL.h); g.fillStyle = '#000'; g.imageSmoothingEnabled = false;
+  const W = LBL.w, H = LBL.h, X = 12, F = "'DF Label', Arial, sans-serif";
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); g.imageSmoothingEnabled = false; g.textBaseline = 'alphabetic';
+  // текст: если не влезает — уменьшаем шрифт, а не сжимаем буквы; совсем длинный — обрезаем с многоточием
+  const fit = (t, size, min, weight, max) => { t = String(t || ''); let z = size; g.font = `${weight} ${z}px ${F}`;
+    while (z > min && g.measureText(t).width > max) { z--; g.font = `${weight} ${z}px ${F}`; }
+    if (g.measureText(t).width > max) { while (t.length > 1 && g.measureText(t + '…').width > max) t = t.slice(0, -1); t += '…'; }
+    return t; };
+  const text = (t, x, y, size, min, weight, max, align) => { const s = fit(t, size, min, weight, max); g.textAlign = align || 'left'; g.fillText(s, x, y); return g.measureText(s).width; };
+  // шапка
+  const no = L.no ? String(L.no).padStart(2, '0') : '';
+  g.fillStyle = '#000'; g.fillRect(0, 0, W, 40); g.fillStyle = '#fff';
+  const noW = no ? text(no, W - X, 32, 32, 24, 700, 70, 'right') + 10 : 0;
+  text(L.head || 'de factum · выезд', X, 28, 19, 14, 700, W - 2 * X - noW);
+  g.fillStyle = '#000';
+  // пациент и пробирка
+  // длинное ФИО: сначала уменьшаем шрифт до 18, если всё равно не влезает — фамилия и инициал
+  g.font = `700 18px ${F}`; const fio = L.fioShort && g.measureText(L.fio || '').width > W - 2 * X ? L.fioShort : L.fio;
+  text(fio, X, 68, 23, 16, 700, W - 2 * X);
+  text([L.dob, L.tube].filter(Boolean).join('  ·  '), X, 90, 15, 12, 400, W - 2 * X);
+  // штрихкод: полоска не уже 2 точек, по краям — пустое поле для сканера
   if (window.JsBarcode) {
     const b = document.createElement('canvas');
-    let mod = 3; JsBarcode(b, L.code, { format: 'CODE128', width: mod, height: 96, margin: 0, displayValue: false });
-    if (b.width > LBL.w - 28) { mod = 2; JsBarcode(b, L.code, { format: 'CODE128', width: mod, height: 96, margin: 0, displayValue: false }); }
-    g.drawImage(b, Math.round((LBL.w - b.width) / 2), 8);
+    let mod = 3; JsBarcode(b, L.code, { format: 'CODE128', width: mod, height: 92, margin: 0, displayValue: false });
+    if (b.width > W - 40) { mod = 2; JsBarcode(b, L.code, { format: 'CODE128', width: mod, height: 92, margin: 0, displayValue: false }); }
+    g.drawImage(b, Math.round((W - b.width) / 2), 100);
   }
-  const F = "'DF Label', Arial, sans-serif", line = (t, y, font, x, align) => { g.font = font; g.textAlign = align || 'left'; g.textBaseline = 'alphabetic'; g.fillText(t, x == null ? 12 : x, y, LBL.w - 24); };
-  line(L.code, 132, '700 27px ' + F, LBL.w / 2, 'center');
-  line(L.date, 153, '400 15px ' + F, 20);
-  line(L.who, 176, '400 19px ' + F);
-  line(L.tube, 200, '700 19px ' + F);
-  line(L.an, 219, '400 12px ' + F);
-  if (L.frame) { g.fillStyle = '#000'; const k = 8, t = 2; g.fillRect(k, k, LBL.w - 2 * k, t); g.fillRect(k, LBL.h - k - t, LBL.w - 2 * k, t); g.fillRect(k, k, t, LBL.h - 2 * k); g.fillRect(LBL.w - k - t, k, t, LBL.h - 2 * k); }
+  // номер штрихкода и время
+  const tw = L.time ? (g.font = `400 15px ${F}`, g.measureText(L.time).width) : 0;
+  text(L.code, X, 224, 24, 18, 700, W - 2 * X - tw - 10);
+  if (L.time) text(L.time, W - X, 224, 15, 12, 400, W / 2 - X, 'right');
+  if (L.frame) { const k = 8, t = 2; g.fillRect(k, k, W - 2 * k, t); // рамка в 1 мм от края: видно, если печать обрезает какую-то сторону
+    g.fillRect(k, H - k - t, W - 2 * k, t); g.fillRect(k, k, t, H - 2 * k); g.fillRect(W - k - t, k, t, H - 2 * k); }
   return c;
 }
-const labelData = (p, t) => ({ code: t.code, date: t.taken ? 'Взято ' + dt(t.taken) : dt(visit().created), who: (p.pid || p.order) + ' ' + fioShort(p), tube: t.name, an: t.an });
+const shortDt = (d) => dt(d).slice(0, 5) + ' ' + dt(d).slice(11); // 13.11 11:26
+const labelData = (p, t) => ({ code: t.code, no: t.no, fio: [p.last, p.first].filter(Boolean).join(' '), fioShort: fioShort(p), dob: p.dob || (p.pid ? 'ID ' + p.pid : ''), tube: t.name.replace(/ \((ЭДТА|ПЦР)\)$/, ''), time: t.taken ? 'взято ' + shortDt(t.taken) : shortDt(visit().created) });
 // Картинка → чёрно-белые строки по 1 биту на точку (1 = чёрная)
 function monoBits(c) {
   const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, wb = Math.ceil(c.width / 8), out = new Uint8Array(wb * c.height);
@@ -1250,7 +1265,7 @@ async function printLabels(p) {
 }
 async function printTest() {
   await fontsReady();
-  const d = new Date(), ok = await sendToPrinter([labelCanvas({ code: '12345602', date: dt(d), who: '123456 Тестова Т.Т.', tube: 'Проверка печати', an: 'de factum · ' + APP_VERSION, frame: true })]);
+  const d = new Date(), ok = await sendToPrinter([labelCanvas({ code: '12345602', no: 2, head: 'Проверка печати · ' + APP_VERSION, fio: 'Тестова Тамара', dob: '01.01.1990', tube: 'Жёлтая крышка', time: shortDt(d), frame: true })]);
   if (ok) toast('Тестовая этикетка отправлена на принтер');
 }
 async function shareLabels(p) {
