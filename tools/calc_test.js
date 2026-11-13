@@ -7,7 +7,7 @@ const Scan = require('../scan.js');
 const stub = { Scan, btoa: (x) => Buffer.from(x, 'binary').toString('base64'), location: { protocol: 'https:', hostname: 'example.org' }, sessionStorage: {}, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } },
   document: { documentElement: { classList: { contains: () => true, add() {} } }, addEventListener() {}, getElementById: () => ({ innerHTML: '', addEventListener() {}, remove() {} }), querySelectorAll: () => [], querySelector: () => null, body: { appendChild() {} }, createElement: () => ({ remove() {} }) },
   window: { scrollTo() {}, scrollY: 0, addEventListener() {}, Capacitor: null }, navigator: { userAgent: '' }, fetch: async () => ({ ok: false }), setTimeout, clearTimeout, console, Date, Math, JSON };
-const fn = new Function(...Object.keys(stub), src + '\nreturn {prepFor, prepList, SETS, setItems, dayReport, dayKey, closeVisit, vSum, reportText, receiptLines, vHistory, vCatalog, PAY, tubeArt, priceDate, goBack, updateResult, printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
+const fn = new Function(...Object.keys(stub), src + '\nreturn {pMissedIds, pMiss, deliveryInfo, DELIVERY, labelData, vTubes, prepFor, prepList, SETS, setItems, dayReport, dayKey, closeVisit, vSum, reportText, receiptLines, vHistory, vCatalog, PAY, tubeArt, priceDate, goBack, updateResult, printerBytes, b64, vPrinter, vClient, vVisit, vProfile, vScan, UI, verNum, APP_VERSION, scanProblems, fioShort, formatAddress, S, P, setPrices, vTotals, pSum, groupTubes, fmt, plural, newVisit, tubesFor, TUBES};');
 const A = fn(...Object.values(stub));
 const prices = JSON.parse(fs.readFileSync('data/prices.json', 'utf8'));
 A.setPrices(prices);
@@ -26,11 +26,11 @@ v.patients.push(p1, p2);
 const s1 = ttg.price + t4.price + oak.price + oam.price + homa.price + alt.price, s2 = oak.price + ttg.price;
 eq('сумма пациента 1', A.pSum(p1), s1);
 eq('сумма пациента 2', A.pSum(p2), s2);
-eq('итог без выезда и скидки', A.vTotals(v), { an: s1 + s2, ex: 0, off: 0, fee: 0, total: s1 + s2 });
+eq('итог без выезда и скидки', A.vTotals(v), { an: s1 + s2, ex: 0, off: 0, miss: 0, fee: 0, total: s1 + s2 });
 v.homeFee = 150000;
 eq('итог с выездом', A.vTotals(v).total, s1 + s2 + 150000);
 v.discount = 10;
-eq('скидка 10% только на анализы', A.vTotals(v), { an: s1 + s2, ex: 0, off: Math.round((s1 + s2) * 0.1), fee: 150000, total: s1 + s2 - Math.round((s1 + s2) * 0.1) + 150000 });
+eq('скидка 10% только на анализы', A.vTotals(v), { an: s1 + s2, ex: 0, off: Math.round((s1 + s2) * 0.1), miss: 0, fee: 150000, total: s1 + s2 - Math.round((s1 + s2) * 0.1) + 150000 });
 v.discount = 15; const t15 = A.vTotals(v);
 eq('скидка 15%: сумма сходится', t15.an - t15.off + t15.fee, t15.total);
 // 3. удалённая из прайса услуга не ломает расчёт
@@ -114,7 +114,7 @@ eq('лист: контейнеры 01, 02, 35', g3.map((x) => x.no), [1, 2, 35])
 eq('лист: штрихкод = ID счёта + контейнер', g3.map((x) => x.code), ['12398701', '12398702', '12398735']);
 eq('лист: подпись на этикетке', A.fioShort(p3), 'Каримова Л.Т.');
 const v2 = A.newVisit(); v2.patients.push(p3); v2.discount = 10;
-eq('скидка не трогает «Вызов на дом»', A.vTotals(v2), { an: 880000, ex: 80000, off: 88000, fee: 0, total: 872000 });
+eq('скидка не трогает «Вызов на дом»', A.vTotals(v2), { an: 880000, ex: 80000, off: 88000, miss: 0, fee: 0, total: 872000 });
 // ошибки распознавания показываются списком
 const lv = (x) => x.map((y) => y.level + ':' + y.text.split(/[:—(«]/)[0].trim());
 eq('ошибки: чистый лист — нет ошибок', A.scanProblems({ sheet: sh, match: mt, sheetTotal: mt.total, confidence: 70, srcLong: 3000 }), []);
@@ -205,6 +205,51 @@ eq('все анализы готовых наборов есть в прайсе
   eq('текст отчёта содержит итог', A.reportText(r).includes(A.fmt(r.total)), true);
   eq('экран истории рисуется', /Итого за день/.test(A.vHistory()), true);
   A.UI.patientId = 'h1'; A.UI.cat = -1; eq('экран наборов рисуется', /Наборы анализов/.test(A.vCatalog()), true); A.UI.cat = 0;
+}
+// ---- забор: взято / не удалось / доставка
+{
+  A.S.me = A.S.me || { name: 'Тестова Нигора', phone: '901234567', branch: 'DeFactum Central' };
+  const v = A.newVisit(); A.S.visitId = v.id;
+  const p = { id: 'z1', last: 'Каримова', first: 'Лола', sex: 'f', items: [892, 457, 342, 332], extra: [{ name: 'Вызов на дом', price: 80000 }] };
+  v.patients.push(p);
+  const tubes = A.groupTubes(p), full = A.vTotals(v);
+  const ttg = tubes.find((t) => t.tests.some((n) => /^Тиреотропный/.test(n)));
+  eq('ТТГ в отдельной пробирке', !!ttg && ttg.tests.length, 1);
+  p.missed = { [ttg.key]: 'Пациент отказался' };
+  const t2 = A.vTotals(v);
+  eq('не взято: сумма анализов уменьшилась на цену ТТГ', full.an - t2.an, byId(457).price);
+  eq('не взято: сумма невзятого = цена ТТГ', t2.miss, byId(457).price);
+  eq('не взято: вызов на дом остался', t2.ex, 80000);
+  v.discount = 10; const t3 = A.vTotals(v);
+  eq('скидка считается только со взятых анализов', t3.off, Math.round(t2.an * 0.1));
+  v.discount = 0;
+  eq('пробирка помечена как невзятая', A.groupTubes(p).find((t) => t.key === ttg.key).missed, 'Пациент отказался');
+  const L = A.receiptLines(v);
+  eq('в чеке у невзятого анализа нет цены', L.some((x) => /^Тиреотропный/.test(x.l || '') && x.r === 'не взято'), true);
+  eq('итог чека без невзятого', L.find((x) => x.k === 'total').r, A.fmt(t2.total));
+  p.missed = {};
+  eq('вернули пробирку — сумма как была', A.vTotals(v).total, full.total);
+  // двойная пробирка: HOMA требует 35 и 02 — выпадает, если не взята любая
+  const homa = prices.items.find((x) => /HOMA/i.test(x.name));
+  if (homa) { const q = { id: 'z2', last: 'Т', first: 'Т', items: [homa.id], extra: [] }; const tt = A.groupTubes(q);
+    eq('HOMA: две пробирки', tt.length, 2);
+    q.missed = { [tt[1].key]: 'Не хватило материала' }; eq('HOMA выпадает без одной из пробирок', A.pMiss(q), homa.price); }
+  // время забора на этикетке
+  const at = new Date('2026-11-13T09:41:00').getTime(); p.taken = { [tubes[0].key]: at };
+  eq('этикетка: время забора', A.labelData(p, A.groupTubes(p)[0]).date, 'Взято 13.11.2026 09:41');
+  eq('этикетка без отметки: время выезда', A.labelData(p, A.groupTubes(p)[1]).date.startsWith('Взято'), false);
+  p.missed = { [tubes[0].key]: 'x' };
+  eq('невзятая пробирка не считается взятой', A.groupTubes(p)[0].taken, 0);
+  p.missed = {};
+  // доставка
+  eq('без сроков доставки — только «материал взят»', [!!A.deliveryInfo(v).first, A.deliveryInfo(v).due], [true, null]);
+  A.DELIVERY[tubes[0].no] = 2; const d = A.deliveryInfo(v);
+  eq('срок доставки = забор + 2 часа', d.due && d.due.at, at + 2 * 3600e3);
+  delete A.DELIVERY[tubes[0].no];
+  A.UI.patientId = 'z1'; p.missed = { [ttg.key]: 'Пациент отказался' };
+  const html = A.vTubes();
+  eq('экран пробирок: печать без невзятой', /Печать этикеток \(2\)/.test(html), true);
+  eq('экран пробирок: кнопки Взято/Не удалось', /data-act="take"/.test(html) && /data-act="miss"/.test(html), true);
 }
 console.log(fail ? `\nОШИБОК: ${fail}` : '\nВСЕ ТЕСТЫ ПРОШЛИ');
 process.exit(fail ? 1 : 0);

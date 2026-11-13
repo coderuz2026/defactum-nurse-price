@@ -209,7 +209,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.29', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.30', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -408,15 +408,22 @@ function newVisit() {
   S.visits.push(v); S.visitId = v.id; save(); return v;
 }
 const patient = (id) => (visit() || { patients: [] }).patients.find((p) => p.id === id);
-const pItems = (p) => p.items.reduce((s, id) => s + ((P.byId[id] || {}).price || 0), 0);
+// Анализы из пробирки, которую не удалось взять, в сумму не идут. Анализ, которому нужны две пробирки, выпадает, если не взята любая из них.
+function pMissedIds(p) {
+  const m = p.missed || {}, out = new Set(); if (!Object.keys(m).length) return out;
+  p.items.forEach((id) => { const it = P.byId[id]; if (it && tubesFor(it, (P.catById[it.cat] || {}).name).some((k) => m[k])) out.add(id); });
+  return out;
+}
+const pItems = (p) => { const miss = pMissedIds(p); return p.items.reduce((s, id) => s + (miss.has(id) ? 0 : ((P.byId[id] || {}).price || 0)), 0); };
+const pMiss = (p) => [...pMissedIds(p)].reduce((s, id) => s + ((P.byId[id] || {}).price || 0), 0);
 const pExtra = (p) => (p.extra || []).reduce((s, x) => s + (+x.price || 0), 0);
 const pSum = (p) => pItems(p) + pExtra(p);
 const fioShort = (p) => (p.last || '') + (p.first ? ' ' + p.first[0].toUpperCase() + '.' : '') + (p.middle ? p.middle[0].toUpperCase() + '.' : '');
 function vTotals(v) {
   const an = v.patients.reduce((s, p) => s + pItems(p), 0);
   const ex = v.patients.reduce((s, p) => s + pExtra(p), 0); // услуги не из прайса — без скидки
-  const off = Math.round(an * (v.discount || 0) / 100);
-  return { an, ex, off, fee: +v.homeFee || 0, total: an - off + ex + (+v.homeFee || 0) };
+  const off = Math.round(an * (v.discount || 0) / 100), miss = v.patients.reduce((s, p) => s + pMiss(p), 0);
+  return { an, ex, off, miss, fee: +v.homeFee || 0, total: an - off + ex + (+v.homeFee || 0) };
 }
 /* ---------- История, оплата, отчёт ---------- */
 const PAY = { cash: 'Наличные', card: 'Карта', click: 'Click', payme: 'Payme' };
@@ -449,7 +456,8 @@ function receiptLines(v) {
     { k: 'row', l: 'Дата', r: dt(Date.now()) }, { k: 'row', l: 'Медсестра', r: me.name }, { k: 'row', l: 'Филиал', r: me.branch }, { k: 'row', l: 'Выезд №', r: v.no }, { k: 'hr' }];
   v.patients.filter((p) => p.items.length || (p.extra || []).length).forEach((p) => {
     L.push({ k: 'head', l: p.last + ' ' + p.first });
-    p.items.map((id) => P.byId[id]).filter(Boolean).forEach((it) => L.push({ k: 'row', l: it.name, r: fmt(it.price).replace(' сум', '') }));
+    const miss = pMissedIds(p);
+    p.items.map((id) => P.byId[id]).filter(Boolean).forEach((it) => L.push({ k: 'row', l: it.name, r: miss.has(it.id) ? 'не взято' : fmt(it.price).replace(' сум', '') }));
     (p.extra || []).forEach((x) => L.push({ k: 'row', l: x.name, r: fmt(x.price).replace(' сум', '') }));
   });
   if (t.fee) L.push({ k: 'row', l: 'Выезд на дом', r: fmt(t.fee).replace(' сум', '') });
@@ -544,6 +552,23 @@ const SETS = [
 const allSets = () => SETS.map((x, i) => ({ ...x, key: 'b' + i })).concat((S.sets || []).map((x, i) => ({ ...x, key: 'o' + i, own: true })));
 const setItems = (x) => x.ids.map((id) => P.byId[id]).filter(Boolean);
 
+/* ---------- Забор: время, «не удалось», доставка ---------- */
+// Срок доставки в лабораторию по номеру контейнера, в часах. Заполнить по требованиям лаборатории, например { 4: 2 } — голубая крышка за 2 часа.
+const DELIVERY = {};
+const MISS_WHY = ['Не нашли вену', 'Пациент отказался', 'Не соблюдена подготовка (не натощак)', 'Не хватило материала'];
+const hm = (d) => dt(d).slice(11);
+const dur = (ms) => { const m = Math.max(0, Math.round(ms / 60000)), h = Math.floor(m / 60); return (h ? h + ' ч ' : '') + (m % 60) + ' мин'; };
+function deliveryInfo(v) {
+  let first = null, due = null;
+  v.patients.forEach((p) => groupTubes(p).forEach((t) => {
+    if (!t.taken || t.missed) return;
+    if (!first || t.taken < first.at) first = { at: t.taken, p, t };
+    const h = DELIVERY[t.no]; if (h) { const at = t.taken + h * 3600e3; if (!due || at < due.at) due = { at, p, t }; }
+  }));
+  return { first, due };
+}
+const tubeTitle = (t) => t.name + (t.no ? ' (' + String(t.no).padStart(2, '0') + ')' : '');
+
 function groupTubes(p) {
   const groups = {};
   p.items.forEach((id) => {
@@ -553,7 +578,8 @@ function groupTubes(p) {
   p.stuck = p.stuck || {};
   if (!p.order) { S.order = (S.order || 900000) + 1; p.order = S.order; save(); } // у пациента с листа p.order = «ID счета» из Aurora
   // Один контейнер у пациента = одна пробирка = один штрихкод: <номер заказа><номер контейнера>
-  return Object.values(groups).sort((a, b) => a.no - b.no).map((g) => ({ ...g, code: String(p.order) + String(g.no).padStart(2, '0'), stuck: !!p.stuck[g.key] }));
+  const tk = p.taken || {}, ms = p.missed || {};
+  return Object.values(groups).sort((a, b) => a.no - b.no).map((g) => ({ ...g, code: String(p.order) + String(g.no).padStart(2, '0'), stuck: !!p.stuck[g.key], taken: ms[g.key] ? 0 : (tk[g.key] || 0), missed: ms[g.key] || '' }));
 }
 
 /* ---------- Рендер ---------- */
@@ -570,6 +596,14 @@ function render() {
   if (UI.view === 'catalog' && UI._focus) { const i = document.getElementById('q'); if (i) { i.focus(); const l = i.value.length; i.setSelectionRange(l, l); } UI._focus = false; }
   window.scrollTo(0, UI._keepScroll ? window.scrollY : 0); UI._keepScroll = false;
 }
+// напоминание о доставке и время в карточках пробирок обновляются раз в минуту
+setInterval(() => {
+  if (!S.me || !['visit', 'tubes'].includes(UI.view) || UI.printing) return;
+  const ae = document.activeElement; if (ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName)) return;
+  const ov = document.getElementById('overlay'); if (ov && ov.innerHTML) return;
+  if (!deliveryInfo(visit()).first) return;
+  UI._keepScroll = true; render();
+}, 60000);
 function go(view, extra) { Object.assign(UI, { view, err: '' }, extra || {}); render(); }
 
 function vAuth() {
@@ -625,18 +659,22 @@ function vVisit() {
     ${v.geo ? `<a href="https://yandex.uz/maps/?pt=${v.geo.lon},${v.geo.lat}&z=17&l=map" target="_blank" rel="noopener" class="sub" style="text-decoration:none;color:var(--brand-deep);font-weight:600;margin-top:-4px">Точка на карте: ${v.geo.lat.toFixed(5)}, ${v.geo.lon.toFixed(5)} · ±${v.geo.acc} м ›</a>` : ''}
   </div>
   <div class="body" style="padding-bottom:260px">
+    ${(() => { const d = deliveryInfo(v), now = Date.now(); if (!d.first) return '';
+      if (d.due) { const late = d.due.at < now; return `<div class="note ${late ? 'err' : 'warn'}" style="align-items:center;font-size:13.5px"><span style="font-size:20px">⏱</span><span><b>Доставить в лабораторию до ${hm(d.due.at)}</b><br>${esc(tubeTitle(d.due.t))} — ${esc(fioShort(d.due.p))} · ${late ? 'опоздание ' + dur(now - d.due.at) : 'осталось ' + dur(d.due.at - now)}</span></div>`; }
+      return `<div class="note warn" style="align-items:center;font-size:13.5px"><span style="font-size:20px">⏱</span><span><b>Материал взят в ${hm(d.first.at)}</b> · прошло ${dur(now - d.first.at)}<br>Доставьте в лабораторию</span></div>`; })()}
     ${v.patients.map((p) => {
-      const tubes = groupTubes(p); const marked = tubes.length && tubes.every((x) => x.stuck);
+      const tubes = groupTubes(p); const marked = tubes.length && tubes.every((x) => x.taken || x.missed), missed = tubes.filter((x) => x.missed);
       return `<div class="card pad" style="display:flex;flex-direction:column;gap:12px">
         <div class="row"><span class="avatar">${esc(initials(p.last + ' ' + p.first))}</span>
           <div style="flex:1;min-width:0"><b style="font-size:16px">${esc(p.last)} ${esc(p.first)}</b><div class="sub">${p.sex === 'm' ? 'М' : 'Ж'}${p.dob ? ' · ' + esc(p.dob) : ''} · ${p.items.length} ${plural(p.items.length, 'анализ', 'анализа', 'анализов')}</div></div>
           <b class="num">${fmt(pSum(p))}</b></div>
         ${(p.extra || []).length ? `<div class="sub" style="margin-top:-4px">${p.extra.map((x) => esc(x.name) + ' · ' + fmt(x.price)).join('; ')}${p.pid ? ' · ID ' + esc(p.pid) : ''}</div>` : ''}
-        ${tubes.length ? `<div class="chips">${tubes.map((x) => `<span class="chip">${I.tube(x.cap)}${esc(x.name.replace(/ \((ЭДТА|ПЦР)\)/, ''))}${x.no ? ' (' + String(x.no).padStart(2, '0') + ')' : ''}${x.tests.length > 1 ? ' ×' + x.tests.length : ''}</span>`).join('')}</div>` : ''}
+        ${tubes.length ? `<div class="chips">${tubes.map((x) => `<span class="chip" style="${x.missed ? 'opacity:.5;text-decoration:line-through' : ''}">${x.taken ? I.check('#0F6B3A', 12) : I.tube(x.cap)}${esc(x.name.replace(/ \((ЭДТА|ПЦР)\)/, ''))}${x.no ? ' (' + String(x.no).padStart(2, '0') + ')' : ''}${x.tests.length > 1 ? ' ×' + x.tests.length : ''}</span>`).join('')}</div>` : ''}
+        ${missed.length ? `<div class="note err" style="padding:9px 12px;font-size:12.5px"><span><b>Не взято:</b> ${missed.map((x) => esc(tubeTitle(x)) + ' — ' + esc(x.missed.toLowerCase())).join('; ')} · −${fmt(pMiss(p))}</span></div>` : ''}
         ${prepList(p).length ? `<div class="note warn" style="padding:9px 12px;font-size:12.5px"><span><b>Подготовка:</b> <span>${prepList(p).map((x) => esc(x)).join('; ')}</span></span></div>` : ''}
         <div class="grid2">
           <button class="btn light small" data-act="catalog" data-v="${p.id}">${I.plus('#0F172A', 15)} Анализы</button>
-          ${p.items.length ? `<button class="btn small" data-act="tubes" data-v="${p.id}" style="${marked ? 'background:var(--okbg);color:var(--ok);box-shadow:none' : ''}">${marked ? I.check('#0F6B3A') + ' Промаркировано' : I.bars() + ' Пробирки'}</button>` : `<button class="btn light small" data-act="editPatient" data-v="${p.id}">Изменить</button>`}
+          ${p.items.length ? `<button class="btn small" data-act="tubes" data-v="${p.id}" style="${marked ? 'background:var(--okbg);color:var(--ok);box-shadow:none' : ''}">${marked ? I.check('#0F6B3A') + ' Все отмечены' : I.bars() + ' Пробирки'}</button>` : `<button class="btn light small" data-act="editPatient" data-v="${p.id}">Изменить</button>`}
         </div>
         <div class="row between" style="margin-top:-2px">
           <button class="linkbtn" data-act="editPatient" data-v="${p.id}">Изменить данные</button>
@@ -654,8 +692,9 @@ function vVisit() {
     ${UI.newVer ? `<button class="btn small" data-act="appUpdate">Доступно обновление ${esc(UI.newVer)} — обновить</button>` : `<div class="sub" style="text-align:center;font-size:12px">Версия ${APP_VERSION} от ${APP_DATE}</div>`}
   </div>
   <div class="bottom"><div>
-    <div class="sum-row"><span>Анализы${v.patients.length ? ', ' + v.patients.length + ' ' + plural(v.patients.length, 'пациент', 'пациента', 'пациентов') : ''}</span><span class="num">${fmt(t.an)}</span></div>
+    <div class="sum-row"><span>Анализы${v.patients.length ? ', ' + v.patients.length + ' ' + plural(v.patients.length, 'пациент', 'пациента', 'пациентов') : ''}</span><span class="num">${fmt(t.an + t.miss)}</span></div>
     ${t.ex ? `<div class="sum-row"><span>Вызов на дом и прочее</span><span class="num">${fmt(t.ex)}</span></div>` : ''}
+    ${t.miss ? `<div class="sum-row" style="color:var(--bad)"><span>Не взято</span><span class="num">− ${fmt(t.miss)}</span></div>` : ''}
     <div class="row between" style="gap:8px"><span class="sub">Скидка${t.off ? ` <b class="num" style="color:var(--ok);font-weight:600">− ${fmt(t.off)}</b>` : ''}</span>
       <div class="seg" style="grid-template-columns:repeat(4,44px);padding:2px;border-radius:11px">${[0, 5, 10, 15].map((d) => `<button class="${(v.discount || 0) === d ? 'on' : ''}" data-act="disc" data-v="${d}" style="height:28px;font-size:12px;border-radius:9px">${d ? d + '%' : 'Нет'}</button>`).join('')}</div>
     </div>
@@ -756,35 +795,43 @@ function vCatalog() {
 function labelHtml(p, t, i) {
   const v = visit();
   return `<div class="label"><svg class="bc" data-code="${t.code}"></svg><div class="code">${t.code}</div>
-    <div class="l1">${dt(v.created)}</div><div class="l2">${esc(p.pid || p.order)} ${esc(fioShort(p))}</div>
+    <div class="l1">${t.taken ? 'Взято ' + dt(t.taken) : dt(v.created)}</div><div class="l2">${esc(p.pid || p.order)} ${esc(fioShort(p))}</div>
     <div class="l3">${esc(t.name)}</div><div class="l4">${esc(t.an)}</div></div>`;
 }
 function vTubes() {
   const p = patient(UI.patientId); if (!p) return vVisit();
-  const tubes = groupTubes(p); const done = tubes.filter((t) => t.stuck).length;
-  return header('Пробирки', `${esc(p.last)} ${esc(p.first)}${p.dob ? ' · ' + esc(p.dob) : ''}`, 'visit') + `
-  <div class="body" style="padding-bottom:200px">
-    <div class="note info" style="align-items:center"><b style="font-size:22px">${p.items.length}</b>${plural(p.items.length, 'анализ', 'анализа', 'анализов')} → <b style="font-size:22px">${tubes.length}</b>${plural(tubes.length, 'пробирка', 'пробирки', 'пробирок')}<span style="flex:1;text-align:right;font-size:12px">одинаковый контейнер = один штрихкод</span></div>
-    ${tubes.map((t) => `<div class="card tube">
-      <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">${tubeArt(t)}</div>
+  const tubes = groupTubes(p), live = tubes.filter((t) => !t.missed);
+  const taken = tubes.filter((t) => t.taken).length, miss = tubes.length - live.length, wait = tubes.length - taken - miss;
+  const price = (t) => t.tests.reduce((a, n) => a + ((P.items.find((x) => x.name === n) || {}).price || 0), 0);
+  const card = (t) => { const no = !!t.missed, h = DELIVERY[t.no], due = t.taken && h ? t.taken + h * 3600e3 : 0;
+    return `<div class="card tube" style="${no ? 'background:#FBFBFC;border-color:#F3D4D4' : t.taken ? 'border-color:#BFE6CD' : ''}">
+      <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;${no ? 'opacity:.35;filter:grayscale(1)' : ''}">${tubeArt(t)}</div>
       <div class="tube-t">
-        <div><b style="font-size:15px">${esc(t.name)}${t.no ? ' (' + String(t.no).padStart(2, '0') + ')' : ''}</b><div class="sub">${esc(t.mat)} · ${esc(t.an)}</div></div>
+        <div><b style="font-size:15px;${no ? 'color:#94A3B8;text-decoration:line-through' : ''}">${esc(tubeTitle(t))}</b><div class="sub">${esc(t.mat)} · ${esc(t.an)}</div></div>
         <div class="chips">${t.tests.length > 1 ? `<span class="tag" style="background:var(--okbg);color:var(--ok)">объединено: ${t.tests.length}</span>` : ''}</div>
-        <div style="font-size:13.5px;line-height:1.45">${t.tests.map(esc).join(', ')}</div>
-        <div class="row between" style="padding-top:8px;border-top:1px dashed var(--line2)">
-          <b class="num" style="letter-spacing:1px">${t.code}</b>
-          <button class="btn small ${t.stuck ? '' : 'light'}" style="width:auto;padding:0 12px;height:40px;${t.stuck ? 'background:var(--okbg);color:var(--ok);box-shadow:none' : ''}" data-act="stick" data-v="${t.key}">${t.stuck ? I.check('#0F6B3A') + ' Наклеено' : 'Наклеить'}</button>
+        <div style="font-size:13.5px;line-height:1.45;${no ? 'color:#94A3B8;text-decoration:line-through' : ''}">${t.tests.map(esc).join(', ')}</div>
+        ${t.taken ? `<div class="note ok" style="padding:8px 11px;align-items:center">${I.check('#0F6B3A', 15)}<span><b>Взято в ${hm(t.taken)}</b>${due ? `<br><span style="color:${due < Date.now() ? 'var(--bad)' : '#7A4B00'}">Доставить в лабораторию до <b>${hm(due)}</b> · ${due < Date.now() ? 'опоздание ' + dur(Date.now() - due) : 'осталось ' + dur(due - Date.now())}</span>` : ''}</span></div>` : ''}
+        ${no ? `<div class="note err" style="padding:8px 11px;align-items:center">${I.x('#B42318')}<span><b>Не взято:</b> ${esc(t.missed)}<br>Сумма уменьшена на <b>${fmt(price(t))}</b></span></div>` : ''}
+        <div class="row between" style="padding-top:8px;border-top:1px dashed var(--line2);gap:8px">
+          ${no ? `<b class="num" style="color:#94A3B8;text-decoration:line-through">${t.code}</b><button class="linkbtn" style="color:var(--brand-deep)" data-act="unmiss" data-v="${t.key}">Вернуть</button>`
+          : t.taken ? `<b class="num" style="letter-spacing:1px">${t.code}</b><button class="linkbtn" data-act="untake" data-v="${t.key}">Отменить отметку</button>`
+          : `<button class="btn small light" style="flex:1;color:var(--bad);border-color:#F3D4D4" data-act="miss" data-v="${t.key}">Не удалось</button><button class="btn small" style="flex:1.3" data-act="take" data-v="${t.key}">${I.check('#fff', 15)} Взято</button>`}
         </div>
-      </div></div>`).join('')}
-    <div class="row between" style="padding:0 4px"><span class="h2">Этикетки 40×30 мм</span><span class="sub">листайте →</span></div>
-    <div class="labels print-area">${tubes.map((t, i) => labelHtml(p, t, i)).join('')}</div>
+      </div></div>`; };
+  return header('Пробирки', `${esc(p.last)} ${esc(p.first)}${p.dob ? ' · ' + esc(p.dob) : ''}`, 'visit') + `
+  <div class="body" style="padding-bottom:220px">
+    <div class="note info" style="align-items:center"><b style="font-size:22px">${p.items.length}</b>${plural(p.items.length, 'анализ', 'анализа', 'анализов')} → <b style="font-size:22px">${tubes.length}</b>${plural(tubes.length, 'пробирка', 'пробирки', 'пробирок')}<span style="flex:1;text-align:right;font-size:12px">одинаковый контейнер = один штрихкод</span></div>
+    ${wait ? `<div class="note info"><span>Отмечайте каждую пробирку: <b>Взято</b> — время забора попадёт на этикетку, <b>Не удалось</b> — анализы уберутся из суммы.</span></div>` : ''}
+    ${tubes.map(card).join('')}
+    ${live.length ? `<div class="row between" style="padding:0 4px"><span class="h2">Этикетки 40×30 мм</span><span class="sub">листайте →</span></div>
+    <div class="labels print-area">${live.map((t, i) => labelHtml(p, t, i)).join('')}</div>` : ''}
     <div class="note warn">Группировка пробирок пока предварительная — по категории анализа. После выгрузки справочника «анализ → контейнер» из Aurora будет 1 в 1 как в лаборатории. Печать на Bluetooth-принтер — в мобильной версии.</div>
   </div>
   <div class="bottom"><div>
-    <div class="row"><span style="flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden;display:flex"><span style="width:${tubes.length ? Math.round(done / tubes.length * 100) : 0}%;background:#22A55B"></span></span><span class="sub" style="font-weight:600">Наклеено ${done} из ${tubes.length}</span></div>
+    <div class="row"><span style="flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden;display:flex"><span style="width:${tubes.length ? Math.round(taken / tubes.length * 100) : 0}%;background:#22A55B"></span><span style="width:${tubes.length ? Math.round(miss / tubes.length * 100) : 0}%;background:#E5484D"></span></span><span class="sub" style="font-weight:600">Взято ${taken}${miss ? ' · не взято ' + miss : ''}${wait ? ' · ждёт ' + wait : ''}</span></div>
     <div class="row" style="gap:8px">
-      <button class="btn" style="flex:1" data-act="print" ${UI.printing ? 'disabled' : ''}>${UI.printing ? '<span class="spin"></span> Печатаю…' : I.print() + ' Печать этикеток (' + tubes.length + ')'}</button>
-      <button class="btn light" style="width:56px;flex-shrink:0" data-act="shareLabels" aria-label="Передать этикетки картинками в другое приложение">${I.share}</button>
+      <button class="btn" style="flex:1" data-act="print" ${UI.printing || !live.length ? 'disabled' : ''}>${UI.printing ? '<span class="spin"></span> Печатаю…' : I.print() + ' Печать этикеток (' + live.length + ')'}</button>
+      <button class="btn light" style="width:56px;flex-shrink:0" data-act="shareLabels" aria-label="Передать этикетки картинками в другое приложение" ${live.length ? '' : 'disabled'}>${I.share}</button>
     </div>
     <button class="sub" data-act="go" data-v="printer" style="border:0;background:none;padding:0;color:var(--brand-deep);font-weight:600">${S.printer && S.printer.address ? 'Принтер: ' + esc(S.printer.name) + ' ›' : 'Принтер не выбран — настроить ›'}</button>
   </div></div>`;
@@ -811,7 +858,9 @@ function vClient() {
       <div style="padding:4px 20px">
         ${v.patients.filter((p) => p.items.length || (p.extra || []).length).map((p) => `
           ${v.patients.length > 1 ? `<div style="padding:12px 0 2px;font-weight:800;font-size:14px;color:var(--brand-deep)">${esc(p.last)} ${esc(p.first)}</div>` : ''}
-          ${p.items.map((id) => P.byId[id]).filter(Boolean).map((it) => `<div class="rline"><span style="line-height:1.35">${esc(it.name)}</span><b class="num" style="font-weight:600">${fmt(it.price).replace(' сум', '')}</b></div>`).join('')}
+          ${(() => { const miss = pMissedIds(p); return p.items.map((id) => P.byId[id]).filter(Boolean).map((it) => miss.has(it.id)
+            ? `<div class="rline" style="color:#94A3B8"><span style="line-height:1.35;text-decoration:line-through">${esc(it.name)}</span><b style="font-weight:600;white-space:nowrap">не взято</b></div>`
+            : `<div class="rline"><span style="line-height:1.35">${esc(it.name)}</span><b class="num" style="font-weight:600">${fmt(it.price).replace(' сум', '')}</b></div>`).join(''); })()}
           ${(p.extra || []).map((x) => `<div class="rline"><span style="line-height:1.35">${esc(x.name)}</span><b class="num" style="font-weight:600">${fmt(x.price).replace(' сум', '')}</b></div>`).join('')}`).join('')}
         ${t.fee ? `<div class="rline"><span>Выезд на дом</span><b class="num" style="font-weight:600">${fmt(t.fee).replace(' сум', '')}</b></div>` : ''}
         ${t.off ? `<div class="rline" style="color:var(--ok)"><span>Скидка ${v.discount}%</span><b class="num">− ${fmt(t.off).replace(' сум', '')}</b></div>` : ''}
@@ -902,7 +951,18 @@ document.addEventListener('click', (e) => {
       if (i >= 0) p.items.splice(i, 1); else p.items.push(id);
       save(); if (el.dataset.keep) { UI.q = ''; } UI._keepScroll = true; render(); break;
     }
-    case 'stick': { const p = patient(UI.patientId); p.stuck = p.stuck || {}; p.stuck[v] = !p.stuck[v]; save(); UI._keepScroll = true; render(); break; }
+    case 'take': { const p = patient(UI.patientId); if (!p) break; p.taken = p.taken || {}; p.taken[v] = Date.now(); if (p.missed) delete p.missed[v]; save(); UI._keepScroll = true; render(); break; }
+    case 'untake': { const p = patient(UI.patientId); if (p && p.taken) { delete p.taken[v]; save(); UI._keepScroll = true; render(); } break; }
+    case 'miss': { const p = patient(UI.patientId), t = p && groupTubes(p).find((x) => x.key === v); if (!t) break; UI._missKey = v;
+      overlay(`<b style="font-size:18px">Почему не удалось взять?</b><span class="sub">${esc(tubeTitle(t))}<br>Анализы из этой пробирки уберутся из суммы клиента</span>
+        <div style="display:flex;flex-direction:column;gap:8px;width:100%">${MISS_WHY.map((r) => `<button class="btn light small" data-act="missWhy" data-v="${esc(r)}">${esc(r)}</button>`).join('')}<button class="btn light small" data-act="missWhy" data-v="">Другое — написать</button></div>
+        <button class="btn light small" data-act="missCancel">Отмена</button>`); break; }
+    case 'missWhy': { const p = patient(UI.patientId), key = UI._missKey; if (!p || key == null) break;
+      const why = v || (prompt('Причина', '') || '').trim().slice(0, 80); if (!why) break;
+      p.missed = p.missed || {}; p.missed[key] = why; if (p.taken) delete p.taken[key]; UI._missKey = null; save(); overlay(''); UI._keepScroll = true; render();
+      const off = pMiss(p); if (off) toast('Не взято: сумма уменьшена на ' + fmt(off)); break; }
+    case 'missCancel': UI._missKey = null; overlay(''); break;
+    case 'unmiss': { const p = patient(UI.patientId); if (p && p.missed) { delete p.missed[v]; save(); UI._keepScroll = true; render(); } break; }
     case 'print': printLabels(patient(UI.patientId)); break;
     case 'shareLabels': shareLabels(patient(UI.patientId)); break;
     case 'prList': printerList(true); break;
@@ -1126,7 +1186,7 @@ function labelCanvas(L) {
   line(L.an, 219, '400 12px ' + F);
   return c;
 }
-const labelData = (p, t) => ({ code: t.code, date: dt(visit().created), who: (p.pid || p.order) + ' ' + fioShort(p), tube: t.name, an: t.an });
+const labelData = (p, t) => ({ code: t.code, date: t.taken ? 'Взято ' + dt(t.taken) : dt(visit().created), who: (p.pid || p.order) + ' ' + fioShort(p), tube: t.name, an: t.an });
 // Картинка → чёрно-белые строки по 1 биту на точку (1 = чёрная)
 function monoBits(c) {
   const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, wb = Math.ceil(c.width / 8), out = new Uint8Array(wb * c.height);
@@ -1164,7 +1224,7 @@ async function printLabels(p) {
   if (!p || UI.printing) return;
   if (!IS_APK) { window.print(); return; }
   if (!S.printer || !S.printer.address) { toast('Сначала выберите принтер'); go('printer'); return; }
-  const tubes = groupTubes(p); if (!tubes.length) return;
+  const tubes = groupTubes(p).filter((t) => !t.missed); if (!tubes.length) return;
   UI.printing = true; UI._keepScroll = true; render();
   await fontsReady();
   const ok = await sendToPrinter(tubes.map((t) => labelCanvas(labelData(p, t))));
@@ -1177,7 +1237,7 @@ async function printTest() {
   if (ok) toast('Тестовая этикетка отправлена на принтер');
 }
 async function shareLabels(p) {
-  if (!p) return; const tubes = groupTubes(p); if (!tubes.length) return;
+  if (!p) return; const tubes = groupTubes(p).filter((t) => !t.missed); if (!tubes.length) return;
   await fontsReady();
   // для программ принтеров картинку увеличиваем вдвое — так её удобнее масштабировать
   const big = (c) => { const o = document.createElement('canvas'); o.width = c.width * 2; o.height = c.height * 2; const g = o.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(c, 0, 0, o.width, o.height); return o; };
