@@ -204,7 +204,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.37', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.38', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -1301,7 +1301,9 @@ function vPrinter() {
   if (IS_APK && !bt && !UI._btAsked) { UI._btAsked = true; setTimeout(() => printerList(false), 50); }
   return header('Принтер этикеток', 'Портативный Bluetooth-принтер, этикетка 40×30 мм', 'profile') + `
   <div class="body">
-    ${!IS_APK ? `<div class="note warn"><span><b>Печать напрямую работает только в приложении APK.</b><br>В версии для браузера этикетки можно передать картинками в программу принтера — кнопка рядом с «Печать этикеток».</span></div>` : `
+    ${!IS_APK ? `<div class="note warn" style="flex-direction:column;align-items:stretch;gap:10px"><span><b>Сейчас открыта версия-сайт, а не APK.</b><br>${typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches ? 'Этот значок на экране телефона — ярлык сайта, он только похож на приложение. ' : ''}Сайт не может подключиться к Bluetooth-принтеру. Откройте приложение de factum, установленное из APK, или установите его по кнопке ниже. Ярлык сайта лучше удалить, чтобы не путать.</span>
+      <a class="btn small" href="${APK_URL}" style="text-decoration:none">Скачать APK</a>
+      <span class="sub">Без APK этикетки можно только передать картинками в программу принтера — кнопка рядом с «Печать этикеток».</span></div>` : `
     <div class="card pad" style="display:flex;flex-direction:column;gap:10px">
       <b style="font-size:16px">1. Сопряжение</b>
       <span class="sub" style="line-height:1.45">Включите принтер. В настройках Bluetooth телефона найдите его и подключите (PIN обычно 0000 или 1234). Потом вернитесь сюда и нажмите «Обновить список».</span>
