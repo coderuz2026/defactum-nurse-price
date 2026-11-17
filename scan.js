@@ -18,10 +18,31 @@ const Scan = (() => {
   const fixDigits = (t) => t.replace(/[OoОо©BВвCСсЗзlI|]/g, (c) => DIG[c]);
   const PRICE_TOKEN = /^[\dOoОо©BВвCСсЗз]{3,}[.,][\dOoОо]{1,2}$/;
   const isNumTok = (t) => PRICE_TOKEN.test(t) || /^\d{5,}$/.test(t);
+  const TOTAL_RE = /^.{0,6}(?:[иimмнn]того|итог)/i; // «Итого», в том числе «Мтого», «Нтого»
   const okPrice = (n) => Number.isFinite(n) && n >= 5000 && n <= 20000000 && n % 1000 === 0;
   function tokPrice(t) { // «80090.90» → 80 000: одиночная ошибка в цифре сотен/десятков прощается, цены в прайсе кратны 1000
     const n = Math.floor(parseFloat(fixDigits(t).replace(',', '.'))); if (!Number.isFinite(n)) return null;
     const r = Math.round(n / 1000) * 1000; return okPrice(r) && Math.abs(n - r) <= 100 ? r : null;
+  }
+  // Цена строки по всем числам строки. На листе две колонки: «Сумма» (80000.00) и «к оплате» (80000.0).
+  // Если точка не прочиталась, число становится в 100 или 10 раз больше («10000000», «1000000») —
+  // берём значение, на котором сходятся обе колонки (первое число скорее /100, второе /10).
+  function tokCands(t, k) {
+    const raw = fixDigits(t.replace(/[()[\]{}“”"'`~]/g, ''));
+    if (/^\d{6,}$/.test(raw)) {
+      const n = parseInt(raw, 10), out = [];
+      [n, n / 10, n / 100].forEach((v, j) => { const r = Math.round(v / 1000) * 1000; if (okPrice(r) && Math.abs(v - r) <= 100 && !out.some((o) => o.v === r)) out.push({ v: r, main: j === (k === 0 ? 2 : 1) }); });
+      return out;
+    }
+    const p = tokPrice(t.replace(/[()[\]{}“”"'`~]/g, '')); return p ? [{ v: p, main: true }] : [];
+  }
+  function rowPrice(toks) {
+    const sets = []; toks.forEach((t) => { const c = tokCands(t, sets.length); if (c.length) sets.push(c); });
+    if (!sets.length) return { price: null, alts: [] };
+    const sc = new Map();
+    sets.forEach((c) => c.forEach(({ v, main }) => sc.set(v, (sc.get(v) || 0) + 1 + (main ? 0.5 : 0))));
+    const top = Math.max(...sc.values()), alts = [...sc.keys()].filter((v) => sc.get(v) >= top - 0.5);
+    return { price: [...sc.keys()].find((v) => sc.get(v) === top), alts };
   }
   function moneyAfterColon(line) { // «Итого: 1 060 000»; «630 C00 |» и «630 ©20» тоже читаются как 630 000
     const m = line.split(':').slice(1).join(':'); if (!m) return null;
@@ -68,25 +89,40 @@ const Scan = (() => {
 
     // Таблица услуг: от шапки до «Итого»
     let s = find(/наименован|услуги/);
-    if (s < 0) s = Math.max(find(/домофона|номер дома/), find(/сч[её]та/)); let e = L.findIndex((l, k) => k > s && /^.{0,6}итого/.test(l));
+    if (s < 0) s = Math.max(find(/домофона|номер дома/), find(/сч[её]та/)); let e = L.findIndex((l, k) => k > s && TOTAL_RE.test(l));
     if (e < 0) e = L.findIndex((l, k) => k > s && /сумма к оплате\s*[:;]/.test(l));
     if (e < 0) e = lines.length;
     const isPatient = (l) => /[пn][аaеe][цu][иu][еeё]нт\W*$/i.test(l);
     for (let k = s + 1; k < e && s >= 0; k++) {
       const line = lines[k], toks = line.split(' ');
       const firstNum = toks.findIndex((t, j) => j > 0 && isNumTok(t.replace(/[()[\]{}]/g, '')));
-      if (firstNum > 0 || isPatient(line)) {
-        let cut = firstNum > 0 ? firstNum : toks.length - 1;
+      // «10 Билирубин и его фракции (Bilirubin) 1.0» — номер, название и количество, а цены перенеслись на следующую строку
+      const qtyOnly = firstNum < 0 && toks.length >= 3 && /^\d{1,2}$/.test(toks[0]) && /^[А-ЯЁ][а-яё]{3,}/.test(toks[1]) && /^[1lI][.,]?[0оОoO]$/.test(toks[toks.length - 1]);
+      if (firstNum > 0 || isPatient(line) || qtyOnly) {
+        let cut = firstNum > 0 ? firstNum : qtyOnly ? toks.length : toks.length - 1;
         if (cut > 1 && /^[\\KКк1lI]?[.,]?[\dоОoO9]{1,3}$|^\d[.,]\d$/.test(toks[cut - 1]) && toks[cut - 1].length <= 4) cut--; // количество «1.0»
         let name = toks.slice(0, cut).join(' ');
         name = name.replace(/^(?:[^A-Za-zА-Яа-яЁё]{1,3}|[A-Za-zА-Яа-яЁё\d]{1,2}[.)]?)\s+(?=\S{3,})/, '').replace(/^\d{1,2}[оo]?(?=[А-ЯЁ])/, '').trim();
-        const prices = toks.slice(cut).map((t) => tokPrice(t.replace(/[()[\]{}]/g, ''))).filter((x) => x);
-        r.rows.push({ name, more: '', price: prices.length ? mode(prices) : null, raw: line });
+        const words = (name.match(/[A-Za-zА-Яа-яЁё]{3,}/g) || []).filter((w) => !/^[пn][аaеe][цu][иu][еeё]н/i.test(w));
+        const prev = r.rows[r.rows.length - 1];
+        if (!words.length && prev) {
+          // Строка без названия («— © 1000000 Пациент», «100000.00 о 100000.0 Пациент») — перенос цены предыдущей услуги, а не новая услуга
+          prev.toks = prev.toks.concat(toks.slice(cut)); const rp = rowPrice(prev.toks); prev.price = rp.price; prev.alts = rp.alts;
+          continue;
+        }
+        const rp = rowPrice(toks.slice(cut));
+        r.rows.push({ name, more: '', price: rp.price, alts: rp.alts, toks: toks.slice(cut), raw: line });
       } else if (r.rows.length && /[A-Za-zА-Яа-яЁё]{4,}/.test(line)) {
         const row = r.rows[r.rows.length - 1]; row.more = (row.more + ' ' + line).trim();
       }
     }
-    lines.forEach((l) => { if (/^.{0,6}итого|сумма к оплате/i.test(l)) { const n = moneyAfterColon(l); if (n) r.totals.push(n); } });
+    lines.forEach((l) => {
+      if (!(TOTAL_RE.test(l) || /сумма к оплате/i.test(l))) return;
+      const n = moneyAfterColon(l); if (n) r.totals.push(n);
+      // «Итого: \ 540 000» — единица миллионов прочиталась как «\» или «|»: берём оба варианта, matchSheet выберет тот, что сходится с суммой строк
+      const one = l.split(':').slice(1).join(':').match(/^\s*[\\|/!lI]\s*(\d{3}[ \u00a0]?\d{3})(?!\d)/);
+      if (one) { const x = parseInt(one[1].replace(/\D/g, ''), 10); if (!r.totals.includes(1000000 + x)) r.totals.unshift(1000000 + x); if (okPrice(x) && !r.totals.includes(x)) r.totals.push(x); }
+    });
     return r;
   }
 
@@ -100,7 +136,7 @@ const Scan = (() => {
       let best = null, second = 0;
       idx.forEach(({ it, n }) => {
         let sc = Math.max(dice(a, n), dice(b, n), a.length >= 8 && n.startsWith(a.slice(0, Math.min(a.length, n.length))) ? 0.9 : 0);
-        if (row.price && row.price === it.price) sc += 0.06; // цена на листе совпала с прайсом
+        if (row.price && (row.price === it.price || (row.alts || []).includes(it.price))) sc += 0.06; // цена на листе совпала с прайсом
         if (!best || sc > best.sc) { second = best ? best.sc : 0; best = { it, sc }; } else if (sc > second) second = sc;
       });
       if (best && best.sc >= 0.5 && !used.has(best.it.id)) {

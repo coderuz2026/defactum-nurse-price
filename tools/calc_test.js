@@ -309,5 +309,13 @@ eq('все анализы готовых наборов есть в прайсе
   const m3 = Sc.matchSheet(mk([[ferr.name, ferr.price], ['Нор', 700000], ['Вызов на дом', 80000]]), prices.items);
   eq('мусор + пропуск: ошибка остаётся', m3.ok, false);
 }
+{ // 1.44: лист, где пропали точки в ценах («10000000» вместо 100000.00), цены перенеслись на следующую строку, «Мтого: \\ 540 000» (данные пациента выдуманы)
+  const Sc = require('../scan.js');
+  const sh = Sc.parseSheet(fs.readFileSync(__dirname + '/fixtures/sheet_nodots.txt', 'utf8'), '');
+  const m = Sc.matchSheet(sh, prices.items);
+  eq('без точек: 14 услуг, цены сходятся по двум колонкам', [sh.rows.length, sh.rows[1].price, sh.rows[3].price, sh.rows[13].price], [14, 100000, 260000, 80000]);
+  eq('без точек: «Мтого: \\ 540 000» → 1 540 000, сумма сошлась', [m.total, m.sum, m.ok, m.extra.length], [1540000, 1540000, true, 1]);
+  eq('итог «| 540 000» при сумме 540 000 не ломается', Sc.parseSheet('Итого: | 540 000', '').totals.includes(540000), true);
+}
 console.log(fail ? `\nОШИБОК: ${fail}` : '\nВСЕ ТЕСТЫ ПРОШЛИ');
 process.exit(fail ? 1 : 0);
