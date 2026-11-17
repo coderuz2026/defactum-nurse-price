@@ -225,7 +225,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.39', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.40', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -1208,14 +1208,18 @@ const Cam = (() => {
     const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, m.cw, m.ch);
     st.root.querySelector('.cam-shot').style.setProperty('--p', progress.toFixed(2));
     if (!info.found) return;
-    const b = info.box, x = m.ox + b.x * m.vw * m.k, y = m.oy + b.y * m.vh * m.k, w = b.w * m.vw * m.k, h = b.h * m.vh * m.k;
+    // рамка по настоящим углам листа (если лист наклонён — рамка тоже наклонена); углы не нашлись — прямоугольник
+    const b = info.box, P = (info.quad || [{ x: b.x, y: b.y }, { x: b.x + b.w, y: b.y }, { x: b.x + b.w, y: b.y + b.h }, { x: b.x, y: b.y + b.h }])
+      .map((q) => ({ x: m.ox + q.x * m.vw * m.k, y: m.oy + q.y * m.vh * m.k }));
     const col = ready ? '#22C55E' : (info.whole && info.big ? '#FACC15' : '#F97316');
-    g.lineWidth = ready ? 5 : 3; g.strokeStyle = col; g.lineJoin = 'round';
-    if (ready) { g.fillStyle = 'rgba(34,197,94,.14)'; g.fillRect(x, y, w, h); }
-    g.strokeRect(x, y, w, h);
-    // уголки
-    const L = Math.min(w, h) * 0.12; g.lineWidth = ready ? 8 : 6;
-    [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]].forEach(([px, py, sx, sy]) => { g.beginPath(); g.moveTo(px + sx * L, py); g.lineTo(px, py); g.lineTo(px, py + sy * L); g.stroke(); });
+    g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = col;
+    g.beginPath(); P.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y))); g.closePath();
+    if (ready) { g.fillStyle = 'rgba(34,197,94,.14)'; g.fill(); }
+    g.lineWidth = ready ? 5 : 3; g.stroke();
+    // уголки — короткие толстые отрезки вдоль сторон
+    g.lineWidth = ready ? 9 : 7;
+    P.forEach((q, i) => { const a1 = P[(i + 1) % 4], a2 = P[(i + 3) % 4], f = 0.14;
+      g.beginPath(); g.moveTo(q.x + (a1.x - q.x) * f, q.y + (a1.y - q.y) * f); g.lineTo(q.x, q.y); g.lineTo(q.x + (a2.x - q.x) * f, q.y + (a2.y - q.y) * f); g.stroke(); });
   }
   // Снимок: берём текущий кадр видео в полном разрешении — без задержки затвора
   async function shoot() {

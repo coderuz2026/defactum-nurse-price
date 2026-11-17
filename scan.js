@@ -123,7 +123,7 @@ const Scan = (() => {
   /* ---------- Распознавание в браузере (Tesseract, файлы лежат в vendor/tesseract) ---------- */
   const base = () => new URL('vendor/tesseract/', document.baseURI).href;
   const inApk = () => !!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost');
-  const CFG = { paperW: 1700, split: true, crop: true, lines: true, norm: true, gamma: 1.3, zooms: [1.6, 1.3, 2], params: { tessedit_pageseg_mode: '6', tessedit_do_invert: '0', user_defined_dpi: '200' } }; // режим страницы задаём всегда: параметры в модуле сохраняются между вызовами
+  const CFG = { paperW: 1700, split: true, crop: true, warp: true, lines: true, norm: true, gamma: 1.3, zooms: [1.6, 1.3, 2], params: { tessedit_pageseg_mode: '6', tessedit_do_invert: '0', user_defined_dpi: '200' } }; // режим страницы задаём всегда: параметры в модуле сохраняются между вызовами
   const ID_RE = /сч[её]та\s*[:;]?\s*\d{5,8}/i;
   // Два потока распознавания: верх листа (данные пациента) и низ (таблица услуг) читаются одновременно
   const pool = [null, null], poolKey = ['', ''];
@@ -166,6 +166,77 @@ const Scan = (() => {
     if ((x1 - x0) < W * 0.45 || (y1 - y0) < H * 0.4) return null;
     return { x: x0 / W, y: y0 / H, w: (x1 + 1 - x0) / W, h: (y1 + 1 - y0) / H, thr, light: bright ? bsum / bright : 0 };
   }
+  // Четыре угла листа. Берём самую крупную связную светлую область, по ней — точки левого, правого, верхнего и нижнего края
+  // и проводим через каждый край прямую так, чтобы случайные выступы (блик, светлый край стола) не сбивали её.
+  // Углы — пересечения прямых: [ЛВ, ПВ, ПН, ЛН] в долях кадра. null — лист не похож на четырёхугольник (тогда работаем по рамке, как раньше).
+  function paperQuad(lum, W, H, core) {
+    const thr = core.thr, n = W * H, comp = new Uint8Array(n), stack = new Int32Array(n);
+    // затравка — середина «ядра» листа, найденного по строкам и столбцам
+    let seed = -1;
+    const cx = Math.round((core.x + core.w / 2) * W), cy = Math.round((core.y + core.h / 2) * H);
+    for (let r = 0; r < Math.min(W, H) / 4 && seed < 0; r++) for (let dy = -r; dy <= r && seed < 0; dy++) for (let dx = -r; dx <= r; dx++) {
+      const x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < W && y < H && lum[y * W + x] > thr) { seed = y * W + x; break; }
+    }
+    if (seed < 0) return null;
+    let sp = 0, cnt = 0; stack[sp++] = seed; comp[seed] = 1;
+    while (sp) {
+      const i = stack[--sp], x = i % W; cnt++;
+      if (x > 0 && !comp[i - 1] && lum[i - 1] > thr) { comp[i - 1] = 1; stack[sp++] = i - 1; }
+      if (x < W - 1 && !comp[i + 1] && lum[i + 1] > thr) { comp[i + 1] = 1; stack[sp++] = i + 1; }
+      if (i >= W && !comp[i - W] && lum[i - W] > thr) { comp[i - W] = 1; stack[sp++] = i - W; }
+      if (i < n - W && !comp[i + W] && lum[i + W] > thr) { comp[i + W] = 1; stack[sp++] = i + W; }
+    }
+    if (cnt < n * 0.15) return null;
+    // точки краёв по средней части листа (без углов)
+    const x0 = Math.round(core.x * W), x1 = Math.round((core.x + core.w) * W), y0 = Math.round(core.y * H), y1 = Math.round((core.y + core.h) * H);
+    const L = [], R = [], T = [], B = [];
+    for (let y = Math.round(y0 + (y1 - y0) * 0.12); y <= y1 - (y1 - y0) * 0.12; y++) {
+      let a = 0; while (a < W && !comp[y * W + a]) a++;
+      let b = W - 1; while (b >= 0 && !comp[y * W + b]) b--;
+      if (a <= b) { L.push([y, a]); R.push([y, b + 1]); }
+    }
+    for (let x = Math.round(x0 + (x1 - x0) * 0.12); x <= x1 - (x1 - x0) * 0.12; x++) {
+      let a = 0; while (a < H && !comp[a * W + x]) a++;
+      let b = H - 1; while (b >= 0 && !comp[b * W + x]) b--;
+      if (a <= b) { T.push([x, a]); B.push([x, b + 1]); }
+    }
+    // прямая s = k·t + c, устойчиво (RANSAC): перебираем прямые через пары точек края, берём ту, рядом с которой больше всего точек,
+    // и уточняем по этим точкам методом наименьших квадратов. Тень, блик или светлый край стола остаются в стороне.
+    const fit = (pts) => {
+      const m = pts.length; if (m < 10) return null;
+      const near = (k, c, tol) => pts.filter(([t, v]) => Math.abs(v - (k * t + c)) <= tol);
+      let bestK = 0, bestC = 0, bestN = -1;
+      for (let i = 0; i < 80; i++) {
+        const p = pts[(i * 7919) % m], q = pts[(i * 104729 + (m >> 1)) % m];
+        if (Math.abs(q[0] - p[0]) < m * 0.2) continue; // точки слишком близко — прямая неточная
+        const k = (q[1] - p[1]) / (q[0] - p[0]), c = p[1] - k * p[0], nIn = near(k, c, 1.2).length;
+        if (nIn > bestN) { bestN = nIn; bestK = k; bestC = c; }
+      }
+      if (bestN < m * 0.4) return null;
+      const use = near(bestK, bestC, 1.5);
+      let st = 0, ss = 0, stt = 0, sts = 0; const u = use.length;
+      for (const [t, v] of use) { st += t; ss += v; stt += t * t; sts += t * v; }
+      const den = u * stt - st * st; if (!den) return null;
+      const k = (u * sts - st * ss) / den;
+      return { k, c: (ss - k * st) / u, share: u / m };
+    };
+    const fl = fit(L), fr = fit(R), ft = fit(T), fb = fit(B);
+    if (!fl || !fr || !ft || !fb) return null;
+    // пересечение «x = kx·y + cx» и «y = ky·x + cy»
+    const cross = (v, h) => { const den = 1 - v.k * h.k; if (Math.abs(den) < 1e-6) return null; const x = (v.k * h.c + v.c) / den; return { x: x / W, y: (h.k * x + h.c) / H }; };
+    const pt = [cross(fl, ft), cross(fr, ft), cross(fr, fb), cross(fl, fb)];
+    if (pt.some((p) => !p || p.x < -0.03 || p.y < -0.03 || p.x > 1.03 || p.y > 1.03)) return null;
+    let area = 0;
+    for (let k = 0; k < 4; k++) { const a = pt[k], b = pt[(k + 1) % 4]; area += a.x * b.y - b.x * a.y; }
+    if (Math.abs(area) / 2 < 0.15) return null;
+    for (let k = 0; k < 4; k++) {
+      const p0 = pt[(k + 3) % 4], p1 = pt[k], p2 = pt[(k + 1) % 4];
+      const v1 = { x: (p0.x - p1.x) * W, y: (p0.y - p1.y) * H }, v2 = { x: (p2.x - p1.x) * W, y: (p2.y - p1.y) * H };
+      const cos = (v1.x * v2.x + v1.y * v2.y) / (Math.hypot(v1.x, v1.y) * Math.hypot(v2.x, v2.y) || 1);
+      if (Math.abs(cos) > 0.45) return null; // угол вне 63°…117° — это не лист
+    }
+    return pt.map((p) => ({ x: Math.min(1, Math.max(0, p.x)), y: Math.min(1, Math.max(0, p.y)) }));
+  }
   const lumOf = (d, n) => { const lum = new Uint8Array(n); for (let i = 0, j = 0; j < n; i += 4, j++) lum[j] = (d[i] * 77 + d[i + 1] * 150 + d[i + 2] * 29) >> 8; return lum; };
   function findPaper(bmp) {
     const k = 200 / Math.max(bmp.width, bmp.height), c = mk(bmp.width * k, bmp.height * k), g = c.getContext('2d', { willReadFrequently: true });
@@ -186,7 +257,8 @@ const Scan = (() => {
     const whole = b.x > edge && b.y > edge && b.x + b.w < 1 - edge && b.y + b.h < 1 - edge;
     // лист должен занимать заметную часть кадра: по короткой стороне кадра — не меньше 55 %
     const big = (W <= H ? b.w : b.h) >= 0.55;
-    return { found: true, box: { x: b.x, y: b.y, w: b.w, h: b.h }, whole, big, light: Math.round(b.light) };
+    const quad = paperQuad(lumOf(img.data, W * H), W, H, b);
+    return { found: true, box: { x: b.x, y: b.y, w: b.w, h: b.h }, quad, whole, big, light: Math.round(b.light) };
   }
   // Резкость: дисперсия лапласиана по яркости (у размытого текста перепады яркости мягкие — значение маленькое)
   function sharpness(img) {
@@ -202,14 +274,76 @@ const Scan = (() => {
   // Рамки соседних кадров почти совпадают — телефон держат неподвижно
   const sameBox = (a, b, tol) => !!a && !!b && Math.abs(a.x - b.x) < tol && Math.abs(a.y - b.y) < tol && Math.abs(a.w - b.w) < tol && Math.abs(a.h - b.h) < tol;
 
+  // Углы листа на фото (анализ на уменьшенной копии, длинная сторона 400 точек)
+  function findQuad(bmp) {
+    const k = 400 / Math.max(bmp.width, bmp.height), c = mk(bmp.width * k, bmp.height * k), g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(bmp, 0, 0, c.width, c.height);
+    const W = c.width, H = c.height, lum = lumOf(g.getImageData(0, 0, W, H).data, W * H), b = paperIn(lum, W, H);
+    return b ? paperQuad(lum, W, H, b) : null;
+  }
+  // Перспективное преобразование: для точки результата (u, v) — где она на исходном фото. 8 уравнений по 4 парам точек.
+  function homography(from, to) {
+    const A = [], B = [];
+    for (let i = 0; i < 4; i++) {
+      const { x: u, y: v } = from[i], { x, y } = to[i];
+      A.push([u, v, 1, 0, 0, 0, -x * u, -x * v]); B.push(x);
+      A.push([0, 0, 0, u, v, 1, -y * u, -y * v]); B.push(y);
+    }
+    for (let c = 0; c < 8; c++) { // метод Гаусса с выбором главного элемента
+      let p = c; for (let r = c + 1; r < 8; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+      [A[c], A[p]] = [A[p], A[c]]; [B[c], B[p]] = [B[p], B[c]];
+      for (let r = 0; r < 8; r++) { if (r === c) continue; const f = A[r][c] / A[c][c]; for (let k = c; k < 8; k++) A[r][k] -= f * A[c][k]; B[r] -= f * B[c]; }
+    }
+    return B.map((b, i) => b / A[i][i]);
+  }
+  // Выпрямленный лист: ширина как у обычной обрезки (paperW), по краям запас 1,5 %
+  function warpPaper(bmp, quad, paperW) {
+    const BW = bmp.width, BH = bmp.height, cx = quad.reduce((a, p) => a + p.x, 0) / 4, cy = quad.reduce((a, p) => a + p.y, 0) / 4, m = 1.03;
+    const P = quad.map((p) => ({ x: Math.min(1, Math.max(0, cx + (p.x - cx) * m)) * BW, y: Math.min(1, Math.max(0, cy + (p.y - cy) * m)) * BH }));
+    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const srcW = Math.max(dist(P[0], P[1]), dist(P[3], P[2])), srcH = Math.max(dist(P[0], P[3]), dist(P[1], P[2]));
+    const k = Math.min(3.2, paperW / srcW), OW = Math.round(srcW * k), OH = Math.round(srcH * k);
+    // исходник: только область вокруг листа, сразу в нужном масштабе (качественное сглаживание браузера), дальше — поворот почти 1:1
+    const x0 = Math.max(0, Math.floor(Math.min(...P.map((p) => p.x)))), y0 = Math.max(0, Math.floor(Math.min(...P.map((p) => p.y))));
+    const x1 = Math.min(BW, Math.ceil(Math.max(...P.map((p) => p.x)))), y1 = Math.min(BH, Math.ceil(Math.max(...P.map((p) => p.y))));
+    const ks = k, sc = mk((x1 - x0) * ks, (y1 - y0) * ks), sg = sc.getContext('2d', { willReadFrequently: true });
+    sg.imageSmoothingQuality = 'high'; sg.drawImage(bmp, x0, y0, x1 - x0, y1 - y0, 0, 0, sc.width, sc.height);
+    const SW = sc.width, SH = sc.height, src = lumOf(sg.getImageData(0, 0, SW, SH).data, SW * SH);
+    const to = P.map((p) => ({ x: (p.x - x0) * ks, y: (p.y - y0) * ks }));
+    const h = homography([{ x: 0, y: 0 }, { x: OW, y: 0 }, { x: OW, y: OH }, { x: 0, y: OH }], to);
+    const out = mk(OW, OH), og = out.getContext('2d', { willReadFrequently: true }), img = og.createImageData(OW, OH), d = img.data;
+    for (let v = 0; v < OH; v++) {
+      const vy = v + 0.5;
+      let X = h[0] * 0.5 + h[1] * vy + h[2], Y = h[3] * 0.5 + h[4] * vy + h[5], Z = h[6] * 0.5 + h[7] * vy + 1;
+      for (let u = 0, o = v * OW * 4; u < OW; u++, o += 4) {
+        const sx = X / Z - 0.5, sy = Y / Z - 0.5;
+        let val = 255;
+        if (sx >= 0 && sy >= 0 && sx < SW - 1 && sy < SH - 1) {
+          const ix = sx | 0, iy = sy | 0, fx = sx - ix, fy = sy - iy, i = iy * SW + ix;
+          const top = src[i] + (src[i + 1] - src[i]) * fx, bot = src[i + SW] + (src[i + SW + 1] - src[i + SW]) * fx;
+          val = top + (bot - top) * fy;
+        }
+        d[o] = d[o + 1] = d[o + 2] = val; d[o + 3] = 255;
+        X += h[0]; Y += h[3]; Z += h[6];
+      }
+    }
+    og.putImageData(img, 0, 0);
+    return out;
+  }
   // Фото → серое изображение листа стандартной ширины, с выровненным светом и без линий таблицы
   async function prepare(file, opt) {
     const bmp = await loadBitmap(file), long = Math.max(bmp.width, bmp.height);
-    const box = opt.crop ? findPaper(bmp) : { x: 0, y: 0, w: 1, h: 1 };
-    const sx = box.x * bmp.width, sy = box.y * bmp.height, sw = box.w * bmp.width, sh = box.h * bmp.height;
-    const k = Math.min(3.2, opt.paperW / sw);
-    const c = mk(sw * k, sh * k), W = c.width, H = c.height, g = c.getContext('2d', { willReadFrequently: true });
-    g.imageSmoothingQuality = 'high'; g.drawImage(bmp, sx, sy, sw, sh, 0, 0, W, H);
+    // лист снят с наклоном или под углом — выпрямляем по четырём углам; не нашли углы — режем по рамке, как раньше
+    const quad = opt.crop && opt.warp ? findQuad(bmp) : null;
+    let c, box = { x: 0, y: 0, w: 1, h: 1 };
+    if (quad) c = warpPaper(bmp, quad, opt.paperW);
+    else {
+      if (opt.crop) box = findPaper(bmp);
+      const sx = box.x * bmp.width, sy = box.y * bmp.height, sw = box.w * bmp.width, sh = box.h * bmp.height, k = Math.min(3.2, opt.paperW / sw);
+      c = mk(sw * k, sh * k); const g0 = c.getContext('2d', { willReadFrequently: true });
+      g0.imageSmoothingQuality = 'high'; g0.drawImage(bmp, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    }
+    const W = c.width, H = c.height, g = c.getContext('2d', { willReadFrequently: true });
     const img = g.getImageData(0, 0, W, H), d = img.data, n = W * H, lum = lumOf(d, n);
     if (opt.norm) {
       // Свет: делим на размытую «карту бумаги» (уменьшили в 40 раз и растянули обратно)
@@ -237,7 +371,7 @@ const Scan = (() => {
     }
     for (let j = 0, i = 0; j < n; j++, i += 4) { d[i] = d[i + 1] = d[i + 2] = lum[j]; d[i + 3] = 255; }
     g.putImageData(img, 0, 0);
-    return { canvas: c, srcLong: long, paper: box.w < 1 || box.h < 1 };
+    return { canvas: c, srcLong: long, paper: !!quad || box.w < 1 || box.h < 1, warped: !!quad };
   }
   const crop = (c, x, y, w, h, k) => { const o = mk(w * k, h * k), g = o.getContext('2d'); g.imageSmoothingQuality = 'high'; g.fillStyle = '#fff'; g.fillRect(0, 0, o.width, o.height); g.drawImage(c, x, y, w, h, 0, 0, o.width, o.height); return o; };
   const lineBoxes = (data) => (data.lines || []).map((l) => ({ text: l.text, y0: l.bbox.y0, y1: l.bbox.y1, words: (l.words || []).map((w) => ({ t: w.text, c: w.confidence })) }));
@@ -257,11 +391,10 @@ const Scan = (() => {
   }
 
   // Полный цикл: фото → текст → пациент и анализы. Если сумма не сошлась с «Итого», таблица перечитывается крупнее.
-  async function read(file, items, onProgress, optIn) {
-    const opt = Object.assign({}, CFG, optIn || {}), t0 = performance.now(), T = {};
-    progressCb = onProgress || null;
-    const say = (p, st) => { if (onProgress) onProgress(p, st); };
-    const { canvas, srcLong, paper } = await prepare(file, opt); T.prep = performance.now() - t0;
+  // Одно чтение листа: подготовка фото, текст, разбор, контрольное чтение ФИО. Без повторов таблицы.
+  async function readPass(file, items, opt) {
+    const t0 = performance.now(), T = {};
+    const { canvas, srcLong, paper, warped } = await prepare(file, opt); T.prep = performance.now() - t0; if (opt.debug) window.__prep = canvas;
     let t = performance.now(), data = null, lines = null, headP = null;
     if (opt.split && paper && (opt.pair === 'force' || canPair())) {
       // Бланк стандартный: шапка таблицы примерно на середине листа. Режем с нахлёстом, чтобы ничего не потерять на стыке.
@@ -294,7 +427,7 @@ const Scan = (() => {
       }
       T.id = performance.now() - t;
     }
-    let text = data.text, sheet = parseSheet(text, idText), match = matchSheet(sheet, items), passes = 1;
+    const text = data.text, sheet = parseSheet(text, idText), match = matchSheet(sheet, items);
     // Сверяем основное чтение с контрольным: ФИО, дата рождения, телефон (ошибку в букве сумма «Итого» не поймает)
     const hc = headP ? await headP : await headerCheck(canvas, lines, opt.params, 0);
     let fioConf = hc ? hc.conf1 : null, fioCheck = 'none';
@@ -313,8 +446,15 @@ const Scan = (() => {
       if (!sheet.sex && hc.sheet.sex) sheet.sex = hc.sheet.sex;
       T.check = hc.ms;
     }
-    const miss = (m) => (m.total ? Math.abs(m.total - m.sum) : 1e12) - m.items.length;
-    t = performance.now();
+    T.pass = performance.now() - t0;
+    return { canvas, lines, data, text, sheet, match, idText, fioConf, fioCheck, check, srcLong, warped, T };
+  }
+  const miss = (m) => (m.total ? Math.abs(m.total - m.sum) : 1e12) - m.items.length;
+  // Повторы таблицы крупнее, пока сумма не сошлась с «Итого»
+  async function finish(r, items, opt, say) {
+    const { canvas, lines, data, idText } = r;
+    let { text, sheet, match } = r, passes = 1;
+    const t = performance.now();
     for (const zoom of opt.zooms) {
       if (match.ok) break;
       say(0.92, 'retry');
@@ -323,10 +463,24 @@ const Scan = (() => {
       const sh2 = parseSheet(t2, idText), m2 = matchSheet(sh2, items);
       if (m2.ok || miss(m2) < miss(match)) { Object.keys(sheet).forEach((k) => { if (k !== 'rows' && k !== 'totals' && !sh2[k]) sh2[k] = sheet[k]; }); sheet = sh2; match = m2; text = t2; }
     }
-    if (passes > 1) T.retry = performance.now() - t;
-    T.total = performance.now() - t0;
+    if (passes > 1) r.T.retry = performance.now() - t;
+    return Object.assign(r, { text, sheet, match, passes });
+  }
+  async function read(file, items, onProgress, optIn) {
+    const opt = Object.assign({}, CFG, optIn || {}), t0 = performance.now();
+    progressCb = onProgress || null;
+    const say = (p, st) => { if (onProgress) onProgress(p, st); };
+    let r = await finish(await readPass(file, items, opt), items, opt, say);
+    // Выпрямленный лист так и не сошёлся с «Итого» — читаем ещё раз с обычной обрезкой и берём лучший результат
+    if (!r.match.ok && r.warped) {
+      say(0.9, 'retry');
+      const r2 = await finish(await readPass(file, items, Object.assign({}, opt, { warp: false })), items, opt, say);
+      r2.passes += r.passes;
+      if (r2.match.ok || miss(r2.match) < miss(r.match)) r = r2; else r.passes = r2.passes;
+    }
+    const T = r.T; T.total = performance.now() - t0; T.warped = r.warped ? 1 : 0;
     say(1, 'done');
-    return { sheet, match, text, confidence: data.confidence, fioConf, fioCheck, check, srcLong, passes, timings: T };
+    return { sheet: r.sheet, match: r.match, text: r.text, confidence: r.data.confidence, fioConf: r.fioConf, fioCheck: r.fioCheck, check: r.check, srcLong: r.srcLong, passes: r.passes, timings: T };
   }
   // Повторное чтение только таблицы услуг, крупнее: помогает, когда строка не прочиталась с общего снимка
   async function rescanTable(res, zoom, params) {
@@ -347,6 +501,6 @@ const Scan = (() => {
   }
   // Заранее загружаем и запускаем модуль распознавания: первое сканирование не ждёт, и всё остаётся в кэше для работы без сети
   function warmup() { getWorker(0).then(() => { if (canPair()) return getWorker(1); }).catch(() => {}); }
-  return { norm, dice, parseSheet, matchSheet, read, warmup, frameInfo, sharpness, sameBox };
+  return { norm, dice, parseSheet, matchSheet, read, warmup, frameInfo, sharpness, sameBox, paperQuad, homography };
 })();
 if (typeof module !== 'undefined') module.exports = Scan;
