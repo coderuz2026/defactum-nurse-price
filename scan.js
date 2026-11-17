@@ -142,8 +142,10 @@ const Scan = (() => {
   const CFG = { budget: 14000, paperW: 1700, split: true, crop: true, warp: true, lines: true, norm: true, gamma: 1.3, zooms: [1.6, 1.3, 2], params: { tessedit_pageseg_mode: '6', tessedit_do_invert: '0', user_defined_dpi: '200' } }; // режим страницы задаём всегда: параметры в модуле сохраняются между вызовами
   const ID_RE = /сч[её]та\s*[:;]?\s*\d{5,8}/i;
   // Два потока распознавания: верх листа (данные пациента) и низ (таблица услуг) читаются одновременно
-  const pool = [null, null], poolKey = ['', ''];
+  const pool = [null, null], poolKey = ['', ''], poolReady = [false, false];
   let progressCb = null;
+  let simdV = null; // поддерживает ли WebView быстрые векторные команды WASM (без них распознавание в 2–3 раза медленнее)
+  const simdOk = () => { if (simdV === null) { try { simdV = WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11])); } catch (e) { simdV = false; } } return simdV; };
   const canPair = () => (navigator.hardwareConcurrency || 2) >= 4 && !(navigator.deviceMemory && navigator.deviceMemory < 2); // браузер округляет память вниз: 3 ГБ показывает как 2
   function loadScript(src) { return new Promise((ok, bad) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => bad(new Error('Не загрузился модуль распознавания')); document.head.appendChild(s); }); }
   let libP = null;
@@ -153,7 +155,7 @@ const Scan = (() => {
     if (!pool[i]) pool[i] = lib().then(() => window.Tesseract.createWorker(['rus', 'eng'], 1, {
       workerPath: base() + 'worker.min.js', corePath: base(), langPath: base() + 'lang', gzip: !inApk(), // Android при сборке APK сам распаковывает .gz
       logger: (m) => { if (i === 0 && progressCb && m.status) progressCb(m.status === 'recognizing text' ? 0.3 + 0.6 * m.progress : 0.05 + 0.25 * (m.progress || 0), m.status); }
-    })).catch((e) => { pool[i] = null; throw e; });
+    })).then((w) => { poolReady[i] = true; return w; }, (e) => { pool[i] = null; throw e; });
     return pool[i];
   }
   async function ocr(canvas, params, i) {
@@ -502,6 +504,9 @@ const Scan = (() => {
     // не успели — показываем лучшее, что прочитали, с ошибками красным (можно переснять).
     const deadline = t0 + opt.budget, fits = (ms) => performance.now() + ms <= deadline;
     const pair = opt.pair === 'force' || (opt.pair !== false && canPair());
+    // Замер для диагностики: сколько ушло на запуск движка (идёт параллельно с подготовкой фото, работу не задерживает)
+    const tI = performance.now(), cold = !poolReady[0] || (pair && !poolReady[1]); let initMs = null;
+    Promise.all([getWorker(0), pair ? getWorker(1) : null]).then(() => { initMs = performance.now() - tI; }, () => {});
     let r = await readPass(file, items, opt);
     const better = (a, b) => (b.match.ok && !a.match.ok) || (!a.match.ok && miss(b.match) < miss(a.match)) ? b : a;
     if (!r.match.ok && r.warped && pair) {
@@ -524,6 +529,7 @@ const Scan = (() => {
       }
     }
     const T = r.T; T.total = performance.now() - t0; T.warped = r.warped ? 1 : 0;
+    Object.assign(T, { init: cold ? initMs : 0, cold: cold ? 1 : 0, pair: pair ? 1 : 0, cores: navigator.hardwareConcurrency || 0, mem: navigator.deviceMemory || 0, simd: simdOk() ? 1 : 0, apk: inApk() ? 1 : 0, src: r.srcLong || 0, passes: r.passes || 1 });
     say(1, 'done');
     return { sheet: r.sheet, match: r.match, text: r.text, confidence: r.data.confidence, fioConf: r.fioConf, fioCheck: r.fioCheck, check: r.check, srcLong: r.srcLong, passes: r.passes, timings: T };
   }

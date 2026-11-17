@@ -225,7 +225,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.42', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.43', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -1260,7 +1260,7 @@ async function scanFile(file) {
     const sheet = res.sheet, match = res.match, text = res.text;
     overlay('');
     if (!match.items.length && !sheet.last && !sheet.order) { scanFail(['На фото не найден лист заказа de factum', res.srcLong < 1000 ? 'Фото слишком маленькое — снимайте камерой' : 'Текст не читается: размыто, темно или лист не целиком в кадре', 'Держите телефон ровно над листом, при хорошем свете']); return; }
-    UI.scan = { sheet, match, text, sheetTotal: match.total, showText: false, confidence: res.confidence, srcLong: res.srcLong, fioCheck: res.fioCheck, check: res.check, ms: Math.round(res.timings.total) };
+    UI.scan = { sheet, match, text, sheetTotal: match.total, showText: false, confidence: res.confidence, srcLong: res.srcLong, fioCheck: res.fioCheck, check: res.check, ms: Math.round(res.timings.total), T: res.timings };
     go('scan');
   } catch (e) {
     scanFail(['Фото не удалось обработать' + (e && e.message ? ': ' + e.message : ''), navigator.onLine === false ? 'Нет интернета: при первом сканировании он нужен, чтобы загрузить модуль распознавания' : 'Попробуйте ещё раз; если повторится — закройте и откройте приложение']);
@@ -1300,6 +1300,20 @@ function scanProblems(sc) {
   if (!sh.pid) warn('Не прочитан ID пациента');
   return out;
 }
+// Строка-замер под результатом: на что ушло время распознавания (чтобы понять, почему на телефоне долго)
+function scanTimeLine(T) {
+  if (!T || !T.total) return '';
+  const sec = (ms) => (Math.round(ms / 100) / 10).toFixed(1).replace('.', ',');
+  const parts = [];
+  if (T.cold) parts.push('запуск ' + (T.init == null ? '?' : sec(T.init)));
+  if (T.prep != null) parts.push('фото ' + sec(T.prep));
+  if (T.ocr != null) parts.push('текст ' + sec(T.ocr));
+  if (T.check) parts.push('проверка ' + sec(T.check));
+  if (T.id) parts.push('ID ' + sec(T.id));
+  if (T.retry) parts.push('повторы ' + sec(T.retry));
+  const env = [(T.mode === 2 ? '2 потока' : '1 поток'), 'проходов ' + (T.passes || 1), 'SIMD ' + (T.simd ? 'да' : 'НЕТ'), 'ядер ' + (T.cores || '?'), 'ОЗУ ' + (T.mem || '?'), 'фото ' + (T.src || '?') + 'px', T.warped ? 'выпрямлен' : 'обрезка', T.apk ? 'APK' : 'сайт'];
+  return `<div class="sub" style="font-size:11.5px;line-height:1.45;color:var(--muted);text-align:center">⏱ ${sec(T.total)} с: ${parts.join(' · ')}<br>${env.join(' · ')}</div>`;
+}
 function vScan() {
   const sc = UI.scan; if (!sc) return vVisit();
   const sh = sc.sheet, m = sc.match;
@@ -1310,6 +1324,7 @@ function vScan() {
   const nothing = !m.items.length && !sh.last;
   return header('Лист заказа', sh.orderDate ? 'Заказ от ' + esc(sh.orderDate) + (sh.callTime ? ' · ' + esc(sh.callTime) : '') : 'Проверьте распознанные данные', 'visit') + `
   <form class="body" data-submit="scan" style="padding-bottom:150px">
+    ${scanTimeLine(sc.T)}
     ${errs.length ? `<div class="problems" role="alert">
         <h3>${WARN_ICON}${nothing ? 'Лист не распознан' : 'Есть ошибки: ' + errs.length}</h3>
         <ul>${errs.map((x) => `<li>${esc(x.text)}</li>`).join('')}</ul>
