@@ -40,6 +40,14 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import android.graphics.Rect;
+import android.content.res.AssetManager;
+
+import com.googlecode.tesseract.android.ResultIterator;
+import com.googlecode.tesseract.android.TessBaseAPI;
 
 /**
  * Печать этикеток на портативный Bluetooth-принтер (классический Bluetooth, профиль SPP)
@@ -53,7 +61,7 @@ import java.util.UUID;
 public class LabelPrinterPlugin extends Plugin {
 
     /** Уровень «родной» части. Если в новой версии он выше — нужен новый APK, иначе хватает обновления веб-части. */
-    private static final int NATIVE_LEVEL = 4; // 4: разрешение камеры для съёмки листа внутри приложения
+    private static final int NATIVE_LEVEL = 5; // 4: камера внутри приложения; 5: родное распознавание листа (Tesseract)
 
     private static final UUID SPP = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
@@ -212,6 +220,7 @@ public class LabelPrinterPlugin extends Plugin {
     public void info(PluginCall call) {
         JSObject res = new JSObject();
         res.put("native", NATIVE_LEVEL);
+        res.put("ocr", true);
         try {
             res.put("apkVersion", getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0).versionName);
         } catch (Exception ignored) { }
@@ -348,5 +357,155 @@ public class LabelPrinterPlugin extends Plugin {
                 call.reject("Обновление не удалось: " + e.getMessage());
             }
         }).start();
+    }
+
+    // ---------------------------------------------------------------- Распознавание листа (родной Tesseract)
+    // Тот же движок и те же модели rus+eng, что в веб-версии, но без WebView — в несколько раз быстрее.
+    // Два независимых движка в двух потоках: веб-часть читает верх и низ листа одновременно (как два воркера tesseract.js).
+
+    private static final String[] LANGS = { "rus", "eng" };
+    private final ExecutorService[] ocrThreads = { Executors.newSingleThreadExecutor(), Executors.newSingleThreadExecutor() };
+    private final TessBaseAPI[] ocrApi = new TessBaseAPI[2];
+    private final String[] ocrKey = { "", "" };
+    private static final Object MODEL_LOCK = new Object();
+
+    /** Модели лежат в APK (веб-часть, vendor/tesseract/lang); Tesseract читает их только с диска — копируем один раз. */
+    private File modelsDir() throws IOException {
+        synchronized (MODEL_LOCK) {
+            File root = new File(getContext().getFilesDir(), "ocr");
+            File td = new File(root, "tessdata");
+            if (!td.exists() && !td.mkdirs()) throw new IOException("Не удалось создать папку моделей");
+            AssetManager am = getContext().getAssets();
+            for (String lang : LANGS) {
+                File out = new File(td, lang + ".traineddata");
+                File ok = new File(td, lang + ".ok");
+                if (out.exists() && ok.exists() && out.length() > 0) continue;
+                File tmp = new File(td, lang + ".tmp");
+                try (InputStream in = am.open("public/vendor/tesseract/lang/" + lang + ".traineddata"); FileOutputStream fo = new FileOutputStream(tmp)) {
+                    byte[] buf = new byte[256 * 1024];
+                    int n;
+                    while ((n = in.read(buf)) > 0) fo.write(buf, 0, n);
+                }
+                if (!tmp.renameTo(out)) throw new IOException("Не удалось сохранить модель " + lang);
+                ok.createNewFile();
+            }
+            return root;
+        }
+    }
+
+    /** Вызывается только из своего потока i. */
+    private TessBaseAPI engine(int i) throws IOException {
+        if (ocrApi[i] != null) return ocrApi[i];
+        TessBaseAPI api = new TessBaseAPI();
+        if (!api.init(modelsDir().getAbsolutePath(), "rus+eng", TessBaseAPI.OEM_LSTM_ONLY)) {
+            api.recycle();
+            throw new IOException("Движок распознавания не запустился");
+        }
+        ocrApi[i] = api;
+        ocrKey[i] = "";
+        return api;
+    }
+
+    private static JSObject box(Rect r) {
+        JSObject b = new JSObject();
+        b.put("x0", r.left); b.put("y0", r.top); b.put("x1", r.right); b.put("y1", r.bottom);
+        return b;
+    }
+
+    /** Заранее запустить движки (пока медсестра наводит камеру). */
+    @PluginMethod
+    public void ocrWarm(final PluginCall call) {
+        final int count = Math.max(1, Math.min(2, call.getInt("count", 1)));
+        final long t0 = System.currentTimeMillis();
+        final int[] left = { count };
+        for (int k = 0; k < count; k++) {
+            final int i = k;
+            ocrThreads[i].execute(() -> {
+                try { engine(i); } catch (Exception e) { synchronized (left) { if (left[0] > 0) { left[0] = 0; call.reject(e.getMessage()); } } return; }
+                synchronized (left) {
+                    if (left[0] > 0 && --left[0] == 0) { JSObject r = new JSObject(); r.put("ms", System.currentTimeMillis() - t0); call.resolve(r); }
+                }
+            });
+        }
+    }
+
+    /**
+     * Распознать картинку. На входе — оттенки серого, 1 байт на точку (base64), ширина, высота,
+     * параметры Tesseract (как в веб-версии) и номер потока 0/1.
+     * На выходе — текст, средняя уверенность, строки и слова с рамками (как у tesseract.js).
+     */
+    @PluginMethod
+    public void ocr(final PluginCall call) {
+        final String b64 = call.getString("gray");
+        final int w = call.getInt("width", 0), h = call.getInt("height", 0);
+        final int i = Math.max(0, Math.min(1, call.getInt("worker", 0)));
+        final JSObject params = call.getObject("params", new JSObject());
+        if (b64 == null || w <= 0 || h <= 0) { call.reject("Нет картинки"); return; }
+        ocrThreads[i].execute(() -> {
+            try {
+                long t0 = System.currentTimeMillis();
+                byte[] px = Base64.decode(b64, Base64.DEFAULT);
+                if (px.length < (long) w * h) throw new IOException("Картинка повреждена");
+                TessBaseAPI api = engine(i);
+                long tInit = System.currentTimeMillis();
+                String key = params.toString();
+                if (!key.equals(ocrKey[i])) {
+                    java.util.Iterator<String> it = params.keys();
+                    while (it.hasNext()) {
+                        String k = it.next(), v = String.valueOf(params.get(k));
+                        if ("tessedit_pageseg_mode".equals(k)) api.setPageSegMode(Integer.parseInt(v));
+                        else api.setVariable(k, v);
+                    }
+                    ocrKey[i] = key;
+                }
+                api.setImage(px, w, h, 1, w);
+                String text = api.getUTF8Text();
+                if (text == null) throw new IOException("Текст не распознан");
+                JSObject res = new JSObject();
+                res.put("text", text);
+                res.put("confidence", api.meanConfidence());
+                JSArray lines = new JSArray(), words = new JSArray();
+                ResultIterator ri = api.getResultIterator();
+                if (ri != null) {
+                    ri.begin();
+                    do {
+                        String t = ri.getUTF8Text(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE);
+                        if (t == null || t.trim().isEmpty()) continue;
+                        JSObject l = box(ri.getBoundingRect(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE));
+                        l.put("text", t.replaceAll("\\s+$", ""));
+                        l.put("c", ri.confidence(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE));
+                        lines.put(l);
+                    } while (ri.next(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE));
+                    ri.begin();
+                    do {
+                        String t = ri.getUTF8Text(TessBaseAPI.PageIteratorLevel.RIL_WORD);
+                        if (t == null || t.trim().isEmpty()) continue;
+                        JSObject wd = box(ri.getBoundingRect(TessBaseAPI.PageIteratorLevel.RIL_WORD));
+                        wd.put("text", t.trim());
+                        wd.put("c", ri.confidence(TessBaseAPI.PageIteratorLevel.RIL_WORD));
+                        words.put(wd);
+                    } while (ri.next(TessBaseAPI.PageIteratorLevel.RIL_WORD));
+                    ri.delete();
+                }
+                api.clear();
+                res.put("lines", lines);
+                res.put("words", words);
+                res.put("msInit", tInit - t0);
+                res.put("ms", System.currentTimeMillis() - t0);
+                call.resolve(res);
+            } catch (Throwable e) {
+                try { if (ocrApi[i] != null) ocrApi[i].clear(); } catch (Throwable ignored) { }
+                call.reject("Родное распознавание не удалось: " + e.getMessage());
+            }
+        });
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        for (int i = 0; i < 2; i++) {
+            final int k = i;
+            ocrThreads[k].execute(() -> { if (ocrApi[k] != null) { ocrApi[k].recycle(); ocrApi[k] = null; } });
+            ocrThreads[k].shutdown();
+        }
     }
 }

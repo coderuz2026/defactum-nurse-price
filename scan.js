@@ -143,7 +143,7 @@ const Scan = (() => {
         used.add(best.it.id);
         out.items.push({ id: best.it.id, name: best.it.name, price: best.it.price, sheetPrice: row.price, score: Math.min(1, best.sc), sure: best.sc >= 0.68 && best.sc - second >= 0.04, raw: row.raw });
       } else {
-        const visit = /вызов\s*(на|ha)\s*дом|выезд/i.test(row.name) || dice(norm(row.name), norm('Вызов на дом')) >= 0.45 || /дом\b/i.test(row.name) && norm(row.name).length <= 16; // «бозовнадом» — тоже он
+        const visit = /вызов\s*(на|ha)\s*дом|выезд/i.test(row.name) || dice(norm(row.name), norm('Вызов на дом')) >= 0.45 || /дом\b/i.test(row.name) && norm(row.name).length <= 16 || /^[A-Za-zА-Яа-яЁё ]{6,16}$/.test(row.name.trim()) && /(?:[дdгg][оo0][мm])\s*$/i.test(row.name.trim()) && !row.more; // «бозовнадом», «Gososnagom» — тоже он
         const clean = visit ? 'Вызов на дом' : (row.name + (row.more ? ' ' + row.more : '')).replace(/\s+/g, ' ').trim();
         if (clean.length >= 3) out.extra.push({ name: clean, price: row.price || 0, sure: !!row.price && visit, raw: row.raw });
       }
@@ -194,8 +194,48 @@ const Scan = (() => {
     })).then((w) => { poolReady[i] = true; return w; }, (e) => { pool[i] = null; throw e; });
     return pool[i];
   }
+  // ---- Родной движок в APK (Tesseract на процессоре, без WebView). Нет его (старый APK, сайт) или сломался — работает tesseract.js.
+  const NP = () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LabelPrinter;
+  let nativeP = null, nativeOff = false;
+  const native = () => {
+    if (nativeOff || !inApk() || !NP()) return Promise.resolve(false);
+    return nativeP || (nativeP = NP().info().then((r) => !!(r && r.ocr), () => false));
+  };
+  const nativeReady = [false, false]; let nativeWarm = null;
+  function nativeWarmup(count) {
+    return nativeWarm || (nativeWarm = NP().ocrWarm({ count }).then(() => { nativeReady[0] = true; if (count > 1) nativeReady[1] = true; }, (e) => { nativeWarm = null; throw e; }));
+  }
+  // Картинка → оттенки серого, 1 байт на точку, base64 (без сжатия: быстро и без потери качества)
+  function grayB64(canvas) {
+    const W = canvas.width, H = canvas.height, d = canvas.getContext('2d').getImageData(0, 0, W, H).data, g = new Uint8Array(W * H);
+    for (let j = 0, k = 0; k < g.length; j += 4, k++) g[k] = (d[j] * 77 + d[j + 1] * 150 + d[j + 2] * 29) >> 8;
+    let s = ''; const CH = 0x8000;
+    for (let k = 0; k < g.length; k += CH) s += String.fromCharCode.apply(null, g.subarray(k, k + CH));
+    return btoa(s);
+  }
+  // Ответ родного движка → тот же вид, что у tesseract.js (text, confidence, lines[bbox, words], words)
+  function nativeData(r) {
+    const words = (r.words || []).map((w) => ({ text: w.text, confidence: w.c, bbox: { x0: w.x0, y0: w.y0, x1: w.x1, y1: w.y1 } }));
+    const lines = (r.lines || []).map((l) => ({ text: l.text, confidence: l.c, bbox: { x0: l.x0, y0: l.y0, x1: l.x1, y1: l.y1 }, words: [] }));
+    words.forEach((w) => { // слово — в ту строку, где лежит его центр
+      const cx = (w.bbox.x0 + w.bbox.x1) / 2, cy = (w.bbox.y0 + w.bbox.y1) / 2;
+      const l = lines.find((x) => cy >= x.bbox.y0 && cy <= x.bbox.y1 && cx >= x.bbox.x0 - 2 && cx <= x.bbox.x1 + 2);
+      if (l) l.words.push(w);
+    });
+    return { text: r.text || '', confidence: r.confidence || 0, lines, words };
+  }
+  async function nativeOcr(canvas, params, i) {
+    if (i === 0 && progressCb) progressCb(0.4, 'recognizing text');
+    const r = await NP().ocr({ gray: grayB64(canvas), width: canvas.width, height: canvas.height, params: params || {}, worker: i });
+    nativeReady[i] = true;
+    return nativeData(r);
+  }
   async function ocr(canvas, params, i) {
     i = i || 0;
+    if (await native()) {
+      try { return await nativeOcr(canvas, params, i); }
+      catch (e) { nativeOff = true; console.warn('Родное распознавание недоступно, переходим на веб-движок', e); } // дальше — tesseract.js
+    }
     const w = await getWorker(i), key = JSON.stringify(params || {});
     if (key !== poolKey[i]) { await w.setParameters(params || {}); poolKey[i] = key; }
     return (await w.recognize(canvas)).data;
@@ -541,8 +581,10 @@ const Scan = (() => {
     const deadline = t0 + opt.budget, fits = (ms) => performance.now() + ms <= deadline;
     const pair = opt.pair === 'force' || (opt.pair !== false && canPair());
     // Замер для диагностики: сколько ушло на запуск движка (идёт параллельно с подготовкой фото, работу не задерживает)
-    const tI = performance.now(), cold = !poolReady[0] || (pair && !poolReady[1]); let initMs = null;
-    Promise.all([getWorker(0), pair ? getWorker(1) : null]).then(() => { initMs = performance.now() - tI; }, () => {});
+    const nat = await native();
+    const ready = nat ? nativeReady : poolReady;
+    const tI = performance.now(), cold = !ready[0] || (pair && !ready[1]); let initMs = null;
+    (nat ? nativeWarmup(pair ? 2 : 1) : Promise.all([getWorker(0), pair ? getWorker(1) : null])).then(() => { initMs = performance.now() - tI; }, () => {});
     let r = await readPass(file, items, opt);
     const better = (a, b) => (b.match.ok && !a.match.ok) || (!a.match.ok && miss(b.match) < miss(a.match)) ? b : a;
     if (!r.match.ok && r.warped && pair) {
@@ -565,7 +607,7 @@ const Scan = (() => {
       }
     }
     const T = r.T; T.total = performance.now() - t0; T.warped = r.warped ? 1 : 0;
-    Object.assign(T, { init: cold ? initMs : 0, cold: cold ? 1 : 0, pair: pair ? 1 : 0, cores: navigator.hardwareConcurrency || 0, mem: navigator.deviceMemory || 0, simd: simdOk() ? 1 : 0, apk: inApk() ? 1 : 0, src: r.srcLong || 0, passes: r.passes || 1 });
+    Object.assign(T, { engine: nat && !nativeOff ? 'native' : 'wasm', init: cold ? initMs : 0, cold: cold ? 1 : 0, pair: pair ? 1 : 0, cores: navigator.hardwareConcurrency || 0, mem: navigator.deviceMemory || 0, simd: simdOk() ? 1 : 0, apk: inApk() ? 1 : 0, src: r.srcLong || 0, passes: r.passes || 1 });
     say(1, 'done');
     return { sheet: r.sheet, match: r.match, text: r.text, confidence: r.data.confidence, fioConf: r.fioConf, fioCheck: r.fioCheck, check: r.check, srcLong: r.srcLong, passes: r.passes, timings: T };
   }
@@ -587,7 +629,12 @@ const Scan = (() => {
     return headPart.concat(['Наименование услуги'], tableLines, ti >= 0 ? all.slice(ti) : []).join('\n');
   }
   // Заранее загружаем и запускаем модуль распознавания: первое сканирование не ждёт, и всё остаётся в кэше для работы без сети
-  function warmup() { getWorker(0).then(() => { if (canPair()) return getWorker(1); }).catch(() => {}); }
+  function warmup() {
+    native().then((nat) => {
+      if (nat) return nativeWarmup(canPair() ? 2 : 1).catch(() => { nativeOff = true; return warmup(); });
+      return getWorker(0).then(() => { if (canPair()) return getWorker(1); });
+    }).catch(() => {});
+  }
   return { norm, dice, parseSheet, matchSheet, read, warmup, frameInfo, sharpness, sameBox, paperQuad, homography };
 })();
 if (typeof module !== 'undefined') module.exports = Scan;

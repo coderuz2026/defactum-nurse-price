@@ -2,7 +2,7 @@ name: Сборка APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, native-ocr]
     paths-ignore: ['README.md', 'tools/**']
   workflow_dispatch:
 
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: apk
+  group: apk-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -74,6 +74,12 @@ jobs:
           # номер версии
           sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/; s/versionName \"1.0\"/versionName \"${{ steps.ver.outputs.name }}\"/" android/app/build.gradle
           grep -n "versionCode\|versionName" android/app/build.gradle
+          # родное распознавание листа: Tesseract4Android (JitPack), только ARM-телефоны — APK меньше
+          sed -i "0,/mavenCentral()/s##mavenCentral()\n        maven { url 'https://jitpack.io' }#" android/build.gradle
+          grep -n "jitpack" android/build.gradle
+          sed -i "0,/^dependencies {/s##dependencies {\n    implementation 'cz.adaptech.tesseract4android:tesseract4android:4.8.0'#" android/app/build.gradle
+          sed -i "0,/defaultConfig {/s##defaultConfig {\n        ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }#" android/app/build.gradle
+          grep -n "tesseract4android\|abiFilters" android/app/build.gradle
           npx cap sync android
 
       - name: Ключ подписи
@@ -118,4 +124,11 @@ jobs:
         run: |
           TAG="v${{ steps.ver.outputs.name }}-b${{ github.run_number }}"
           printf 'APK для Android. Скачайте файл defactum-nurse.apk и установите.\n\nПодпись: %s\nОтпечаток SHA-256: %s\n' "$SIGN" "$FP" > notes.md
+          if [ "${{ github.ref_name }}" != "main" ]; then
+            # тестовая ветка: только «предварительный выпуск» — медсёстрам он не приходит (ссылка latest его не видит)
+            TAG="test-${{ github.ref_name }}-b${{ github.run_number }}"
+            printf '\nТЕСТОВАЯ СБОРКА из ветки ${{ github.ref_name }}. Медсёстрам не рассылается.\n' >> notes.md
+            gh release create "$TAG" defactum-nurse.apk --prerelease --latest=false --target "${{ github.sha }}" --title "ТЕСТ ${{ github.ref_name }} ${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})" --notes-file notes.md
+            exit 0
+          fi
           gh release create "$TAG" defactum-nurse.apk defactum-nurse-web.zip --latest --title "de factum ${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})" --notes-file notes.md

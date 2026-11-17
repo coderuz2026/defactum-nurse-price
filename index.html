@@ -225,12 +225,12 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.44', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.45', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
 const SITE = 'https://coderuz2026.github.io/defactum-nurse-price/';
-const APK_NATIVE = 4; // уровень «родной» части APK; повышать, когда меняется Java-код (тогда обновление идёт установкой APK)
+const APK_NATIVE = 5; // уровень «родной» части APK; повышать, когда меняется Java-код (тогда обновление идёт установкой APK)
 const WEB_ZIP_URL = 'https://github.com/coderuz2026/defactum-nurse-price/releases/latest/download/defactum-nurse-web.zip';
 const APK_URL = 'https://github.com/coderuz2026/defactum-nurse-price/releases/latest/download/defactum-nurse.apk';
 const PRICES_REMOTE = 'https://raw.githubusercontent.com/coderuz2026/defactum-nurse-price/main/data/prices.json';
@@ -1311,7 +1311,7 @@ function scanTimeLine(T) {
   if (T.check) parts.push('проверка ' + sec(T.check));
   if (T.id) parts.push('ID ' + sec(T.id));
   if (T.retry) parts.push('повторы ' + sec(T.retry));
-  const env = [(T.mode === 2 ? '2 потока' : '1 поток'), 'проходов ' + (T.passes || 1), 'SIMD ' + (T.simd ? 'да' : 'НЕТ'), 'ядер ' + (T.cores || '?'), 'ОЗУ ' + (T.mem || '?'), 'фото ' + (T.src || '?') + 'px', T.warped ? 'выпрямлен' : 'обрезка', T.apk ? 'APK' : 'сайт'];
+  const env = [(T.engine === 'native' ? 'родной движок' : 'веб-движок'), (T.mode === 2 ? '2 потока' : '1 поток'), 'проходов ' + (T.passes || 1), 'SIMD ' + (T.simd ? 'да' : 'НЕТ'), 'ядер ' + (T.cores || '?'), 'ОЗУ ' + (T.mem || '?'), 'фото ' + (T.src || '?') + 'px', T.warped ? 'выпрямлен' : 'обрезка', T.apk ? 'APK' : 'сайт'];
   return `<div class="sub" style="font-size:11.5px;line-height:1.45;color:var(--muted);text-align:center">⏱ ${sec(T.total)} с: ${parts.join(' · ')}<br>${env.join(' · ')}</div>`;
 }
 function vScan() {
