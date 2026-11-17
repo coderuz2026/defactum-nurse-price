@@ -123,12 +123,12 @@ const Scan = (() => {
   /* ---------- Распознавание в браузере (Tesseract, файлы лежат в vendor/tesseract) ---------- */
   const base = () => new URL('vendor/tesseract/', document.baseURI).href;
   const inApk = () => !!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost');
-  const CFG = { paperW: 1700, split: true, crop: true, warp: true, lines: true, norm: true, gamma: 1.3, zooms: [1.6, 1.3, 2], params: { tessedit_pageseg_mode: '6', tessedit_do_invert: '0', user_defined_dpi: '200' } }; // режим страницы задаём всегда: параметры в модуле сохраняются между вызовами
+  const CFG = { budget: 12000, paperW: 1700, split: true, crop: true, warp: true, lines: true, norm: true, gamma: 1.3, zooms: [1.6, 1.3, 2], params: { tessedit_pageseg_mode: '6', tessedit_do_invert: '0', user_defined_dpi: '200' } }; // режим страницы задаём всегда: параметры в модуле сохраняются между вызовами
   const ID_RE = /сч[её]та\s*[:;]?\s*\d{5,8}/i;
   // Два потока распознавания: верх листа (данные пациента) и низ (таблица услуг) читаются одновременно
   const pool = [null, null], poolKey = ['', ''];
   let progressCb = null;
-  const canPair = () => (navigator.hardwareConcurrency || 2) >= 4 && !(navigator.deviceMemory && navigator.deviceMemory < 3);
+  const canPair = () => (navigator.hardwareConcurrency || 2) >= 4 && !(navigator.deviceMemory && navigator.deviceMemory < 2); // браузер округляет память вниз: 3 ГБ показывает как 2
   function loadScript(src) { return new Promise((ok, bad) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => bad(new Error('Не загрузился модуль распознавания')); document.head.appendChild(s); }); }
   let libP = null;
   const lib = () => libP || (libP = (window.Tesseract ? Promise.resolve() : loadScript(base() + 'tesseract.min.js')).catch((e) => { libP = null; throw e; }));
@@ -414,14 +414,15 @@ const Scan = (() => {
         }
       } catch (e) { /* второй поток не запустился — читаем одним */ }
     }
-    if (!data) { if (headP) await headP; headP = null; data = await ocr(canvas, opt.params); lines = lineBoxes(data); T.mode = 1; }
+    const w0 = opt.worker || 0; // в каком потоке читать одиночным проходом
+    if (!data) { if (headP) await headP; headP = null; data = await ocr(canvas, opt.params, w0); lines = lineBoxes(data); T.mode = 1; }
     T.ocr = performance.now() - t;
     let idText = '';
     if (!ID_RE.test(data.text)) { // «ID счета» напечатан мелко — читаем полосу над шапкой таблицы отдельно, крупнее
       t = performance.now();
       const head = lines.find((l) => /наименован/i.test(l.text));
       const y1 = head ? head.y0 : Math.round(canvas.height * 0.5), y0 = Math.max(0, y1 - Math.round(canvas.height * 0.1));
-      if (y1 - y0 > 10) idText = (await ocr(crop(canvas, 0, y0, canvas.width * 0.55, y1 - y0, 2), opt.params)).text;
+      if (y1 - y0 > 10) idText = (await ocr(crop(canvas, 0, y0, canvas.width * 0.55, y1 - y0, 2), opt.params, w0)).text;
       if (!ID_RE.test(idText) && 'BarcodeDetector' in window) {
         try { const v = (await new window.BarcodeDetector().detect(canvas)).map((x) => x.rawValue).find((x) => /^\d{5,8}$/.test(x)); if (v) idText += '\nсчета: ' + v; } catch (e) {}
       }
@@ -429,7 +430,7 @@ const Scan = (() => {
     }
     const text = data.text, sheet = parseSheet(text, idText), match = matchSheet(sheet, items);
     // Сверяем основное чтение с контрольным: ФИО, дата рождения, телефон (ошибку в букве сумма «Итого» не поймает)
-    const hc = headP ? await headP : await headerCheck(canvas, lines, opt.params, 0);
+    const hc = headP ? await headP : await headerCheck(canvas, lines, opt.params, w0);
     let fioConf = hc ? hc.conf1 : null, fioCheck = 'none';
     const check = { dob: 'none', phone: 'none' };
     if (hc) {
@@ -451,14 +452,16 @@ const Scan = (() => {
   }
   const miss = (m) => (m.total ? Math.abs(m.total - m.sum) : 1e12) - m.items.length;
   // Повторы таблицы крупнее, пока сумма не сошлась с «Итого»
-  async function finish(r, items, opt, say) {
+  async function finish(r, items, opt, say, fits) {
     const { canvas, lines, data, idText } = r;
     let { text, sheet, match } = r, passes = 1;
     const t = performance.now();
     for (const zoom of opt.zooms) {
       if (match.ok) break;
+      if (fits && !fits(r.T.pass * 0.55)) break; // повтор таблицы ≈ половина полного чтения — не влезает в отведённое время
+
       say(0.92, 'retry');
-      const t2 = await rescanTable({ canvas, lines, text: data.text }, zoom, opt.params); if (!t2) break;
+      const t2 = await rescanTable({ canvas, lines, text: data.text }, zoom, opt.params, opt.worker || 0); if (!t2) break;
       passes++;
       const sh2 = parseSheet(t2, idText), m2 = matchSheet(sh2, items);
       if (m2.ok || miss(m2) < miss(match)) { Object.keys(sheet).forEach((k) => { if (k !== 'rows' && k !== 'totals' && !sh2[k]) sh2[k] = sheet[k]; }); sheet = sh2; match = m2; text = t2; }
@@ -470,20 +473,37 @@ const Scan = (() => {
     const opt = Object.assign({}, CFG, optIn || {}), t0 = performance.now();
     progressCb = onProgress || null;
     const say = (p, st) => { if (onProgress) onProgress(p, st); };
-    let r = await finish(await readPass(file, items, opt), items, opt, say);
-    // Выпрямленный лист так и не сошёлся с «Итого» — читаем ещё раз с обычной обрезкой и берём лучший результат
-    if (!r.match.ok && r.warped) {
+    // Время ограничено: медсестра ждёт результат не дольше ~15 с. Повторы делаются, только пока укладываемся;
+    // не успели — показываем лучшее, что прочитали, с ошибками красным (можно переснять).
+    const deadline = t0 + opt.budget, fits = (ms) => performance.now() + ms <= deadline;
+    const pair = opt.pair === 'force' || (opt.pair !== false && canPair());
+    let r = await readPass(file, items, opt);
+    const better = (a, b) => (b.match.ok && !a.match.ok) || (!a.match.ok && miss(b.match) < miss(a.match)) ? b : a;
+    if (!r.match.ok && r.warped && pair) {
+      // Два потока: первый перечитывает таблицу выпрямленного листа крупнее, второй в это же время читает лист с обычной обрезкой.
+      // Сначала готовый удачный результат — сразу показываем, не дожидаясь второго.
       say(0.9, 'retry');
-      const r2 = await finish(await readPass(file, items, Object.assign({}, opt, { warp: false })), items, opt, say);
-      r2.passes += r.passes;
-      if (r2.match.ok || miss(r2.match) < miss(r.match)) r = r2; else r.passes = r2.passes;
+      const a = finish(r, items, Object.assign({}, opt, { worker: 0 }), say, fits);
+      const b = fits(r.T.pass * 1.1) ? readPass(file, items, Object.assign({}, opt, { warp: false, split: false, worker: 1 })).then((x) => { x.passes = 1; return x; }).catch(() => null) : Promise.resolve(null);
+      const first = await Promise.race([a.then((x) => ['a', x]), b.then((x) => ['b', x])]);
+      if (first[1] && first[1].match.ok) r = first[1];
+      else { const [ra, rb] = await Promise.all([a, b]); r = rb ? better(ra, rb) : ra; r.passes = (ra.passes || 1) + (rb ? 1 : 0); }
+    } else {
+      r = await finish(r, items, opt, say, fits);
+      // Один поток: выпрямленный лист так и не сошёлся с «Итого» — читаем с обычной обрезкой, если успеваем
+      if (!r.match.ok && r.warped && fits(r.T.pass * 0.9)) {
+        say(0.9, 'retry');
+        const r2 = await finish(await readPass(file, items, Object.assign({}, opt, { warp: false })), items, opt, say, fits);
+        r2.passes += r.passes;
+        r = better(r, r2); r.passes = r2.passes;
+      }
     }
     const T = r.T; T.total = performance.now() - t0; T.warped = r.warped ? 1 : 0;
     say(1, 'done');
     return { sheet: r.sheet, match: r.match, text: r.text, confidence: r.data.confidence, fioConf: r.fioConf, fioCheck: r.fioCheck, check: r.check, srcLong: r.srcLong, passes: r.passes, timings: T };
   }
   // Повторное чтение только таблицы услуг, крупнее: помогает, когда строка не прочиталась с общего снимка
-  async function rescanTable(res, zoom, params) {
+  async function rescanTable(res, zoom, params, worker) {
     const c = res.canvas, L = res.lines || []; if (!c) return null;
     const top = L.filter((l) => /домофона|номер дома|сч[её]та/i.test(l.text)).pop();
     const head = L.find((l) => /наименован|покрыти|скидка/i.test(l.text));
@@ -491,7 +511,7 @@ const Scan = (() => {
     const y0 = Math.max(0, (head ? head.y0 : top ? top.y1 : Math.round(c.height * 0.45)) - 6);
     const y1 = Math.min(c.height, (bot ? bot.y0 : Math.round(c.height * 0.85)) + 4);
     if (y1 - y0 < 40) return null;
-    const tableText = (await ocr(crop(c, 0, y0, c.width, y1 - y0, Math.min(zoom || 1.6, 4200 / c.width)), params)).text;
+    const tableText = (await ocr(crop(c, 0, y0, c.width, y1 - y0, Math.min(zoom || 1.6, 4200 / c.width)), params, worker || 0)).text;
     // собираем текст заново: шапка листа + таблица + итоги
     const all = res.text.split(/\r?\n/);
     const hi = all.findIndex((l) => /адрес\s+вы[еe]зда/i.test(l)), ti = all.findIndex((l) => /^.{0,6}итого/i.test(l.trim()));
