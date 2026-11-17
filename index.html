@@ -225,7 +225,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.41', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.42', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -1089,7 +1089,7 @@ function overlay(html) { document.getElementById('overlay').innerHTML = html ? `
    Кнопка спуска работает всегда. Если камера в приложении недоступна — открывается обычная камера телефона. */
 const Cam = (() => {
   let st = null; // открытая камера: поток, элементы, состояние анализа
-  const READY_MS = 700, TICK_MS = 110, SHARP_MIN = 80;
+  const READY_MS = 600, TICK_MS = 80, SHARP_MIN = 80, BEST_MS = 1200;
   const isOpen = () => !!st;
   const hintEl = () => st && st.root.querySelector('.cam-hint');
   function say(text, kind) { const h = hintEl(); if (!h || h.textContent === text && h.dataset.k === (kind || '')) return; h.textContent = text; h.dataset.k = kind || ''; h.className = 'cam-hint' + (kind ? ' ' + kind : ''); }
@@ -1109,11 +1109,11 @@ const Cam = (() => {
       <div class="cam-hint">Включаю камеру…</div>
       <div class="cam-bot"><button class="cam-side" data-cam="gallery"><i>🖼</i>Галерея</button><button class="cam-shot" data-cam="shot" aria-label="Снять"><span></span></button><button class="cam-side${camAuto() ? ' on' : ''}" data-cam="auto"><i>A</i>Автоснимок</button></div>`;
     document.body.appendChild(root);
-    st = { root, video: root.querySelector('video'), canvas: root.querySelector('canvas'), stream: null, track: null, timer: 0, boxes: [], peak: 0, readySince: 0, info: null, busy: false, torch: false };
+    st = { root, video: root.querySelector('video'), canvas: root.querySelector('canvas'), stream: null, track: null, timer: 0, boxes: [], peak: 0, readySince: 0, info: null, busy: false, torch: false, best: null, bestCanvas: document.createElement('canvas') };
     root.addEventListener('click', onClick);
     st.video.addEventListener('click', onTapFocus);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } } });
       if (!st) { stream.getTracks().forEach((t) => t.stop()); return; } // закрыли, пока камера включалась
       st.stream = stream; st.track = stream.getVideoTracks()[0]; st.video.srcObject = stream;
       await st.video.play().catch(() => {});
@@ -1183,21 +1183,28 @@ const Cam = (() => {
       sharp = Scan.sharpness(cg.getImageData(0, 0, crop.width, crop.height));
       st.boxes.push(b); if (st.boxes.length > 4) st.boxes.shift();
     } else { st.boxes = []; }
+    const now = performance.now();
     st.peak = Math.max(st.peak * 0.97, sharp);
-    const stable = st.boxes.length >= 3 && st.boxes.every((b) => Scan.sameBox(b, st.boxes[st.boxes.length - 1], 0.02));
-    const isSharp = sharp >= SHARP_MIN && sharp >= st.peak * 0.6;
-    const ready = info.found && info.whole && info.big && stable && isSharp;
+    const stable = st.boxes.length >= 3 && st.boxes.every((b) => Scan.sameBox(b, st.boxes[st.boxes.length - 1], 0.05));
+    const framed = info.found && info.whole && info.big;
+    // Трясёт (машина, лист в руке) — не ждём полной неподвижности: запоминаем самый резкий кадр за последнюю ~1 с и снимаем его
+    if (st.best && now - st.best.at > BEST_MS) st.best = null;
+    if (framed && sharp >= SHARP_MIN && (!st.best || sharp > st.best.sharp)) {
+      const bc = st.bestCanvas; if (bc.width !== v.videoWidth || bc.height !== v.videoHeight) { bc.width = v.videoWidth; bc.height = v.videoHeight; }
+      bc.getContext('2d').drawImage(v, 0, 0); st.best = { sharp, at: now };
+    }
+    const isSharp = !!st.best && st.best.sharp >= st.peak * 0.6;
+    const ready = framed && isSharp;
     st.info = info;
     let progress = 0;
-    if (ready) { if (!st.readySince) st.readySince = performance.now(); progress = Math.min(1, (performance.now() - st.readySince) / READY_MS); }
+    if (ready) { if (!st.readySince) st.readySince = now; progress = Math.min(1, (now - st.readySince) / READY_MS); }
     else st.readySince = 0;
     // подсказка
     if (!info.found) say('Наведите камеру на лист заказа — весь лист в кадре');
     else if (!info.whole) say('Лист не целиком — отодвиньте телефон', 'warn');
     else if (!info.big) say('Поднесите телефон ближе к листу', 'warn');
     else if (info.light < 110 && st.caps && st.caps.torch && !st.torch) say('Мало света — включите фонарик ⚡', 'warn');
-    else if (!stable) say('Держите телефон неподвижно', 'warn');
-    else if (!isSharp) say('Наводится фокус… коснитесь листа', 'warn');
+    else if (!isSharp) say(stable ? 'Наводится фокус… коснитесь листа' : 'Держите телефон ровнее', 'warn');
     else say(camAuto() ? 'Отлично! Не двигайтесь…' : 'Резко — нажмите кнопку', 'ok');
     draw(info, ready, progress);
     if (ready && camAuto() && progress >= 1) shoot();
@@ -1228,8 +1235,9 @@ const Cam = (() => {
     st.busy = true;
     const fl = st.root.querySelector('.cam-flash'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 60);
     try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) {}
-    const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
-    c.getContext('2d').drawImage(v, 0, 0);
+    // самый резкий кадр за последнюю секунду (если есть), иначе текущий
+    let c = st.best && performance.now() - st.best.at <= BEST_MS ? st.bestCanvas : null;
+    if (!c) { c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext('2d').drawImage(v, 0, 0); }
     const blob = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.95));
     close(); // камеру отпускаем сразу — распознаванию нужен весь процессор
     if (!blob) { toast('Не удалось сделать снимок'); return; }

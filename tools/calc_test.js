@@ -293,5 +293,21 @@ eq('все анализы готовых наборов есть в прайсе
   eq('камера: текст резче пустого листа', crisp > 1000 && flat < 1, true);
   eq('камера: одна и та же рамка', [Sc.sameBox({ x: .1, y: .1, w: .8, h: .7 }, { x: .11, y: .1, w: .8, h: .69 }, 0.02), Sc.sameBox({ x: .1, y: .1, w: .8, h: .7 }, { x: .2, y: .1, w: .8, h: .7 }, 0.02)], [true, false]);
 }
+// ---- итог с ошибками распознавания и мусорные строки
+{
+  const Sc = require('../scan.js');
+  const sh = Sc.parseSheet(['Итого: 630 C00 |', 'Скидки: 0', 'Сумма к оплате: 630 ©20'].join('\n'), '');
+  eq('итог «630 C00 |» и «630 ©20» читаются как 630 000', sh.totals, [630000, 630000]);
+  eq('итог: явная ошибка в тысячах не подгоняется', Sc.parseSheet('Итого: 631 500', '').totals, []);
+  const ferr = prices.items.find((x) => /^Ферритин/.test(x.name)), vitd = prices.items.find((x) => /^Витамин Д/.test(x.name));
+  const total = ferr.price + vitd.price + 80000;
+  const mk = (rows) => ({ rows: rows.map(([name, price]) => ({ name, more: '', price, raw: name })), totals: [total] });
+  const m1 = Sc.matchSheet(mk([[ferr.name, ferr.price], ['Нор', 700000], [vitd.name, vitd.price], ['Cees', 800000], ['Вызов на дом', 80000]]), prices.items);
+  eq('мусорные строки отброшены по «Итого»', [m1.ok, m1.sum, m1.extra.map((x) => x.name), (m1.dropped || []).length], [true, total, ['Вызов на дом'], 2]);
+  const m2 = Sc.matchSheet(mk([[ferr.name, ferr.price], ['Вызов на дом', 80000]]), prices.items);
+  eq('пропущенная строка не скрывается', [m2.ok, !!m2.dropped], [false, false]);
+  const m3 = Sc.matchSheet(mk([[ferr.name, ferr.price], ['Нор', 700000], ['Вызов на дом', 80000]]), prices.items);
+  eq('мусор + пропуск: ошибка остаётся', m3.ok, false);
+}
 console.log(fail ? `\nОШИБОК: ${fail}` : '\nВСЕ ТЕСТЫ ПРОШЛИ');
 process.exit(fail ? 1 : 0);

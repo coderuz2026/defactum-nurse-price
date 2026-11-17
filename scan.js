@@ -23,9 +23,12 @@ const Scan = (() => {
     const n = Math.floor(parseFloat(fixDigits(t).replace(',', '.'))); if (!Number.isFinite(n)) return null;
     const r = Math.round(n / 1000) * 1000; return okPrice(r) && Math.abs(n - r) <= 100 ? r : null;
   }
-  function moneyAfterColon(line) { // «Итого: 1 060 000»
+  function moneyAfterColon(line) { // «Итого: 1 060 000»; «630 C00 |» и «630 ©20» тоже читаются как 630 000
     const m = line.split(':').slice(1).join(':'); if (!m) return null;
-    const n = parseInt(fixDigits(m).replace(/[^\d]/g, ''), 10); return okPrice(n) ? n : null;
+    const g = fixDigits(m).match(/\d{1,3}(?:[ \u00a0]?\d{3})+/); // первое число с разрядами; хвост от линии таблицы отбрасываем
+    if (!g) return null;
+    const n = parseInt(g[0].replace(/\D/g, ''), 10), r = Math.round(n / 1000) * 1000;
+    return okPrice(r) && Math.abs(n - r) <= 100 ? r : null; // как у цен: одна ошибка в сотнях/десятках прощается
   }
 
   const mode = (a) => a.slice().sort((x, y) => a.filter((v) => v === y).length - a.filter((v) => v === x).length)[0]; // чаще встречающееся значение
@@ -114,6 +117,19 @@ const Scan = (() => {
     // Итог листа: значение, которое подтверждается суммой строк; иначе — первое прочитанное (тогда будет предупреждение).
     // Цены строк по итогу НЕ подгоняем: иначе пропущенная строка осталась бы незамеченной.
     const totals = sheet.totals || [];
+    // Лишние обрывки (кусок колонки «Сумма к оплате» на отдельной строке и т. п.): если без каких-то нераспознанных строк
+    // сумма ровно совпадает с «Итого» — эти строки в итог не входят, это мусор распознавания. Распознанные анализы и вызов на дом не трогаем.
+    if (totals.length && !totals.includes(sumAll())) {
+      const junk = out.extra.map((x, i) => ({ x, i })).filter(({ x }) => x.price && x.name !== 'Вызов на дом');
+      if (junk.length && junk.length <= 8) {
+        let drop = null;
+        for (let mask = 1; mask < (1 << junk.length) && !drop; mask++) {
+          const part = junk.filter((_, k) => mask & (1 << k)), cut = part.reduce((s, { x }) => s + x.price, 0);
+          if (totals.includes(sumAll() - cut)) drop = part;
+        }
+        if (drop) { const del = new Set(drop.map(({ i }) => i)); out.dropped = drop.map(({ x }) => x); out.extra = out.extra.filter((_, i) => !del.has(i)); }
+      }
+    }
     out.total = totals.find((t) => t === sumAll()) || totals[0] || null;
     out.sum = sumAll();
     out.ok = !!out.total && out.total === out.sum && out.items.length > 0;
@@ -123,7 +139,7 @@ const Scan = (() => {
   /* ---------- Распознавание в браузере (Tesseract, файлы лежат в vendor/tesseract) ---------- */
   const base = () => new URL('vendor/tesseract/', document.baseURI).href;
   const inApk = () => !!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost');
-  const CFG = { budget: 12000, paperW: 1700, split: true, crop: true, warp: true, lines: true, norm: true, gamma: 1.3, zooms: [1.6, 1.3, 2], params: { tessedit_pageseg_mode: '6', tessedit_do_invert: '0', user_defined_dpi: '200' } }; // режим страницы задаём всегда: параметры в модуле сохраняются между вызовами
+  const CFG = { budget: 14000, paperW: 1700, split: true, crop: true, warp: true, lines: true, norm: true, gamma: 1.3, zooms: [1.6, 1.3, 2], params: { tessedit_pageseg_mode: '6', tessedit_do_invert: '0', user_defined_dpi: '200' } }; // режим страницы задаём всегда: параметры в модуле сохраняются между вызовами
   const ID_RE = /сч[её]та\s*[:;]?\s*\d{5,8}/i;
   // Два потока распознавания: верх листа (данные пациента) и низ (таблица услуг) читаются одновременно
   const pool = [null, null], poolKey = ['', ''];
@@ -251,14 +267,23 @@ const Scan = (() => {
   /* ---------- Кадр камеры: виден ли лист целиком, достаточно ли он крупный и резкий ---------- */
   // img — {data, width, height} уменьшенного кадра (длинная сторона ~240 точек)
   function frameInfo(img) {
-    const W = img.width, H = img.height, b = paperIn(lumOf(img.data, W * H), W, H);
+    const W = img.width, H = img.height, lum = lumOf(img.data, W * H), b = paperIn(lum, W, H);
     if (!b) return { found: false };
     const edge = 0.015; // лист не должен касаться краёв кадра — иначе часть листа не видна
+    const quad = paperQuad(lum, W, H, b);
+    if (quad) {
+      // углы листа нашлись — проверяем по ним: яркое окно или рука рядом с листом не мешают
+      const xs = quad.map((p) => p.x), ys = quad.map((p) => p.y), box = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+      const e2 = 0.004; // углы известны точно — достаточно, чтобы все четыре были в кадре
+      const whole = quad.every((p) => p.x > e2 && p.y > e2 && p.x < 1 - e2 && p.y < 1 - e2);
+      const side = W <= H ? (Math.hypot((quad[1].x - quad[0].x) * W, (quad[1].y - quad[0].y) * H) + Math.hypot((quad[2].x - quad[3].x) * W, (quad[2].y - quad[3].y) * H)) / 2 / W
+        : (Math.hypot((quad[3].x - quad[0].x) * W, (quad[3].y - quad[0].y) * H) + Math.hypot((quad[2].x - quad[1].x) * W, (quad[2].y - quad[1].y) * H)) / 2 / H;
+      return { found: true, box, quad, whole, big: side >= 0.5, light: Math.round(b.light) };
+    }
     const whole = b.x > edge && b.y > edge && b.x + b.w < 1 - edge && b.y + b.h < 1 - edge;
-    // лист должен занимать заметную часть кадра: по короткой стороне кадра — не меньше 55 %
-    const big = (W <= H ? b.w : b.h) >= 0.55;
-    const quad = paperQuad(lumOf(img.data, W * H), W, H, b);
-    return { found: true, box: { x: b.x, y: b.y, w: b.w, h: b.h }, quad, whole, big, light: Math.round(b.light) };
+    // лист должен занимать заметную часть кадра: по короткой стороне кадра — не меньше половины
+    const big = (W <= H ? b.w : b.h) >= 0.5;
+    return { found: true, box: { x: b.x, y: b.y, w: b.w, h: b.h }, quad: null, whole, big, light: Math.round(b.light) };
   }
   // Резкость: дисперсия лапласиана по яркости (у размытого текста перепады яркости мягкие — значение маленькое)
   function sharpness(img) {
