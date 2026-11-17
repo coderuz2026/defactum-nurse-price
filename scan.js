@@ -151,25 +151,57 @@ const Scan = (() => {
     try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); }
     catch (e) { return new Promise((ok, bad) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => bad(new Error('Не удалось открыть фото')); im.src = URL.createObjectURL(file); }); }
   }
-  // Где на фото лист бумаги: светлый прямоугольник на более тёмном фоне (стол). Возвращает рамку в долях кадра.
-  function findPaper(bmp) {
-    const k = 200 / Math.max(bmp.width, bmp.height), c = mk(bmp.width * k, bmp.height * k), g = c.getContext('2d', { willReadFrequently: true });
-    g.drawImage(bmp, 0, 0, c.width, c.height);
-    const d = g.getImageData(0, 0, c.width, c.height).data, W = c.width, H = c.height, lum = new Uint8Array(W * H), hist = new Uint32Array(256);
-    for (let i = 0, j = 0; j < lum.length; i += 4, j++) { const v = (d[i] * 77 + d[i + 1] * 150 + d[i + 2] * 29) >> 8; lum[j] = v; hist[v]++; }
+  // Где на фото лист бумаги: светлый прямоугольник на более тёмном фоне (стол).
+  // lum — яркость пикселей уменьшенного кадра W×H. Возвращает рамку листа в долях кадра (без запаса) или null.
+  function paperIn(lum, W, H) {
+    const hist = new Uint32Array(256); for (let j = 0; j < lum.length; j++) hist[lum[j]]++;
     let sum = 0; for (let t = 0; t < 256; t++) sum += t * hist[t];
     let sumB = 0, wB = 0, best = 0, thr = 128; // порог Оцу
     for (let t = 0; t < 256; t++) { wB += hist[t]; if (!wB) continue; const wF = lum.length - wB; if (!wF) break; sumB += t * hist[t]; const mB = sumB / wB, mF = (sum - sumB) / wF, v = wB * wF * (mB - mF) * (mB - mF); if (v > best) { best = v; thr = t; } }
     const rows = new Float32Array(H), cols = new Float32Array(W);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (lum[y * W + x] > thr) { rows[y]++; cols[x]++; }
+    let bright = 0, bsum = 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const v = lum[y * W + x]; if (v > thr) { rows[y]++; cols[x]++; bright++; bsum += v; } }
     const span = (a, n, need) => { let lo = 0, hi = a.length - 1; while (lo < hi && a[lo] / n < need) lo++; while (hi > lo && a[hi] / n < need) hi--; return [lo, hi]; };
     const [y0, y1] = span(rows, W, 0.4), [x0, x1] = span(cols, H, 0.4);
-    const full = { x: 0, y: 0, w: 1, h: 1 };
-    if ((x1 - x0) < W * 0.45 || (y1 - y0) < H * 0.4) return full; // лист не выделился — берём кадр целиком
-    const m = 0.012; // небольшой запас по краям
-    const fx = Math.max(0, x0 / W - m), fy = Math.max(0, y0 / H - m);
-    return { x: fx, y: fy, w: Math.min(1, (x1 + 1) / W + m) - fx, h: Math.min(1, (y1 + 1) / H + m) - fy };
+    if ((x1 - x0) < W * 0.45 || (y1 - y0) < H * 0.4) return null;
+    return { x: x0 / W, y: y0 / H, w: (x1 + 1 - x0) / W, h: (y1 + 1 - y0) / H, thr, light: bright ? bsum / bright : 0 };
   }
+  const lumOf = (d, n) => { const lum = new Uint8Array(n); for (let i = 0, j = 0; j < n; i += 4, j++) lum[j] = (d[i] * 77 + d[i + 1] * 150 + d[i + 2] * 29) >> 8; return lum; };
+  function findPaper(bmp) {
+    const k = 200 / Math.max(bmp.width, bmp.height), c = mk(bmp.width * k, bmp.height * k), g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(bmp, 0, 0, c.width, c.height);
+    const W = c.width, H = c.height, b = paperIn(lumOf(g.getImageData(0, 0, W, H).data, W * H), W, H);
+    if (!b) return { x: 0, y: 0, w: 1, h: 1 }; // лист не выделился — берём кадр целиком
+    const m = 0.012; // небольшой запас по краям
+    const fx = Math.max(0, b.x - m), fy = Math.max(0, b.y - m);
+    return { x: fx, y: fy, w: Math.min(1, b.x + b.w + m) - fx, h: Math.min(1, b.y + b.h + m) - fy };
+  }
+
+  /* ---------- Кадр камеры: виден ли лист целиком, достаточно ли он крупный и резкий ---------- */
+  // img — {data, width, height} уменьшенного кадра (длинная сторона ~240 точек)
+  function frameInfo(img) {
+    const W = img.width, H = img.height, b = paperIn(lumOf(img.data, W * H), W, H);
+    if (!b) return { found: false };
+    const edge = 0.015; // лист не должен касаться краёв кадра — иначе часть листа не видна
+    const whole = b.x > edge && b.y > edge && b.x + b.w < 1 - edge && b.y + b.h < 1 - edge;
+    // лист должен занимать заметную часть кадра: по короткой стороне кадра — не меньше 55 %
+    const big = (W <= H ? b.w : b.h) >= 0.55;
+    return { found: true, box: { x: b.x, y: b.y, w: b.w, h: b.h }, whole, big, light: Math.round(b.light) };
+  }
+  // Резкость: дисперсия лапласиана по яркости (у размытого текста перепады яркости мягкие — значение маленькое)
+  function sharpness(img) {
+    const W = img.width, H = img.height, lum = lumOf(img.data, W * H);
+    let n = 0, s = 0, s2 = 0;
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+      const i = y * W + x, v = 4 * lum[i] - lum[i - 1] - lum[i + 1] - lum[i - W] - lum[i + W];
+      n++; s += v; s2 += v * v;
+    }
+    if (!n) return 0;
+    const m = s / n; return s2 / n - m * m;
+  }
+  // Рамки соседних кадров почти совпадают — телефон держат неподвижно
+  const sameBox = (a, b, tol) => !!a && !!b && Math.abs(a.x - b.x) < tol && Math.abs(a.y - b.y) < tol && Math.abs(a.w - b.w) < tol && Math.abs(a.h - b.h) < tol;
+
   // Фото → серое изображение листа стандартной ширины, с выровненным светом и без линий таблицы
   async function prepare(file, opt) {
     const bmp = await loadBitmap(file), long = Math.max(bmp.width, bmp.height);
@@ -178,8 +210,7 @@ const Scan = (() => {
     const k = Math.min(3.2, opt.paperW / sw);
     const c = mk(sw * k, sh * k), W = c.width, H = c.height, g = c.getContext('2d', { willReadFrequently: true });
     g.imageSmoothingQuality = 'high'; g.drawImage(bmp, sx, sy, sw, sh, 0, 0, W, H);
-    const img = g.getImageData(0, 0, W, H), d = img.data, n = W * H, lum = new Uint8Array(n);
-    for (let i = 0, j = 0; j < n; i += 4, j++) lum[j] = (d[i] * 77 + d[i + 1] * 150 + d[i + 2] * 29) >> 8;
+    const img = g.getImageData(0, 0, W, H), d = img.data, n = W * H, lum = lumOf(d, n);
     if (opt.norm) {
       // Свет: делим на размытую «карту бумаги» (уменьшили в 40 раз и растянули обратно)
       const s = mk(W / 40, H / 40), sg = s.getContext('2d'); sg.imageSmoothingQuality = 'high'; sg.drawImage(c, 0, 0, s.width, s.height);
@@ -316,6 +347,6 @@ const Scan = (() => {
   }
   // Заранее загружаем и запускаем модуль распознавания: первое сканирование не ждёт, и всё остаётся в кэше для работы без сети
   function warmup() { getWorker(0).then(() => { if (canPair()) return getWorker(1); }).catch(() => {}); }
-  return { norm, dice, parseSheet, matchSheet, read, warmup };
+  return { norm, dice, parseSheet, matchSheet, read, warmup, frameInfo, sharpness, sameBox };
 })();
 if (typeof module !== 'undefined') module.exports = Scan;

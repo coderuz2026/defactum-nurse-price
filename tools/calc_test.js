@@ -275,5 +275,23 @@ eq('все анализы готовых наборов есть в прайсе
   eq('сдвиг ESC/POS хранится отдельно', A.prOff({ proto: 'escpos', dx: 2.5, dx_escpos: 6 }, 'dx'), 6);
   eq('ESC/POS +8 мм: картинка во всю головку', A.printerBytes([fakeCanvas], { proto: 'escpos', gap: 2, dx_escpos: 8 })[6], 48);
 }
+// ---- камера: лист в кадре, резкость
+{
+  const Sc = require('../scan.js');
+  // кадр 135×240: серый стол, белый лист с «текстом» (чёрные полоски)
+  const frame = (x0, y0, x1, y1, text) => { const W = 135, H = 240, d = new Uint8ClampedArray(W * H * 4);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = (y * W + x) * 4, inP = x >= x0 && x < x1 && y >= y0 && y < y1;
+      let v = inP ? 235 : 90; if (inP && text && y % 6 < 2 && x % 9 < 6) v = 30; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
+    return { data: d, width: W, height: H }; };
+  const ok = Sc.frameInfo(frame(10, 30, 125, 200, true));
+  eq('камера: лист найден целиком и крупно', [ok.found, ok.whole, ok.big], [true, true, true]);
+  eq('камера: рамка листа примерно верная (±3 точки)', [Math.abs(ok.box.x * 135 - 10) <= 3, Math.abs(ok.box.y * 240 - 30) <= 3, Math.abs(ok.box.w * 135 - 115) <= 3], [true, true, true]);
+  eq('камера: лист касается края — не целиком', Sc.frameInfo(frame(0, 30, 125, 200, true)).whole, false);
+  eq('камера: лист далеко — мелко', (({ found, big }) => [found, big])(Sc.frameInfo(frame(34, 45, 101, 200, true))), [true, false]);
+  eq('камера: нет листа', Sc.frameInfo(frame(0, 0, 0, 0, false)).found, false);
+  const crisp = Sc.sharpness(frame(0, 0, 135, 240, true)), flat = Sc.sharpness(frame(0, 0, 135, 240, false));
+  eq('камера: текст резче пустого листа', crisp > 1000 && flat < 1, true);
+  eq('камера: одна и та же рамка', [Sc.sameBox({ x: .1, y: .1, w: .8, h: .7 }, { x: .11, y: .1, w: .8, h: .69 }, 0.02), Sc.sameBox({ x: .1, y: .1, w: .8, h: .7 }, { x: .2, y: .1, w: .8, h: .7 }, 0.02)], [true, false]);
+}
 console.log(fail ? `\nОШИБОК: ${fail}` : '\nВСЕ ТЕСТЫ ПРОШЛИ');
 process.exit(fail ? 1 : 0);

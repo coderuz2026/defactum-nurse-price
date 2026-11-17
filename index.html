@@ -161,6 +161,27 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 @media (prefers-reduced-motion:reduce){#splash,#splash *{animation-duration:.01s!important;animation-delay:0s!important}#splash{animation:spOut .3s ease .9s forwards!important}}
 .spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.cam{position:fixed;inset:0;z-index:400;background:#000;color:#fff;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+.cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.cam canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.cam-top{position:absolute;left:0;right:0;top:0;padding:calc(12px + env(safe-area-inset-top,0px)) 14px 12px;display:flex;align-items:center;gap:10px;background:linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,0))}
+.cam-top b{flex:1;font-size:17px;font-weight:700}
+.cam-ib{width:46px;height:46px;border-radius:23px;border:0;background:rgba(0,0,0,.45);color:#fff;display:flex;align-items:center;justify-content:center;font:600 13px inherit;font-family:inherit;cursor:pointer;flex-shrink:0}
+.cam-ib[hidden]{display:none}
+.cam-ib.on{background:#FACC15;color:#111}
+.cam-hint{position:absolute;left:50%;transform:translateX(-50%);top:calc(76px + env(safe-area-inset-top,0px));max-width:88%;padding:10px 16px;border-radius:14px;background:rgba(0,0,0,.6);font-size:15px;font-weight:600;text-align:center;line-height:1.3;transition:background .2s}
+.cam-hint.ok{background:#16A34A}
+.cam-hint.warn{background:rgba(180,83,9,.92)}
+.cam-bot{position:absolute;left:0;right:0;bottom:0;padding:18px 22px calc(22px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:space-between;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.6))}
+.cam-side{width:78px;display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:none;color:#fff;font:600 12px inherit;font-family:inherit;cursor:pointer}
+.cam-side i{width:46px;height:46px;border-radius:23px;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:13px}
+.cam-side.on i{background:#16A34A}
+.cam-shot{width:78px;height:78px;border-radius:39px;border:0;padding:5px;cursor:pointer;background:conic-gradient(#22C55E calc(var(--p,0)*1turn),rgba(255,255,255,.55) 0)}
+.cam-shot span{display:block;width:100%;height:100%;border-radius:50%;background:#fff;border:3px solid #000}
+.cam-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
+.cam-flash.on{opacity:.85;transition:none}
+.cam-focus{position:absolute;width:70px;height:70px;margin:-35px 0 0 -35px;border:2px solid #FACC15;border-radius:12px;pointer-events:none;animation:camf .8s ease-out forwards}
+@keyframes camf{0%{transform:scale(1.4);opacity:1}70%{transform:scale(1);opacity:1}100%{opacity:0}}
 .ovl{position:fixed;inset:0;z-index:300;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:24px}
 .ovl>div{width:100%;max-width:340px;background:#fff;border-radius:24px;padding:24px 22px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
 .bar{width:100%;height:8px;border-radius:4px;background:var(--line);overflow:hidden}.bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#A9D046,#2FA98C,#0A93B2);border-radius:4px;transition:width .3s}
@@ -204,12 +225,12 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.38', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.39', APP_DATE = '13.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
 const SITE = 'https://coderuz2026.github.io/defactum-nurse-price/';
-const APK_NATIVE = 3; // уровень «родной» части APK; повышать, когда меняется Java-код (тогда обновление идёт установкой APK)
+const APK_NATIVE = 4; // уровень «родной» части APK; повышать, когда меняется Java-код (тогда обновление идёт установкой APK)
 const WEB_ZIP_URL = 'https://github.com/coderuz2026/defactum-nurse-price/releases/latest/download/defactum-nurse-web.zip';
 const APK_URL = 'https://github.com/coderuz2026/defactum-nurse-price/releases/latest/download/defactum-nurse.apk';
 const PRICES_REMOTE = 'https://raw.githubusercontent.com/coderuz2026/defactum-nurse-price/main/data/prices.json';
@@ -989,7 +1010,7 @@ document.addEventListener('click', (e) => {
     case 'appCheck': checkUpdate(true); break;
     case 'appUpdate': overlay(''); applyUpdate(); break;
     case 'geo': locate(); break;
-    case 'scanCam': overlay(''); document.getElementById('scanCam').click(); break;
+    case 'scanCam': overlay(''); Cam.open(); break;
     case 'scanClose': overlay(''); break;
     case 'scanPick': document.getElementById('scanPick').click(); break;
     case 'scanDel': scanKeep(); UI.scan.match.items.splice(+v, 1); UI._keepScroll = true; render(); break;
@@ -1063,6 +1084,157 @@ function scanKeep() { // переносим правки из формы в со
   UI.scan.match.extra.forEach((x, i) => { if (('xp' + i) in o) x.price = +o['xp' + i].replace(/\D/g, '') || 0; });
 }
 function overlay(html) { document.getElementById('overlay').innerHTML = html ? `<div class="ovl"><div>${html}</div></div>` : ''; }
+/* ---------- Камера в приложении: живой кадр, рамка листа, автоснимок ----------
+   Лист найден целиком, крупно, резко и телефон неподвижен — рамка зелёная, через 0,7 с кадр снимается сам.
+   Кнопка спуска работает всегда. Если камера в приложении недоступна — открывается обычная камера телефона. */
+const Cam = (() => {
+  let st = null; // открытая камера: поток, элементы, состояние анализа
+  const READY_MS = 700, TICK_MS = 110, SHARP_MIN = 80;
+  const isOpen = () => !!st;
+  const hintEl = () => st && st.root.querySelector('.cam-hint');
+  function say(text, kind) { const h = hintEl(); if (!h || h.textContent === text && h.dataset.k === (kind || '')) return; h.textContent = text; h.dataset.k = kind || ''; h.className = 'cam-hint' + (kind ? ' ' + kind : ''); }
+  function fallback(reason) {
+    close();
+    if (reason) toast(reason);
+    const el = document.getElementById('scanCam'); if (el) el.click();
+  }
+  async function open() {
+    if (st) return;
+    if (!P.items.length) { toast('Прайс ещё не загружен — нужен интернет'); return; }
+    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { fallback(); return; }
+    if (Scan.warmup) Scan.warmup(); // модуль распознавания грузится, пока медсестра наводит камеру
+    const root = document.createElement('div'); root.className = 'cam'; root.id = 'cam';
+    root.innerHTML = `<video playsinline muted autoplay></video><canvas></canvas><div class="cam-flash"></div>
+      <div class="cam-top"><button class="cam-ib" data-cam="close" aria-label="Закрыть камеру">${I.x('#fff')}</button><b>Лист заказа</b><button class="cam-ib" data-cam="torch" aria-label="Фонарик" hidden>⚡</button></div>
+      <div class="cam-hint">Включаю камеру…</div>
+      <div class="cam-bot"><button class="cam-side" data-cam="gallery"><i>🖼</i>Галерея</button><button class="cam-shot" data-cam="shot" aria-label="Снять"><span></span></button><button class="cam-side${camAuto() ? ' on' : ''}" data-cam="auto"><i>A</i>Автоснимок</button></div>`;
+    document.body.appendChild(root);
+    st = { root, video: root.querySelector('video'), canvas: root.querySelector('canvas'), stream: null, track: null, timer: 0, boxes: [], peak: 0, readySince: 0, info: null, busy: false, torch: false };
+    root.addEventListener('click', onClick);
+    st.video.addEventListener('click', onTapFocus);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+      if (!st) { stream.getTracks().forEach((t) => t.stop()); return; } // закрыли, пока камера включалась
+      st.stream = stream; st.track = stream.getVideoTracks()[0]; st.video.srcObject = stream;
+      await st.video.play().catch(() => {});
+      setupTrack();
+      say('Наведите камеру на лист заказа — весь лист в кадре');
+      st.timer = setInterval(tick, TICK_MS);
+    } catch (e) {
+      const denied = e && /NotAllowed|Permission|Security/i.test(e.name + ' ' + e.message);
+      fallback(denied ? 'Нет доступа к камере — открываю обычную камеру телефона' : 'Камера в приложении не включилась — открываю обычную камеру');
+    }
+  }
+  function setupTrack() {
+    const t = st.track; let caps = {};
+    try { caps = t.getCapabilities ? t.getCapabilities() : {}; } catch (e) {}
+    st.caps = caps;
+    if (caps.focusMode && caps.focusMode.includes('continuous')) t.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+    if (caps.torch) st.root.querySelector('[data-cam="torch"]').hidden = false;
+  }
+  function close() {
+    if (!st) return;
+    clearInterval(st.timer);
+    if (st.stream) st.stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} });
+    st.root.remove(); st = null;
+  }
+  function camAuto() { return S.camAuto !== false; }
+  function onClick(e) {
+    const b = e.target.closest('[data-cam]'); if (!b || !st) return;
+    const a = b.dataset.cam;
+    if (a === 'close') close();
+    else if (a === 'shot') shoot();
+    else if (a === 'gallery') { close(); document.getElementById('scanPick').click(); }
+    else if (a === 'auto') { S.camAuto = !camAuto(); save(); b.classList.toggle('on', camAuto()); st.readySince = 0; toast(camAuto() ? 'Автоснимок включён' : 'Автоснимок выключен — снимайте кнопкой'); }
+    else if (a === 'torch' && st.track) { st.torch = !st.torch; st.track.applyConstraints({ advanced: [{ torch: st.torch }] }).catch(() => {}); b.classList.toggle('on', st.torch); }
+  }
+  // Касание по кадру — навести фокус в эту точку (если камера телефона это умеет)
+  function onTapFocus(e) {
+    if (!st || !st.track) return;
+    const r = st.video.getBoundingClientRect(), m = mapping();
+    const f = document.createElement('div'); f.className = 'cam-focus'; f.style.left = (e.clientX - r.left) + 'px'; f.style.top = (e.clientY - r.top) + 'px'; st.root.appendChild(f); setTimeout(() => f.remove(), 900);
+    st.peak = 0; st.readySince = 0;
+    const caps = st.caps || {}; if (!caps.focusMode || !m) return;
+    const pt = { x: Math.min(1, Math.max(0, (e.clientX - r.left - m.ox) / (m.vw * m.k))), y: Math.min(1, Math.max(0, (e.clientY - r.top - m.oy) / (m.vh * m.k))) };
+    const mode = caps.focusMode.includes('single-shot') ? 'single-shot' : 'continuous';
+    st.track.applyConstraints({ advanced: [{ focusMode: mode, pointsOfInterest: [pt] }] }).catch(() => {})
+      .then(() => setTimeout(() => { if (st && caps.focusMode.includes('continuous')) st.track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {}); }, 1500));
+  }
+  // Как кадр камеры уложен на экран: целиком (object-fit: contain) — что видно на экране, то и анализируется и снимается
+  function mapping() {
+    const v = st.video, vw = v.videoWidth, vh = v.videoHeight; if (!vw || !vh) return null;
+    const cw = v.clientWidth, ch = v.clientHeight, k = Math.min(cw / vw, ch / vh);
+    return { vw, vh, cw, ch, k, ox: (cw - vw * k) / 2, oy: (ch - vh * k) / 2 };
+  }
+  const small = document.createElement('canvas'), crop = document.createElement('canvas');
+  function tick() {
+    if (!st || st.busy) return;
+    const v = st.video; if (!v.videoWidth || v.readyState < 2) return;
+    const vw = v.videoWidth, vh = v.videoHeight, k = 240 / Math.max(vw, vh);
+    small.width = Math.round(vw * k); small.height = Math.round(vh * k);
+    const g = small.getContext('2d', { willReadFrequently: true }); g.drawImage(v, 0, 0, small.width, small.height);
+    const info = Scan.frameInfo(g.getImageData(0, 0, small.width, small.height));
+    let sharp = 0;
+    if (info.found) {
+      // резкость меряем по середине листа (там текст) в полном разрешении кадра
+      const b = info.box, sx = (b.x + b.w * 0.2) * vw, sy = (b.y + b.h * 0.35) * vh, sw = b.w * 0.6 * vw, sh = b.h * 0.3 * vh, kk = Math.min(1, 360 / sw);
+      crop.width = Math.max(8, Math.round(sw * kk)); crop.height = Math.max(8, Math.round(sh * kk));
+      const cg = crop.getContext('2d', { willReadFrequently: true }); cg.drawImage(v, sx, sy, sw, sh, 0, 0, crop.width, crop.height);
+      sharp = Scan.sharpness(cg.getImageData(0, 0, crop.width, crop.height));
+      st.boxes.push(b); if (st.boxes.length > 4) st.boxes.shift();
+    } else { st.boxes = []; }
+    st.peak = Math.max(st.peak * 0.97, sharp);
+    const stable = st.boxes.length >= 3 && st.boxes.every((b) => Scan.sameBox(b, st.boxes[st.boxes.length - 1], 0.02));
+    const isSharp = sharp >= SHARP_MIN && sharp >= st.peak * 0.6;
+    const ready = info.found && info.whole && info.big && stable && isSharp;
+    st.info = info;
+    let progress = 0;
+    if (ready) { if (!st.readySince) st.readySince = performance.now(); progress = Math.min(1, (performance.now() - st.readySince) / READY_MS); }
+    else st.readySince = 0;
+    // подсказка
+    if (!info.found) say('Наведите камеру на лист заказа — весь лист в кадре');
+    else if (!info.whole) say('Лист не целиком — отодвиньте телефон', 'warn');
+    else if (!info.big) say('Поднесите телефон ближе к листу', 'warn');
+    else if (info.light < 110 && st.caps && st.caps.torch && !st.torch) say('Мало света — включите фонарик ⚡', 'warn');
+    else if (!stable) say('Держите телефон неподвижно', 'warn');
+    else if (!isSharp) say('Наводится фокус… коснитесь листа', 'warn');
+    else say(camAuto() ? 'Отлично! Не двигайтесь…' : 'Резко — нажмите кнопку', 'ok');
+    draw(info, ready, progress);
+    if (ready && camAuto() && progress >= 1) shoot();
+  }
+  function draw(info, ready, progress) {
+    const c = st.canvas, dpr = window.devicePixelRatio || 1, m = mapping(); if (!m) return;
+    if (c.width !== Math.round(m.cw * dpr) || c.height !== Math.round(m.ch * dpr)) { c.width = Math.round(m.cw * dpr); c.height = Math.round(m.ch * dpr); }
+    const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, m.cw, m.ch);
+    st.root.querySelector('.cam-shot').style.setProperty('--p', progress.toFixed(2));
+    if (!info.found) return;
+    const b = info.box, x = m.ox + b.x * m.vw * m.k, y = m.oy + b.y * m.vh * m.k, w = b.w * m.vw * m.k, h = b.h * m.vh * m.k;
+    const col = ready ? '#22C55E' : (info.whole && info.big ? '#FACC15' : '#F97316');
+    g.lineWidth = ready ? 5 : 3; g.strokeStyle = col; g.lineJoin = 'round';
+    if (ready) { g.fillStyle = 'rgba(34,197,94,.14)'; g.fillRect(x, y, w, h); }
+    g.strokeRect(x, y, w, h);
+    // уголки
+    const L = Math.min(w, h) * 0.12; g.lineWidth = ready ? 8 : 6;
+    [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]].forEach(([px, py, sx, sy]) => { g.beginPath(); g.moveTo(px + sx * L, py); g.lineTo(px, py); g.lineTo(px, py + sy * L); g.stroke(); });
+  }
+  // Снимок: берём текущий кадр видео в полном разрешении — без задержки затвора
+  async function shoot() {
+    if (!st || st.busy) return;
+    const v = st.video; if (!v.videoWidth) { toast('Камера ещё включается'); return; }
+    st.busy = true;
+    const fl = st.root.querySelector('.cam-flash'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 60);
+    try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) {}
+    const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    const blob = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.95));
+    close(); // камеру отпускаем сразу — распознаванию нужен весь процессор
+    if (!blob) { toast('Не удалось сделать снимок'); return; }
+    scanFile(new File([blob], 'list.jpg', { type: 'image/jpeg' }));
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) close(); }); // свернули приложение — камеру освобождаем
+  return { open, close, isOpen };
+})();
+
 async function scanFile(file) {
   if (!file) return;
   if (!P.items.length) { toast('Прайс ещё не загружен — нужен интернет'); return; }
@@ -1415,6 +1587,7 @@ document.addEventListener('click', async (e) => {
 const BACK = { history: 'visit', patient: 'visit', catalog: 'visit', tubes: 'visit', client: 'visit', profile: 'visit', scan: 'visit', printer: 'profile' };
 // Возвращает true, если «Назад» обработано внутри приложения
 function goBack() {
+  if (Cam.isOpen()) { Cam.close(); return true; }
   const ov = document.getElementById('overlay'), inst = document.getElementById('install');
   if (ov && ov.querySelector && ov.querySelector('.ovl')) { if (document.getElementById('scanBar') || /Не закрывайте приложение/.test(ov.textContent)) return true; overlay(''); return true; } // во время распознавания и обновления «Назад» ничего не делает
   if (inst && inst.querySelector && inst.querySelector('.install')) { instSet('later'); inst.innerHTML = ''; return true; }
