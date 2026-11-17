@@ -510,10 +510,21 @@ const Scan = (() => {
         const b = await pb;
         const la = a.text.split(/\r?\n/), lb = b.text.split(/\r?\n/);
         const cutA = la.findIndex((l) => /домофона|номер дома/i.test(l)), startB = lb.findIndex((l) => /наименован|сч[её]та/i.test(l));
-        if (cutA >= 0 && startB >= 0) {
+        if (cutA >= 0 && startB >= 0 && !opt.glue) { // opt.glue — только для проверки склейки по положению
           data = { text: la.slice(0, cutA + 1).concat(lb.slice(startB)).join('\n'), confidence: Math.min(a.confidence, b.confidence) };
           lines = lineBoxes(a).filter((l) => l.y1 <= yBot + 4).concat(lineBoxes(b).map((l) => Object.assign(l, { y0: l.y0 + yBot, y1: l.y1 + yBot })).filter((l) => l.y0 >= yBot));
           T.mode = 2;
+        } else {
+          // Метки не нашлись (длинная таблица: шапка выше середины листа и т. п.) — склеиваем по положению строк, а не читаем лист заново:
+          // из верхней половины берём строки выше середины нахлёста, из нижней — ниже. Строки, обрезанные краем куска, сюда не попадают.
+          const yMid = (yBot + yTop) / 2, mid = (l) => (l.y0 + l.y1) / 2;
+          const A = lineBoxes(a).filter((l) => mid(l) < yMid);
+          const B = lineBoxes(b).map((l) => Object.assign(l, { y0: l.y0 + yBot, y1: l.y1 + yBot })).filter((l) => mid(l) >= yMid);
+          if (A.length >= 3 && B.length >= 3) {
+            lines = A.concat(B);
+            data = { text: lines.map((l) => l.text.replace(/\s+$/, '')).join('\n'), confidence: Math.min(a.confidence, b.confidence) };
+            T.mode = 2; T.glue = 1;
+          }
         }
       } catch (e) { /* второй поток не запустился — читаем одним */ }
     }
