@@ -75,8 +75,9 @@ jobs:
           sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/; s/versionName \"1.0\"/versionName \"${{ steps.ver.outputs.name }}\"/" android/app/build.gradle
           grep -n "versionCode\|versionName" android/app/build.gradle
           # родное распознавание листа: Tesseract4Android (JitPack), только ARM-телефоны — APK меньше
-          sed -i "0,/mavenCentral()/s##mavenCentral()\n        maven { url 'https://jitpack.io' }#" android/build.gradle
+          sed -i "s#mavenCentral()#mavenCentral()\n        maven { url 'https://jitpack.io' }#" android/build.gradle
           grep -n "jitpack" android/build.gradle
+          for u in cz/adaptech/tesseract4android/tesseract4android/4.8.0/tesseract4android-4.8.0.pom com/github/adaptech-cz/Tesseract4Android/4.8.0/Tesseract4Android-4.8.0.pom; do echo "$(curl -s -o /dev/null -w '%{http_code}' -m 120 https://jitpack.io/$u) $u"; done
           sed -i "0,/^dependencies {/s##dependencies {\n    implementation 'cz.adaptech.tesseract4android:tesseract4android:4.8.0'#" android/app/build.gradle
           sed -i "0,/defaultConfig {/s##defaultConfig {\n        ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }#" android/app/build.gradle
           grep -n "tesseract4android\|abiFilters" android/app/build.gradle
