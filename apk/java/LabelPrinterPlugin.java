@@ -194,15 +194,17 @@ public class LabelPrinterPlugin extends Plugin {
             File[] old = dir.listFiles();
             if (old != null) for (File f : old) f.delete();
             ArrayList<Uri> uris = new ArrayList<>();
+            boolean allPng = true; // текстовый отчёт (.txt) отправляем как текст, а не как картинку
             for (int i = 0; i < files.length(); i++) {
                 JSObject o = JSObject.fromJSONObject(files.getJSONObject(i));
                 String name = o.getString("name", "label" + (i + 1) + ".png").replaceAll("[^A-Za-z0-9._-]", "_");
+                if (!name.toLowerCase().endsWith(".png")) allPng = false;
                 File f = new File(dir, name);
                 try (FileOutputStream fo = new FileOutputStream(f)) { fo.write(Base64.decode(o.getString("data"), Base64.DEFAULT)); }
                 uris.add(FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", f));
             }
             Intent i = new Intent(uris.size() == 1 ? Intent.ACTION_SEND : Intent.ACTION_SEND_MULTIPLE);
-            i.setType("image/png");
+            i.setType(allPng ? "image/png" : "text/plain");
             if (uris.size() == 1) i.putExtra(Intent.EXTRA_STREAM, uris.get(0)); else i.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
             i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             Intent chooser = Intent.createChooser(i, call.getString("title", "Этикетки"));

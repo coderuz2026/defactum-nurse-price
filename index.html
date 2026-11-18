@@ -15,6 +15,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=Poppins:wght@500;600&display=swap&subset=cyrillic" rel="stylesheet">
 <script src="vendor/JsBarcode.all.min.js"></script>
 <script src="scan.js"></script>
+<script src="aurora.js"></script>
 <style>
 @font-face{font-family:'DF Label';font-weight:400;font-style:normal;font-display:block;src:url(vendor/fonts/arimo-cyrillic-400-normal.woff2) format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
 @font-face{font-family:'DF Label';font-weight:400;font-style:normal;font-display:block;src:url(vendor/fonts/arimo-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+2013-2014,U+2018-201D,U+2022,U+2026}
@@ -225,7 +226,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.45', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.46', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -601,7 +602,7 @@ function groupTubes(p) {
 /* ---------- Рендер ---------- */
 function render() {
   const app = document.getElementById('app');
-  const views = { history: vHistory, auth: vAuth, printer: vPrinter, scan: vScan, visit: vVisit, patient: vPatient, catalog: vCatalog, tubes: vTubes, client: vClient, profile: vProfile };
+  const views = { history: vHistory, auth: vAuth, printer: vPrinter, aurora: vAurora, scan: vScan, visit: vVisit, patient: vPatient, catalog: vCatalog, tubes: vTubes, client: vClient, profile: vProfile };
   if (!S.me) UI.view = 'auth';
   // горизонтальные ленты (категории) не должны убегать в начало при перерисовке того же экрана
   const strip = UI._view === UI.view && app.querySelector ? app.querySelector('.cats') : null, stripX = strip ? strip.scrollLeft : 0;
@@ -918,6 +919,53 @@ function vHistory() {
   </div>`;
 }
 
+/* ---------- Aurora: подключение (пилот) ---------- */
+const AURORA_DEF = { url: 'https://mis.defactum.uz', db: 'aurora', login: '', password: '' };
+function vAurora() {
+  const c = Object.assign({}, AURORA_DEF, S.aurora || {}), st = UI.au || {};
+  return header('Aurora', 'Поиск пациента по ID · пилот', 'profile') + `
+  <form class="body" data-submit="aurora">
+    ${IS_APK ? '' : `<div class="note warn">С сайта подключиться к Aurora нельзя — браузер запрещает такие запросы. Откройте приложение (APK).</div>`}
+    <div class="card pad" style="display:flex;flex-direction:column;gap:12px">
+      <label class="field"><span>Адрес Aurora</span><input class="input" name="url" value="${esc(c.url)}" inputmode="url" autocapitalize="none" autocomplete="off" required></label>
+      <label class="field"><span>База</span><input class="input" name="db" value="${esc(c.db)}" autocapitalize="none" autocomplete="off"></label>
+      <label class="field"><span>Логин Aurora</span><input class="input" name="login" value="${esc(c.login)}" autocapitalize="none" autocomplete="off" required></label>
+      <label class="field"><span>Пароль</span><input class="input" name="password" type="password" value="${esc(c.password)}" autocomplete="off" required></label>
+      <div class="sub">Логин и пароль хранятся только на этом телефоне. Приложение только читает данные и ничего не меняет в Aurora.</div>
+      <button class="btn" ${st.busy ? 'disabled' : ''}>${st.busy === 'login' ? 'Проверяем…' : 'Сохранить и проверить подключение'}</button>
+      ${st.ok ? `<div class="note ok">Подключено: ${esc(st.ok)}</div>` : ''}
+      ${st.err ? `<div class="note warn" style="color:var(--bad)">${esc(st.err)}</div>` : ''}
+    </div>
+    <div class="card pad" style="display:flex;flex-direction:column;gap:12px">
+      <b style="font-size:16px">Отчёт для настройки</b>
+      <div class="sub">Чтобы поиск по ID заработал, нужно один раз узнать, как в Aurora называются таблицы пациентов, заказов и анализов. В отчёт попадают только названия таблиц и полей — без ФИО, телефонов и анализов.</div>
+      <label class="field"><span>ID любого пациента с заказом (для проверки)</span><input class="input" name="testId" value="${esc(st.testId || '')}" inputmode="numeric" placeholder="Например: 504970"></label>
+      <button type="button" class="btn light" data-act="auReport" ${st.busy ? 'disabled' : ''}>${st.busy === 'report' ? esc(st.say || 'Собираем…') : 'Собрать отчёт'}</button>
+      ${st.report ? `<div class="note ok">Отчёт готов: ${st.report.split('\n').length} строк.</div>
+        <div class="grid2"><button type="button" class="btn small" data-act="auShare">Отправить файлом</button><button type="button" class="btn light small" data-act="auCopy">Скопировать</button></div>` : ''}
+    </div>
+  </form>`;
+}
+function auCfg() { const f = document.querySelector('form[data-submit="aurora"]'); if (!f) return S.aurora; const o = formObj(f); UI.au = Object.assign(UI.au || {}, { testId: o.testId || '' }); return { url: o.url.trim(), db: o.db.trim(), login: o.login.trim(), password: o.password }; }
+function auSet(x) { UI.au = Object.assign(UI.au || {}, x); if (UI.view === 'aurora') { UI._keepScroll = true; render(); } }
+async function auLogin() {
+  S.aurora = auCfg(); save(); auSet({ busy: 'login', err: '', ok: '' });
+  try { const r = await Aurora.login(S.aurora); auSet({ busy: '', ok: r.name + ' · Aurora ' + r.version }); return true; }
+  catch (e) { auSet({ busy: '', err: e.message || String(e) }); return false; }
+}
+async function auReport() {
+  S.aurora = auCfg(); save(); auSet({ busy: 'report', err: '', report: '', say: 'Вход в Aurora…' });
+  try { const txt = await Aurora.discover(S.aurora, UI.au.testId, (m) => auSet({ say: m })); auSet({ busy: '', report: txt }); }
+  catch (e) { auSet({ busy: '', err: e.message || String(e) }); }
+}
+async function auShare() {
+  const txt = (UI.au || {}).report; if (!txt) return;
+  try {
+    if (IS_APK && LP() && UI.shell && UI.shell.native >= 5) { await LP().share({ title: 'Отчёт Aurora', files: [{ name: 'aurora-report.txt', data: btoa(unescape(encodeURIComponent(txt))) }] }); return; }
+  } catch (e) { /* не вышло файлом — копируем */ }
+  copyText(txt);
+}
+
 function vProfile() {
   const me = S.me;
   return header('Профиль', esc(me.branch), 'visit') + `
@@ -938,6 +986,11 @@ function vProfile() {
       <span style="flex:1"><b style="font-size:16px;display:block">Принтер этикеток</b><span class="sub">${S.printer && S.printer.address ? esc(S.printer.name) + ' · ' + (S.printer.proto === 'escpos' ? 'ESC/POS' : 'TSPL') : 'Не настроен'}</span></span>
       <span style="font-size:22px;color:#94A3B8">›</span>
     </button>
+    <button class="card pad row" data-act="go" data-v="aurora" style="width:100%;text-align:left;cursor:pointer">
+      <span style="width:44px;height:44px;border-radius:14px;background:var(--tint);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;color:#075E6C">A</span>
+      <span style="flex:1"><b style="font-size:16px;display:block">Aurora · поиск по ID <span class="sub" style="font-weight:600">(пилот)</span></b><span class="sub">${S.aurora && S.aurora.login ? 'Подключено: ' + esc(S.aurora.login) : 'Не настроено'}</span></span>
+      <span style="font-size:22px;color:#94A3B8">›</span>
+    </button>
     ${IS_APK ? '' : isStandalone() ? `<div class="note ok">Приложение установлено на этот телефон.</div>` : `<button class="btn ghost" data-act="instShow">Установить на телефон</button>`}
     <button class="btn light" data-act="logout" style="color:var(--bad)">Выйти</button>
   </div>`;
@@ -953,6 +1006,9 @@ document.addEventListener('click', (e) => {
     case 'authMode': UI.authMode = UI.authMode === 'reg' ? 'login' : 'reg'; UI.err = ''; render(); break;
     case 'branch': UI.regBranch = v; keepForm(); break;
     case 'go': go(v); break;
+    case 'auReport': auReport(); break;
+    case 'auShare': auShare(); break;
+    case 'auCopy': if ((UI.au || {}).report) copyText(UI.au.report); break;
     case 'newPatient': UI.editPatient = null; go('patient'); break;
     case 'editPatient': UI.editPatient = { ...patient(v) }; go('patient'); break;
     case 'delPatient': { const dp = patient(v); if (dp && ask('Удалить пациента ' + dp.last + ' ' + dp.first + ' и его анализы?')) { vis.patients = vis.patients.filter((p) => p.id !== v); save(); UI._keepScroll = UI.view === 'visit'; go('visit'); toast('Пациент удалён'); } break; }
@@ -1038,6 +1094,7 @@ document.addEventListener('submit', (e) => {
   e.preventDefault();
   const f = e.target, o = formObj(f), kind = f.dataset.submit;
   const phone = (o.phone || '').replace(/\D/g, '');
+  if (kind === 'aurora') { auLogin(); return; }
   if (kind === 'register') {
     if (o.name.split(/\s+/).length < 2) return fail('Введите фамилию и имя');
     if (phone.length !== 9) return fail('Телефон: 9 цифр после +998');
@@ -1611,7 +1668,7 @@ document.addEventListener('click', async (e) => {
 
 /* ---------- Кнопка «Назад» ---------- */
 // Куда ведёт «Назад» с каждого экрана. null — выходить некуда (главный экран).
-const BACK = { history: 'visit', patient: 'visit', catalog: 'visit', tubes: 'visit', client: 'visit', profile: 'visit', scan: 'visit', printer: 'profile' };
+const BACK = { history: 'visit', patient: 'visit', catalog: 'visit', tubes: 'visit', client: 'visit', profile: 'visit', scan: 'visit', printer: 'profile', aurora: 'profile' };
 // Возвращает true, если «Назад» обработано внутри приложения
 function goBack() {
   if (Cam.isOpen()) { Cam.close(); return true; }

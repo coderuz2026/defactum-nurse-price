@@ -42,7 +42,7 @@ jobs:
       - name: Веб-часть
         run: |
           mkdir -p www
-          cp -r index.html scan.js manifest.webmanifest icon.svg icon-180.png icon-192.png icon-512.png data vendor www/
+          cp -r index.html scan.js aurora.js manifest.webmanifest icon.svg icon-180.png icon-192.png icon-512.png data vendor www/
           # Android при упаковке APK сам распаковывает .gz — делаем это заранее, чтобы APK и архив обновления были одинаковыми
           gunzip www/vendor/tesseract/lang/*.gz
           ls -la www/vendor/tesseract/lang
