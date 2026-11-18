@@ -226,7 +226,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.53', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.54', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -696,12 +696,13 @@ function vVisit() {
       const tubes = groupTubes(p); const marked = tubes.length && tubes.every((x) => x.taken || x.missed), missed = tubes.filter((x) => x.missed);
       return `<div class="card pad" style="display:flex;flex-direction:column;gap:12px">
         <div class="row"><span class="avatar">${esc(initials(p.last + ' ' + p.first))}</span>
-          <div style="flex:1;min-width:0"><b style="font-size:16px">${esc(p.last)} ${esc(p.first)}</b><div class="sub">${p.sex === 'm' ? 'М' : 'Ж'}${p.dob ? ' · ' + esc(p.dob) : ''} · ${p.items.length} ${plural(p.items.length, 'анализ', 'анализа', 'анализов')}</div></div>
+          <div style="flex:1;min-width:0;cursor:pointer" data-act="openPatient" data-v="${p.id}" role="button" aria-label="Открыть карточку пациента"><b style="font-size:16px">${esc(p.last)} ${esc(p.first)} <span style="color:#94A3B8;font-weight:400">›</span></b><div class="sub">${p.sex === 'm' ? 'М' : 'Ж'}${p.dob ? ' · ' + esc(p.dob) : ''} · ${p.items.length} ${plural(p.items.length, 'анализ', 'анализа', 'анализов')}</div></div>
           <b class="num">${fmt(pSum(p))}</b></div>
         ${(p.extra || []).length ? `<div class="sub" style="margin-top:-4px">${p.extra.map((x) => esc(x.name) + ' · ' + fmt(x.price)).join('; ')}${p.pid ? ' · ID ' + esc(p.pid) : ''}</div>` : ''}
         ${tubes.length ? `<div class="chips">${tubes.map((x) => `<span class="chip" style="${x.missed ? 'opacity:.5;text-decoration:line-through' : ''}">${x.taken ? I.check('#0F6B3A', 12) : miniTube(x)}${esc(x.name.replace(/ \((ЭДТА|ПЦР)\)/, ''))}${x.no ? ' (' + String(x.no).padStart(2, '0') + ')' : ''}${x.tests.length > 1 ? ' ×' + x.tests.length : ''}</span>`).join('')}</div>` : ''}
         ${missed.length ? `<div class="note err" style="padding:9px 12px;font-size:12.5px"><span><b>Не взято:</b> ${missed.map((x) => esc(tubeTitle(x)) + ' — ' + esc(x.missed.toLowerCase())).join('; ')} · −${fmt(pMiss(p))}</span></div>` : ''}
-        ${prepList(p).length ? `<div class="note warn" style="padding:9px 12px;font-size:12.5px"><span><b>Подготовка:</b> <span>${prepList(p).map((x) => esc(x)).join('; ')}</span></span></div>` : ''}
+        ${p.au && (p.au.orderDate || p.au.callTime) ? `<div class="sub" style="margin-top:-4px"><b>Вызов: ${esc([p.au.orderDate, p.au.callTime].filter(Boolean).join(' · '))}</b>${p.order && p.aurora ? ' · счёт ' + esc(p.order) : ''}</div>` : ''}
+        ${!p.aurora && prepList(p).length ? `<div class="note warn" style="padding:9px 12px;font-size:12.5px"><span><b>Подготовка:</b> <span>${prepList(p).map((x) => esc(x)).join('; ')}</span></span></div>` : ''}
         <div class="grid2">
           <button class="btn light small" data-act="catalog" data-v="${p.id}">${I.plus('#0F172A', 15)} Анализы</button>
           ${p.items.length ? `<button class="btn small" data-act="tubes" data-v="${p.id}" style="${marked ? 'background:var(--okbg);color:var(--ok);box-shadow:none' : ''}">${marked ? I.check('#0F6B3A') + ' Все отмечены' : I.bars() + ' Пробирки'}</button>` : `<button class="btn light small" data-act="editPatient" data-v="${p.id}">Изменить</button>`}
@@ -1039,9 +1040,9 @@ function auAddItem(l) {
 const CALL_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>`;
 function auFindAsk(msg) {
   if (!S.aurora || !S.aurora.login) { toast('Сначала подключите Aurora'); go('aurora'); return; }
-  overlay(`<b style="font-size:17px">Поиск в Aurora</b><span class="sub">Введите ID пациента с листа заказа</span>
+  overlay(`<b style="font-size:17px">Поиск в Aurora</b>
     ${msg ? `<div class="note warn" style="color:var(--bad);text-align:left">${esc(msg)}</div>` : ''}
-    <input class="input" id="auId" inputmode="numeric" placeholder="Например: 504970" value="${esc(UI.auLast || '')}" style="text-align:center;font-size:20px;font-weight:700;letter-spacing:1px">
+    <input class="input" id="auId" inputmode="numeric" placeholder="ID пациента" value="${esc(UI.auLast || '')}" style="text-align:center;font-size:20px;font-weight:700;letter-spacing:1px">
     <div class="grid2" style="width:100%"><button class="btn light" data-act="auCancel">Отмена</button><button class="btn" data-act="auGo">Найти</button></div>`);
   setTimeout(() => { const i = document.getElementById('auId'); if (i) { i.focus(); i.onkeydown = (e) => { if (e.key === 'Enter') auLookup(i.value); }; } }, 50);
 }
@@ -1060,6 +1061,8 @@ function auToScan(r) {
     dbg.push((it ? '✓ ' : '— ') + l.name + ' · ' + l.total + (l.status ? ' · ' + l.status : '') + (it && it.price !== l.total ? ' (в прайсе ' + it.price + ')' : '') + (added ? ' · добавлена в прайс' : '') + (it ? ' · пробирки: ' + ks.map((k) => String(TUBES[k].no).padStart(2, '0')).join(', ') + (AUC && AUC.tubes[l.productId] ? ' (Aurora)' : ' (правила приложения)') : ''));
   });
   r.skipped.forEach((l) => dbg.push('пропущено (' + l.why + '): ' + l.name + ' · ' + l.total));
+  if (v) dbg.push('', 'визит №' + v.id + ' · ' + v.dateText + ' · ' + v.period + ' · ' + v.status);
+  (r.dbg || []).forEach((x) => dbg.push(x));
   const total = r.lines.reduce((a, l) => a + l.total, 0);
   const sheet = { last: pt.last, first: pt.first, middle: pt.middle, dob: pt.dob, sex: pt.sex, pid: pt.pid, phone: (v && v.phone) || pt.phone,
     order: v && v.orders.length ? String(Math.max.apply(null, v.orders)) : '', address: (v && v.address) || pt.address, comment: [v && v.comment, pt.comment].filter(Boolean).join(' · '),
@@ -1078,6 +1081,7 @@ async function auLookup(id, visitId) {
   catch (e) { auFindAsk(e.message || String(e)); }
 }
 function auProblems(sc) {
+  if (sc.editId) return []; // карточка уже добавленного пациента — проверять нечего
   const sh = sc.sheet, m = sc.match, a = sc.au || {}, out = [];
   const err = (t) => out.push({ level: 'err', text: t }), warn = (t) => out.push({ level: 'warn', text: t });
   const sum = m.items.reduce((s, x) => s + x.price, 0) + m.extra.reduce((s, x) => s + (+x.price || 0), 0);
@@ -1189,6 +1193,15 @@ document.addEventListener('click', (e) => {
     case 'branch': UI.regBranch = v; keepForm(); break;
     case 'go': go(v); break;
     case 'auCat': (async () => { S.aurora = auCfg(); save(); auSet({ busy: 'cat', err: '', say: 'Загружаем…' }); try { await auCatLoad(true, (m) => auSet({ say: m })); auSet({ busy: '' }); toast('Цены и пробирки обновлены из Aurora'); } catch (e) { auSet({ busy: '', err: e.message || String(e) }); } })(); break;
+    case 'openPatient': { // нажали на ФИО — открываем ту же карточку заказа, что после поиска: данные, телефон, анализы
+      const p = patient(v); if (!p) break;
+      if (!p.scanned) { UI.editPatient = { ...p }; go('patient'); break; }
+      const a = p.au || {};
+      UI.scan = { src: p.aurora ? 'aurora' : 'card', editId: p.id, auProd: p.auProd || {}, showText: false, text: '', sheetTotal: 0,
+        sheet: { last: p.last, first: p.first, middle: p.middle || '', dob: p.dob || '', sex: p.sex, pid: p.pid || '', phone: p.phone || '', order: p.order ? String(p.order) : '', address: a.address || '', comment: a.comment || '', orderDate: a.orderDate || '', callTime: a.callTime || '' },
+        match: { items: p.items.map((id) => P.byId[id]).filter(Boolean).map((it) => ({ id: it.id, name: it.name, price: it.price, sure: true })), extra: (p.extra || []).map((x) => ({ ...x })) },
+        au: { visits: [], visit: { date: '' }, home: true, skipped: 0 } };
+      go('scan'); break; }
     case 'auFind': auFindAsk(); break;
     case 'auCancel': overlay(''); break;
     case 'auGo': { const i = document.getElementById('auId'); auLookup(i ? i.value : ''); break; }
@@ -1307,13 +1320,16 @@ document.addEventListener('submit', (e) => {
     scanKeep(); const sh = UI.scan.sheet, m = UI.scan.match, v = visit();
     if (!sh.last || !sh.first) { toast('Заполните фамилию и имя'); return; }
     if (sh.order && !/^\d{5,8}$/.test(sh.order)) { toast('ID счёта — только цифры (5–8)'); return; }
-    const dup = sh.order && v.patients.find((x) => String(x.order) === sh.order);
+    const old = UI.scan.editId && v.patients.find((x) => x.id === UI.scan.editId); // открыли карточку уже добавленного пациента — правим его же
+    const dup = !old && sh.order && v.patients.find((x) => String(x.order) === sh.order);
     if (dup && !ask('Пациент с этим ID счёта уже есть в выезде. Заменить его?')) return;
     if (dup) v.patients = v.patients.filter((x) => x !== dup);
-    const p = { id: uid(), last: sh.last, first: sh.first, middle: sh.middle, dob: sh.dob, sex: sh.sex || 'f', phone: sh.phone, pid: sh.pid, scanned: true,
-      items: m.items.map((x) => x.id), extra: m.extra.filter((x) => x.price > 0).map((x) => ({ name: x.name, price: x.price })) };
+    const p = Object.assign(old || { id: uid() }, { last: sh.last, first: sh.first, middle: sh.middle, dob: sh.dob, sex: sh.sex || 'f', phone: sh.phone, pid: sh.pid, scanned: true,
+      items: m.items.map((x) => x.id), extra: m.extra.filter((x) => x.price > 0).map((x) => ({ name: x.name, price: x.price })) });
     if (sh.order) p.order = Number(sh.order);
+    p.au = { orderDate: sh.orderDate || '', callTime: sh.callTime || '', address: sh.address || '', comment: sh.comment || '' };
     if (UI.scan.src === 'aurora') { p.aurora = true; p.auProd = UI.scan.auProd || {}; }
+    if (old) { save(); UI.scan = null; go('visit'); return; }
     v.patients.push(p);
     if (!v.addr && sh.address) v.addr = sh.address;
     save(); UI.scan = null; go('tubes', { patientId: p.id });
@@ -1523,7 +1539,7 @@ function scanFail(reasons) {
 }
 // Что пошло не так при распознавании: err — нужно переснять или исправить, warn — проверить глазами
 function scanProblems(sc) {
-  if (sc.src === 'aurora') return auProblems(sc);
+  if (sc.src === 'aurora' || sc.editId) return auProblems(sc);
   const sh = sc.sheet, m = sc.match, out = [];
   const sum = m.items.reduce((s, x) => s + x.price, 0) + m.extra.reduce((s, x) => s + (+x.price || 0), 0);
   const total = sc.sheetTotal;
@@ -1568,8 +1584,8 @@ function vScan() {
   const total = sc.sheetTotal, ok = !!total && total === sum && m.items.length > 0;
   const unsure = m.items.filter((x) => !x.sure).length;
   const probs = scanProblems(sc), errs = probs.filter((x) => x.level === 'err'), warns = probs.filter((x) => x.level === 'warn');
-  const nothing = !m.items.length && !sh.last, AU = sc.src === 'aurora';
-  return header(AU ? 'Заказ из Aurora' : 'Лист заказа', sh.orderDate ? 'Заказ от ' + esc(sh.orderDate) + (sh.callTime ? ' · ' + esc(sh.callTime) : '') : 'Проверьте распознанные данные', 'visit') + `
+  const nothing = !m.items.length && !sh.last, ED = !!sc.editId, AU = sc.src === 'aurora' || ED;
+  return header(ED ? 'Карточка пациента' : AU ? 'Заказ из Aurora' : 'Лист заказа', sh.orderDate ? 'Заказ от ' + esc(sh.orderDate) + (sh.callTime ? ' · ' + esc(sh.callTime) : '') : 'Проверьте распознанные данные', 'visit') + `
   <form class="body" data-submit="scan" style="padding-bottom:150px">
     ${scanTimeLine(sc.T)}
     ${errs.length ? `<div class="problems" role="alert">
@@ -1577,7 +1593,7 @@ function vScan() {
         <ul>${errs.map((x) => `<li>${esc(x.text)}</li>`).join('')}</ul>
         ${AU ? `<button type="button" class="btn red" data-act="auFind">Искать другой ID</button>` : `<div class="tips"><b>Как переснять:</b> лист целиком в кадре, телефон ровно над листом, хороший свет, без тени от руки и бликов, текст резкий.</div>
         <button type="button" class="btn red" data-act="scanCam">${I.cam} Сфотографировать заново</button>`}
-      </div>` : AU ?
+      </div>` : ED ? '' : AU ?
       `<div class="note ok" style="align-items:center">${I.check('#0F6B3A', 18)}<span><b>Найдено в Aurora: ${m.items.length} ${plural(m.items.length, 'анализ', 'анализа', 'анализов')}, ${fmt(sum)}</b><br>Сверьте ФИО с пациентом и нажмите «Добавить». Анализы потом можно добавить или убрать.</span></div>` :
       `<div class="note ok" style="align-items:center">${I.check('#0F6B3A', 18)}<span><b>Сумма сошлась с листом: ${fmt(sum)}</b><br>Все строки распознаны${sc.fioCheck === 'same' ? ', ФИО перепроверено' : ''}. Нажмите «Добавить».</span></div>`}
     ${AU && sc.au.visits.length > 1 ? `<div class="card pad" style="display:flex;flex-direction:column;gap:8px"><span class="sub">У пациента несколько заказов — выберите нужный:</span><div class="chips">${sc.au.visits.slice(0, 8).map((x) => `<button type="button" class="chip" data-act="auVisit" data-v="${x.id}" style="cursor:pointer;${sc.au.visit && x.id === sc.au.visit.id ? 'background:var(--brand);color:#fff;border-color:var(--brand)' : ''}">${esc(x.dateText || '—')}${x.home ? ' · выезд' : ''}</button>`).join('')}</div></div>` : ''}
@@ -1603,12 +1619,12 @@ function vScan() {
     <div class="list">${m.items.map((x, i) => `<div class="item ${x.sure ? '' : 'bad'}" style="cursor:default"><span class="check" style="background:var(--brand);border-color:var(--brand)">${I.check()}</span><span class="item-t"><b>${esc(x.name)}</b>${x.sure ? '' : `<span><span class="flag red">проверьте по листу</span></span>`}</span><span class="price">${fmt(x.price)}</span><button type="button" class="del" data-act="scanDel" data-v="${i}" aria-label="Убрать">${I.x()}</button></div>`).join('') || `<div class="empty">Анализы не распознаны</div>`}</div>
     ${m.extra.length ? `<div class="row between" style="padding:0 4px"><span class="h2">Не из прайса</span><span class="sub">${m.extra.length}</span></div>
     <div class="list">${m.extra.map((x, i) => `<div class="item ${x.price && x.name === 'Вызов на дом' ? '' : 'bad'}" style="cursor:default"><span class="item-t"><b>${esc(x.name)}</b>${x.price ? (x.name === 'Вызов на дом' ? '' : `<span><span class="flag red">нет в прайсе</span></span>`) : `<span><span class="flag red">впишите цену с листа</span></span>`}</span><input class="input num" name="xp${i}" value="${x.price || ''}" inputmode="numeric" placeholder="цена" aria-label="Цена" style="width:104px;height:44px;text-align:right;font-size:15px;font-weight:700;padding:0 10px"><button type="button" class="del" data-act="scanDelExtra" data-v="${i}" aria-label="Убрать">${I.x()}</button></div>`).join('')}</div>` : ''}
-    <button type="button" class="btn light small" data-act="scanText">${sc.showText ? (AU ? 'Скрыть строки заказа' : 'Скрыть распознанный текст') : (AU ? 'Показать строки заказа из Aurora' : 'Показать распознанный текст')}</button>
+    ${ED ? '' : `<button type="button" class="btn light small" data-act="scanText">${sc.showText ? (AU ? 'Скрыть строки заказа' : 'Скрыть распознанный текст') : (AU ? 'Показать строки заказа из Aurora' : 'Показать распознанный текст')}</button>`}
     ${sc.showText ? `<pre style="white-space:pre-wrap;font-size:11.5px;line-height:1.4;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin:0;overflow:auto">${esc(sc.text)}</pre>` : ''}
     <div class="bottom"><div>
       <div class="total" style="border:0;padding:0"><span style="font-weight:700">Итого</span><b>${fmt(sum)}</b></div>
       ${errs.length ? `<div class="sub" style="color:var(--bad);font-weight:600;text-align:center">${AU ? 'Есть ошибки (' + errs.length + ') — проверьте ID' : 'Есть ошибки (' + errs.length + ') — лучше переснять лист'}</div>` : ''}
-      <div class="grid2"><button type="button" class="btn ${errs.length ? 'red' : 'light'}" data-act="${AU ? 'auFind' : 'scanCam'}">${AU ? 'Другой ID' : 'Переснять'}</button><button class="btn ${errs.length ? 'light' : ''}" type="submit" ${m.items.length && sh.last ? '' : 'disabled'}>${errs.length ? 'Всё равно добавить' : 'Добавить'}</button></div>
+      <div class="grid2"><button type="button" class="btn ${errs.length ? 'red' : 'light'}" data-act="${ED ? 'go' : AU ? 'auFind' : 'scanCam'}" data-v="visit">${ED ? 'Назад' : AU ? 'Другой ID' : 'Переснять'}</button><button class="btn ${errs.length ? 'light' : ''}" type="submit" ${m.items.length && sh.last ? '' : 'disabled'}>${ED ? 'Сохранить' : errs.length ? 'Всё равно добавить' : 'Добавить'}</button></div>
     </div></div>
   </form>`;
 }

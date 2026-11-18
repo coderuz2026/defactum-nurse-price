@@ -301,18 +301,38 @@
     const vs = await visits(cfg, patient);
     const visit = (visitId && vs.find((x) => x.id === visitId)) || vs[0] || null;
     const l = visit ? await lines(cfg, visit.id) : { lines: [], skipped: [] };
-    if (visit) visit.orders = await saleOrders(cfg, visit.id, visit.orders);
-    return { patient, visits: vs, visit, lines: l.lines, skipped: l.skipped };
+    let dbg = [];
+    if (visit) { const so = await saleOrders(cfg, visit, patient, l.lines.reduce((a, x) => a + x.total, 0)); visit.orders = so.ids; dbg = so.dbg; }
+    return { patient, visits: vs, visit, lines: l.lines, skipped: l.skipped, dbg };
   }
 
   // Счёт (sale.order) визита: его номер — «ID счёта» на листе заказа. Ищем по визиту и его под-визитам.
-  async function saleOrders(cfg, visitId, known) {
-    if (known && known.length) return known;
+  // Счёт (sale.order) визита: его номер — «ID счёта» на листе заказа.
+  // Ищем по визиту и под-визитам; если там пусто — среди счетов этого пациента (ближайший по дате к визиту, лучше с той же суммой).
+  async function saleOrders(cfg, visit, patient, total) {
+    const dbg = [], F = ['name', 'state', 'amount_total', 'date_order', 'patient_visit_id', 'patient_invoice_number'];
+    const show = (x) => '№' + x.id + ' ' + (x.name || '') + ' · ' + String(x.date_order || '').slice(0, 10) + ' · ' + Math.round(x.amount_total || 0) + ' · ' + (x.state || '') + (x.patient_invoice_number ? ' · счёт пациента ' + x.patient_invoice_number : '') + (x.patient_visit_id ? ' · визит ' + x.patient_visit_id[0] : '');
+    let ids = (visit.orders || []).slice();
     try {
-      const vs = await call(cfg, 'his.patient_visit', 'search', [['|', ['id', '=', visitId], ['main_visit_id', '=', visitId]]], { limit: 100 });
-      const so = await call(cfg, 'sale.order', 'search_read', [[['patient_visit_id', 'in', vs.length ? vs : [visitId]], ['state', '!=', 'cancel']]], { fields: ['name', 'state', 'amount_total'], limit: 20, order: 'id desc' });
-      return so.map((x) => x.id);
-    } catch (e) { return []; }
+      const vs = await call(cfg, 'his.patient_visit', 'search', [['|', ['id', '=', visit.id], ['main_visit_id', '=', visit.id]]], { limit: 100 });
+      dbg.push('визиты заказа: ' + vs.join(', '));
+      const so = await call(cfg, 'sale.order', 'search_read', [[['patient_visit_id', 'in', vs.length ? vs : [visit.id]]]], { fields: F, limit: 20, order: 'id desc' });
+      so.forEach((x) => dbg.push('счёт по визиту: ' + show(x)));
+      so.filter((x) => x.state !== 'cancel').forEach((x) => { if (ids.indexOf(x.id) < 0) ids.push(x.id); });
+    } catch (e) { dbg.push('счета по визиту: ошибка — ' + e.message); }
+    if (!ids.length) {
+      try {
+        const so = await call(cfg, 'sale.order', 'search_read', [[['partner_id', '=', +patient.pid]]], { fields: F, limit: 8, order: 'id desc' });
+        so.forEach((x) => dbg.push('счёт пациента: ' + show(x)));
+        const live = so.filter((x) => x.state !== 'cancel');
+        const day = (x) => Math.abs((Date.parse(String(x.date_order || '').slice(0, 10)) - Date.parse(visit.date)) / 864e5);
+        // подходит счёт, созданный не раньше чем за 7 дней до визита; среди них — с той же суммой, иначе самый новый
+        const near = live.filter((x) => visit.date && day(x) <= 7);
+        const pick = near.find((x) => Math.round(x.amount_total || 0) === total) || near[0];
+        if (pick) { ids = [pick.id]; dbg.push('взят счёт №' + pick.id + ' (по пациенту и дате)'); }
+      } catch (e) { dbg.push('счета пациента: ошибка — ' + e.message); }
+    }
+    return { ids, dbg };
   }
   /* Справочник из Aurora: услуги с ценами и какие контейнеры (пробирки) нужны каждой услуге.
      lis.container — виды контейнеров; lis.biomaterial_container_map — услуга → биоматериал → контейнер. */
