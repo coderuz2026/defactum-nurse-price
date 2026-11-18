@@ -226,7 +226,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.52', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.53', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -268,6 +268,14 @@ const shade = (hex, t) => { // t > 0 — светлее, t < 0 — темнее
 const ART_KIND = { edta: 'tube', serum: 'gel', bio: 'gel', citr: 'tube', gen: 'tube', check: 'tube', urine: 'cup', feces: 'jar', saliva: 'cup', sperm: 'cup', pcr: 'swab', bak: 'swab', glass: 'slide' };
 const ART_FILL = { urine: '#F2CB3A', saliva: '#DCEBF5', sperm: '#EEF0E6', feces: '#8A5A33', pcr: '#F7C6D0', bak: '#F3D98B', check: '#B8C2CC' };
 // Подробный рисунок контейнера: пробирка (с гелем или без), баночка, пробирка с тампоном, предметное стекло
+// Маленький значок в карточке пациента: пробирка, баночка (моча, кал, слюна), пробирка с тампоном или стекло — по виду контейнера
+function miniTube(t) {
+  const kind = ART_KIND[t.key] || 'tube', cap = t.cap, fill = ART_FILL[t.key] || '#fff';
+  if (kind === 'cup' || kind === 'jar') return `<svg width="14" height="22" viewBox="0 0 14 22" aria-hidden="true"><rect x=".5" y="5" width="13" height="5" rx="1.5" fill="${cap}"/><path d="M2 10h10l-1 10.5a1 1 0 0 1-1 .9H4a1 1 0 0 1-1-.9z" fill="#fff" stroke="#CBD5E1"/><path d="M3 15h8l-.5 5.4H3.5z" fill="${fill}" opacity=".9"/></svg>`;
+  if (kind === 'slide') return `<svg width="10" height="22" viewBox="0 0 10 22" aria-hidden="true"><rect x="1.5" y="1" width="7" height="20" rx="1" fill="#F8FAFC" stroke="#94A3B8"/><rect x="1.5" y="1" width="7" height="5" fill="#CBD5E1"/></svg>`;
+  if (kind === 'swab') return `<svg width="10" height="22" viewBox="0 0 10 22" aria-hidden="true"><rect x=".5" y="0" width="9" height="6" rx="2" fill="${cap}" stroke="#CBD5E1" stroke-width=".5"/><rect x="1.5" y="5" width="7" height="16" rx="3.5" fill="#fff" stroke="#CBD5E1"/><path d="M5 6v10" stroke="#C9B48A" stroke-width="1"/><ellipse cx="5" cy="17" rx="1.6" ry="2.4" fill="#F7C6D0"/></svg>`;
+  return I.tube(cap);
+}
 function tubeArt(t) {
   const kind = ART_KIND[t.key] || 'tube', cap = t.cap, capD = shade(cap, -0.22), capL = shade(cap, 0.35);
   const liq = ART_FILL[t.key] || '#C2362B', liqD = shade(liq, -0.25), liqL = shade(liq, 0.25);
@@ -691,7 +699,7 @@ function vVisit() {
           <div style="flex:1;min-width:0"><b style="font-size:16px">${esc(p.last)} ${esc(p.first)}</b><div class="sub">${p.sex === 'm' ? 'М' : 'Ж'}${p.dob ? ' · ' + esc(p.dob) : ''} · ${p.items.length} ${plural(p.items.length, 'анализ', 'анализа', 'анализов')}</div></div>
           <b class="num">${fmt(pSum(p))}</b></div>
         ${(p.extra || []).length ? `<div class="sub" style="margin-top:-4px">${p.extra.map((x) => esc(x.name) + ' · ' + fmt(x.price)).join('; ')}${p.pid ? ' · ID ' + esc(p.pid) : ''}</div>` : ''}
-        ${tubes.length ? `<div class="chips">${tubes.map((x) => `<span class="chip" style="${x.missed ? 'opacity:.5;text-decoration:line-through' : ''}">${x.taken ? I.check('#0F6B3A', 12) : I.tube(x.cap)}${esc(x.name.replace(/ \((ЭДТА|ПЦР)\)/, ''))}${x.no ? ' (' + String(x.no).padStart(2, '0') + ')' : ''}${x.tests.length > 1 ? ' ×' + x.tests.length : ''}</span>`).join('')}</div>` : ''}
+        ${tubes.length ? `<div class="chips">${tubes.map((x) => `<span class="chip" style="${x.missed ? 'opacity:.5;text-decoration:line-through' : ''}">${x.taken ? I.check('#0F6B3A', 12) : miniTube(x)}${esc(x.name.replace(/ \((ЭДТА|ПЦР)\)/, ''))}${x.no ? ' (' + String(x.no).padStart(2, '0') + ')' : ''}${x.tests.length > 1 ? ' ×' + x.tests.length : ''}</span>`).join('')}</div>` : ''}
         ${missed.length ? `<div class="note err" style="padding:9px 12px;font-size:12.5px"><span><b>Не взято:</b> ${missed.map((x) => esc(tubeTitle(x)) + ' — ' + esc(x.missed.toLowerCase())).join('; ')} · −${fmt(pMiss(p))}</span></div>` : ''}
         ${prepList(p).length ? `<div class="note warn" style="padding:9px 12px;font-size:12.5px"><span><b>Подготовка:</b> <span>${prepList(p).map((x) => esc(x)).join('; ')}</span></span></div>` : ''}
         <div class="grid2">
@@ -931,17 +939,36 @@ function vHistory() {
 const AU_CAT = 9000; // раздел прайса для услуг, которых нет в прайсе приложения, но они пришли из заказа Aurora
 let AUC = null;
 const auNorm = (x) => String(x || '').replace(/^\[[^\]]*\]\s*/, '').toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]/g, '');
+// Вид посуды и цвет по названию контейнера и биоматериала из Aurora: моча — баночка, кал — контейнер с ложкой, мазок — пробирка с тампоном и т. д.
+function auLook(name) {
+  const n = String(name || '').toLowerCase().replace(/ё/g, 'е'), o = { kind: '', cap: '', fill: '' };
+  if (/стекл/.test(n)) o.kind = 'slide';
+  else if (/(^|[^а-я])кал(а|ом|овые)?([^а-я]|$)|копро|фекал/.test(n)) { o.kind = 'jar'; o.fill = '#8A5A33'; o.cap = '#8B5A2B'; }
+  else if (/моч|урин/.test(n)) { o.kind = 'cup'; o.fill = '#F2CB3A'; o.cap = '#F2C230'; }
+  else if (/слюн/.test(n)) { o.kind = 'cup'; o.fill = '#DCEBF5'; o.cap = '#94A3B8'; }
+  else if (/эякулят|сперм|мокрот|стерильн.{0,12}контейнер|контейнер|банк|баноч|стакан/.test(n)) { o.kind = 'cup'; o.fill = '#EEF0E6'; o.cap = '#94A3B8'; }
+  else if (/мазок|тампон|зонд|соскоб|транспортн|сред[аоы]|эппендорф|пцр|swab/.test(n)) { o.kind = 'swab'; o.fill = '#F7C6D0'; }
+  else if (/гел|сыворот/.test(n)) o.kind = 'gel';
+  else if (/пробирк|крышк|вакутейнер|эдта|цитрат|гепарин|кров|плазм/.test(n)) o.kind = 'tube';
+  const col = [[/сирен|фиолет|лилов/, '#8E5CC9'], [/желт/, '#E9B200'], [/красн/, '#D92D20'], [/голуб|син/, '#4BA3E3'], [/зелен/, '#22A55B'], [/сер(ая|ый|ой)/, '#94A3B8'], [/бел/, '#E2E8F0'], [/розов/, '#F472B6'], [/черн/, '#1F2937'], [/оранж/, '#F97316'], [/коричн/, '#8B5A2B']].find((x) => x[0].test(n));
+  if (col) o.cap = col[1];
+  return o;
+}
 function auIndex(c) {
   if (!c || !c.cont) return null;
   c.byName = {}; Object.keys(c.prod).forEach((id) => { const k = auNorm(c.prod[id][0]); (c.byName[k] = c.byName[k] || []).push(+id); });
   // Контейнер Aurora → пробирка приложения по номеру контейнера; незнакомые контейнеры добавляются как новые виды пробирок
   c.key = {};
+  const mats = {}; Object.keys(c.tubes).forEach((pid) => c.tubes[pid].forEach((r) => { if (r[1] && !mats[r[0]]) mats[r[0]] = r[1]; })); // биоматериал контейнера
   Object.keys(c.cont).forEach((cid) => {
     const x = c.cont[cid]; if (!x.no) return;
+    const look = auLook(x.name + ' ' + (mats[cid] || ''));
     const known = Object.keys(TUBES).find((k) => TUBES[k].no === x.no && !/^au\d/.test(k));
-    if (known) { c.key[cid] = known; return; }
+    // Номер совпал с пробиркой приложения, и по названию это тот же вид посуды — берём её; иначе рисуем по названию из Aurora
+    if (known && (!look.kind || look.kind === (ART_KIND[known] || 'tube') || (look.kind === 'tube' && ART_KIND[known] === 'gel'))) { c.key[cid] = known; return; }
     const k = 'au' + x.no; c.key[cid] = k;
-    TUBES[k] = { no: x.no, name: x.name || ('Контейнер ' + x.no), cap: x.color || '#64748B', mat: '', an: '' };
+    TUBES[k] = { no: x.no, name: x.name || ('Контейнер ' + x.no), cap: x.color || look.cap || '#64748B', mat: mats[cid] || '', an: '' };
+    ART_KIND[k] = look.kind || 'tube'; if (look.fill) ART_FILL[k] = look.fill;
   });
   return c;
 }
@@ -1046,7 +1073,7 @@ async function auLookup(id, visitId) {
   overlay(`${MARK(48)}<b style="font-size:17px">Ищу в Aurora…</b><span class="sub">ID пациента ${esc(id)}</span>`);
   try {
     try { await auCatLoad(false); } catch (e) { /* справочник не загрузился — работаем по прайсу приложения */ }
-    const r = await Aurora.order(S.aurora, id, visitId); overlay(''); UI.scan = auToScan(r); go('scan');
+    const r = await Aurora.order(S.aurora, id, visitId); overlay(''); UI.auLast = ''; UI.scan = auToScan(r); go('scan'); // нашли — поле поиска в следующий раз пустое
   }
   catch (e) { auFindAsk(e.message || String(e)); }
 }
