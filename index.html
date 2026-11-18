@@ -226,7 +226,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.50', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.51', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -413,6 +413,7 @@ async function loadPrices(force) {
 // Дата прайса в привычном виде: 2026-11-10 → 10.11.2026
 const priceDate = () => String(P.version || '').split('-').reverse().join('.');
 function setPrices(d) {
+  d = auMergePrices(d);
   P.version = d.version; P.cats = d.categories; P.items = d.items; P.byId = {}; P.catById = {};
   d.categories.forEach((c) => { P.catById[c.id] = c; c.n = 0; });
   d.items.forEach((it) => { P.byId[it.id] = it; if (P.catById[it.cat]) P.catById[it.cat].n++; it._s = (it.name + ' ' + (P.catById[it.cat] || {}).name).toLowerCase().replace(/ё/g, 'е'); });
@@ -428,7 +429,7 @@ const patient = (id) => (visit() || { patients: [] }).patients.find((p) => p.id 
 // Анализы из пробирки, которую не удалось взять, в сумму не идут. Анализ, которому нужны две пробирки, выпадает, если не взята любая из них.
 function pMissedIds(p) {
   const m = p.missed || {}, out = new Set(); if (!Object.keys(m).length) return out;
-  p.items.forEach((id) => { const it = P.byId[id]; if (it && tubesFor(it, (P.catById[it.cat] || {}).name).some((k) => m[k])) out.add(id); });
+  p.items.forEach((id) => { const it = P.byId[id]; if (it && itemTubes(it, p).some((k) => m[k])) out.add(id); });
   return out;
 }
 const pItems = (p) => { const miss = pMissedIds(p); return p.items.reduce((s, id) => s + (miss.has(id) ? 0 : ((P.byId[id] || {}).price || 0)), 0); };
@@ -590,7 +591,7 @@ function groupTubes(p) {
   const groups = {};
   p.items.forEach((id) => {
     const it = P.byId[id]; if (!it) return;
-    tubesFor(it, (P.catById[it.cat] || {}).name).forEach((k) => { (groups[k] = groups[k] || { key: k, ...TUBES[k], tests: [] }).tests.push(it.name); });
+    itemTubes(it, p).forEach((k) => { (groups[k] = groups[k] || { key: k, ...TUBES[k], tests: [] }).tests.push(it.name); });
   });
   p.stuck = p.stuck || {};
   if (!p.order) { S.order = (S.order || 900000) + 1; p.order = S.order; save(); } // у пациента с листа p.order = «ID счета» из Aurora
@@ -921,6 +922,88 @@ function vHistory() {
   </div>`;
 }
 
+/* ---------- Aurora: справочник (цены и пробирки) ---------- */
+// Справочник хранится на телефоне и обновляется раз в 12 часов или кнопкой. Нет справочника — работают цены и правила пробирок приложения.
+const AU_CAT = 9000; // раздел прайса для услуг, которых нет в прайсе приложения, но они пришли из заказа Aurora
+let AUC = null;
+const auNorm = (x) => String(x || '').replace(/^\[[^\]]*\]\s*/, '').toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]/g, '');
+function auIndex(c) {
+  if (!c || !c.cont) return null;
+  c.byName = {}; Object.keys(c.prod).forEach((id) => { const k = auNorm(c.prod[id][0]); (c.byName[k] = c.byName[k] || []).push(+id); });
+  // Контейнер Aurora → пробирка приложения по номеру контейнера; незнакомые контейнеры добавляются как новые виды пробирок
+  c.key = {};
+  Object.keys(c.cont).forEach((cid) => {
+    const x = c.cont[cid]; if (!x.no) return;
+    const known = Object.keys(TUBES).find((k) => TUBES[k].no === x.no && !/^au\d/.test(k));
+    if (known) { c.key[cid] = known; return; }
+    const k = 'au' + x.no; c.key[cid] = k;
+    TUBES[k] = { no: x.no, name: x.name || ('Контейнер ' + x.no), cap: x.color || '#64748B', mat: '', an: '' };
+  });
+  return c;
+}
+function auCatInit() { try { AUC = auIndex(JSON.parse(localStorage.getItem(LS + '_aucat'))); } catch (e) { AUC = null; } }
+async function auCatLoad(force, say) {
+  if (!S.aurora || !S.aurora.login) return null;
+  if (!force && AUC && Date.now() - AUC.ts < 12 * 3600e3) return AUC;
+  const c = await Aurora.catalog(S.aurora, say);
+  try { localStorage.setItem(LS + '_aucat', JSON.stringify(c)); } catch (e) {}
+  AUC = auIndex(c);
+  const cached = (() => { try { return JSON.parse(localStorage.getItem(LS + '_prices')); } catch (e) { return null; } })();
+  if (cached) setPrices(cached);
+  return AUC;
+}
+// Услуги Aurora с тем же названием, что у позиции прайса (в Aurora одна услуга может быть заведена несколько раз — по филиалам)
+function auProdIds(it, p) {
+  if (!AUC) return [];
+  const own = p && p.auProd && p.auProd[it.id];
+  if (own && AUC.prod[own]) return [own]; // точная услуга из заказа этого пациента
+  if (it.au && AUC.prod[it.au]) return [it.au];
+  return AUC.byName[auNorm(it.name)] || [];
+}
+// Пробирки для анализа: сначала по справочнику Aurora, если там пусто — по правилам приложения
+function itemTubes(it, p) {
+  const ids = auProdIds(it, p);
+  for (const id of ids) {
+    const rows = AUC.tubes[id]; if (!rows) continue;
+    const ks = []; rows.forEach((r) => { const k = AUC.key[r[0]]; if (k && ks.indexOf(k) < 0) ks.push(k); });
+    if (ks.length) return ks;
+  }
+  return tubesFor(it, (P.catById[it.cat] || {}).name);
+}
+// Цены из Aurora поверх прайса приложения + услуги, добавленные из заказов. Цена меняется, только если в Aurora она одна для этого названия.
+function auMergePrices(d) {
+  const extra = (S && S.auItems) || [];
+  if (!AUC && !extra.length) return d;
+  const out = { ...d, categories: d.categories.slice(), items: d.items.map((x) => ({ ...x })) };
+  const ch = [];
+  if (AUC) out.items.forEach((it) => {
+    const set = {}; (AUC.byName[auNorm(it.name)] || []).forEach((id) => { const pr = AUC.prod[id][1]; if (pr > 0) set[pr] = 1; });
+    const ps = Object.keys(set);
+    if (ps.length === 1 && +ps[0] !== it.price) { ch.push({ name: it.name, was: it.price, now: +ps[0] }); it.price = +ps[0]; }
+  });
+  if (extra.length) {
+    if (!out.categories.some((c) => c.id === AU_CAT)) out.categories.push({ id: AU_CAT, code: '99', name: 'Из Aurora' });
+    extra.forEach((x) => { if (!out.items.some((i) => i.id === x.id)) out.items.push({ id: x.id, name: x.name, cat: AU_CAT, price: (AUC && AUC.prod[x.au] && AUC.prod[x.au][1]) || x.price, au: x.au }); });
+  }
+  UI.auPriceCh = ch;
+  return out;
+}
+// Строка заказа Aurora → позиция прайса: по номеру услуги, по точному названию, иначе услуга добавляется в прайс в раздел «Из Aurora»
+function auItemFor(l) {
+  const n = auNorm(l.name);
+  let it = P.byId[l.productId]; if (it && auNorm(it.name) !== n) it = null;
+  if (!it) it = P.items.find((x) => x.au === l.productId) || P.items.find((x) => auNorm(x.name) === n);
+  return it || null;
+}
+function auAddItem(l) {
+  S.auItems = S.auItems || [];
+  const x = { id: -l.productId, name: l.name, price: l.price || l.total, au: l.productId };
+  if (!S.auItems.some((i) => i.id === x.id)) { S.auItems.push(x); save(); }
+  const cached = (() => { try { return JSON.parse(localStorage.getItem(LS + '_prices')); } catch (e) { return null; } })();
+  if (cached) setPrices(cached);
+  return P.byId[x.id];
+}
+
 /* ---------- Aurora: поиск заказа по ID пациента ---------- */
 const CALL_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>`;
 function auFindAsk(msg) {
@@ -934,25 +1017,33 @@ function auFindAsk(msg) {
 // Ответ Aurora → тот же экран проверки, что после фото листа (UI.scan), дальше общий путь: пациент, пробирки, этикетки
 function auToScan(r) {
   const pt = r.patient, v = r.visit, items = [], extra = [], dbg = [];
+  const auProd = {};
   r.lines.forEach((l) => {
-    const it = P.items.find((x) => x.id === l.productId);
-    if (it && !items.some((x) => x.id === it.id)) items.push({ id: it.id, name: it.name, price: it.price, sure: true, aPrice: l.total });
-    else if (!it) extra.push({ name: /вызов.{0,12}дом/i.test(l.name) ? 'Вызов на дом' : l.name, price: l.total });
-    dbg.push((it ? '✓ ' : '— ') + l.name + ' · ' + l.total + (l.status ? ' · ' + l.status : '') + (it && it.price !== l.total ? ' (в прайсе ' + it.price + ')' : ''));
+    const visitFee = /вызов.{0,12}дом/i.test(l.name);
+    let it = visitFee ? null : auItemFor(l), added = false;
+    // Услуги нет в прайсе приложения, но для неё в Aurora есть пробирка — это анализ: добавляем в прайс (раздел «Из Aurora»)
+    if (!it && !visitFee && AUC && AUC.tubes[l.productId]) { it = auAddItem(l); added = !!it; }
+    if (it) { auProd[it.id] = l.productId; if (!items.some((x) => x.id === it.id)) items.push({ id: it.id, name: it.name, price: it.price, sure: true, aPrice: l.total }); }
+    else extra.push({ name: visitFee ? 'Вызов на дом' : l.name, price: l.total });
+    const ks = it ? itemTubes(it, { auProd }) : [];
+    dbg.push((it ? '✓ ' : '— ') + l.name + ' · ' + l.total + (l.status ? ' · ' + l.status : '') + (it && it.price !== l.total ? ' (в прайсе ' + it.price + ')' : '') + (added ? ' · добавлена в прайс' : '') + (it ? ' · пробирки: ' + ks.map((k) => String(TUBES[k].no).padStart(2, '0')).join(', ') + (AUC && AUC.tubes[l.productId] ? ' (Aurora)' : ' (правила приложения)') : ''));
   });
   r.skipped.forEach((l) => dbg.push('пропущено (' + l.why + '): ' + l.name + ' · ' + l.total));
   const total = r.lines.reduce((a, l) => a + l.total, 0);
   const sheet = { last: pt.last, first: pt.first, middle: pt.middle, dob: pt.dob, sex: pt.sex, pid: pt.pid, phone: (v && v.phone) || pt.phone,
     order: v && v.orders.length ? String(Math.max.apply(null, v.orders)) : '', address: (v && v.address) || pt.address, comment: [v && v.comment, pt.comment].filter(Boolean).join(' · '),
     orderDate: v ? v.dateText : '', callTime: v ? v.period : '' };
-  return { src: 'aurora', sheet, match: { items, extra, sum: total, total, ok: true }, sheetTotal: total, text: dbg.join('\n'), showText: false, au: { visits: r.visits, visit: v, home: !!(v && v.home), skipped: r.skipped.length } };
+  return { src: 'aurora', auProd, sheet, match: { items, extra, sum: total, total, ok: true }, sheetTotal: total, text: dbg.join('\n'), showText: false, au: { visits: r.visits, visit: v, home: !!(v && v.home), skipped: r.skipped.length } };
 }
 async function auLookup(id, visitId) {
   id = String(id || '').replace(/\D/g, ''); if (!id) { auFindAsk('Введите ID пациента — только цифры'); return; }
   if (!P.items.length) { toast('Прайс ещё не загружен — нужен интернет'); return; }
   UI.auLast = id;
   overlay(`${MARK(48)}<b style="font-size:17px">Ищу в Aurora…</b><span class="sub">ID пациента ${esc(id)}</span>`);
-  try { const r = await Aurora.order(S.aurora, id, visitId); overlay(''); UI.scan = auToScan(r); go('scan'); }
+  try {
+    try { await auCatLoad(false); } catch (e) { /* справочник не загрузился — работаем по прайсу приложения */ }
+    const r = await Aurora.order(S.aurora, id, visitId); overlay(''); UI.scan = auToScan(r); go('scan');
+  }
   catch (e) { auFindAsk(e.message || String(e)); }
 }
 function auProblems(sc) {
@@ -988,6 +1079,13 @@ function vAurora() {
       <button class="btn" ${st.busy ? 'disabled' : ''}>${st.busy === 'login' ? 'Проверяем…' : 'Сохранить и проверить подключение'}</button>
       ${st.ok ? `<div class="note ok">Подключено: ${esc(st.ok)}</div>` : ''}
       ${st.err ? `<div class="note warn" style="color:var(--bad)">${esc(st.err)}</div>` : ''}
+    </div>
+    <div class="card pad" style="display:flex;flex-direction:column;gap:12px">
+      <b style="font-size:16px">Цены и пробирки из Aurora</b>
+      <div class="sub">${AUC ? 'Обновлено ' + new Date(AUC.ts).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + ' · услуг: ' + Object.keys(AUC.prod).length + ' · с пробирками: ' + Object.keys(AUC.tubes).length + ' · контейнеров: ' + Object.keys(AUC.cont).length : 'Ещё не загружено. Загрузится само при первом поиске по ID.'}</div>
+      ${AUC ? `<div class="sub">Контейнеры (номер · название): ${esc(Object.keys(AUC.cont).map((k) => AUC.cont[k]).filter((x) => Object.keys(AUC.tubes).some((pid) => AUC.tubes[pid].some((r) => AUC.cont[r[0]] === x))).sort((a, b) => a.no - b.no).slice(0, 40).map((x) => (x.no ? String(x.no).padStart(2, '0') : '?? [' + x.code + ']') + ' · ' + x.name).join('; '))}</div>` : ''}
+      ${AUC && (UI.auPriceCh || []).length ? `<div class="sub"><b>Цены из Aurora отличаются от прайса приложения (${UI.auPriceCh.length}):</b><br>${UI.auPriceCh.slice(0, 30).map((x) => esc(x.name.slice(0, 46)) + ': ' + fmt(x.was) + ' → ' + fmt(x.now)).join('<br>')}${UI.auPriceCh.length > 30 ? '<br>… и ещё ' + (UI.auPriceCh.length - 30) : ''}</div>` : ''}
+      <button type="button" class="btn light" data-act="auCat" ${st.busy ? 'disabled' : ''}>${st.busy === 'cat' ? esc(st.say || 'Загружаем…') : 'Обновить цены и пробирки из Aurora'}</button>
     </div>
     <div class="card pad" style="display:flex;flex-direction:column;gap:12px">
       <b style="font-size:16px">Отчёт для настройки</b>
@@ -1059,6 +1157,7 @@ document.addEventListener('click', (e) => {
     case 'authMode': UI.authMode = UI.authMode === 'reg' ? 'login' : 'reg'; UI.err = ''; render(); break;
     case 'branch': UI.regBranch = v; keepForm(); break;
     case 'go': go(v); break;
+    case 'auCat': (async () => { S.aurora = auCfg(); save(); auSet({ busy: 'cat', err: '', say: 'Загружаем…' }); try { await auCatLoad(true, (m) => auSet({ say: m })); auSet({ busy: '' }); toast('Цены и пробирки обновлены из Aurora'); } catch (e) { auSet({ busy: '', err: e.message || String(e) }); } })(); break;
     case 'auFind': auFindAsk(); break;
     case 'auCancel': overlay(''); break;
     case 'auGo': { const i = document.getElementById('auId'); auLookup(i ? i.value : ''); break; }
@@ -1183,6 +1282,7 @@ document.addEventListener('submit', (e) => {
     const p = { id: uid(), last: sh.last, first: sh.first, middle: sh.middle, dob: sh.dob, sex: sh.sex || 'f', phone: sh.phone, pid: sh.pid, scanned: true,
       items: m.items.map((x) => x.id), extra: m.extra.filter((x) => x.price > 0).map((x) => ({ name: x.name, price: x.price })) };
     if (sh.order) p.order = Number(sh.order);
+    if (UI.scan.src === 'aurora') { p.aurora = true; p.auProd = UI.scan.auProd || {}; }
     v.patients.push(p);
     if (!v.addr && sh.address) v.addr = sh.address;
     save(); UI.scan = null; go('tubes', { patientId: p.id });
@@ -1810,6 +1910,7 @@ function updateResult() {
 S.visits.forEach((v) => { v.homeFee = 0; }); // поле «Выезд на дом» убрано
 if (S.me) UI.view = 'visit';
 render();
+auCatInit();
 loadPrices(false);
 setTimeout(updateResult, document.documentElement.classList.contains('nosplash') ? 300 : 3600);
 setTimeout(() => checkUpdate(false), 4000);

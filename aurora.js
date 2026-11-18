@@ -301,9 +301,36 @@
     const vs = await visits(cfg, patient);
     const visit = (visitId && vs.find((x) => x.id === visitId)) || vs[0] || null;
     const l = visit ? await lines(cfg, visit.id) : { lines: [], skipped: [] };
+    if (visit) visit.orders = await saleOrders(cfg, visit.id, visit.orders);
     return { patient, visits: vs, visit, lines: l.lines, skipped: l.skipped };
   }
 
-  const api = { login, call, logout, discover, order, findPatient, AuroraError, _shape: shape, _dmy: dmy };
+  // Счёт (sale.order) визита: его номер — «ID счёта» на листе заказа. Ищем по визиту и его под-визитам.
+  async function saleOrders(cfg, visitId, known) {
+    if (known && known.length) return known;
+    try {
+      const vs = await call(cfg, 'his.patient_visit', 'search', [['|', ['id', '=', visitId], ['main_visit_id', '=', visitId]]], { limit: 100 });
+      const so = await call(cfg, 'sale.order', 'search_read', [[['patient_visit_id', 'in', vs.length ? vs : [visitId]], ['state', '!=', 'cancel']]], { fields: ['name', 'state', 'amount_total'], limit: 20, order: 'id desc' });
+      return so.map((x) => x.id);
+    } catch (e) { return []; }
+  }
+  /* Справочник из Aurora: услуги с ценами и какие контейнеры (пробирки) нужны каждой услуге.
+     lis.container — виды контейнеров; lis.biomaterial_container_map — услуга → биоматериал → контейнер. */
+  async function catalog(cfg, say) {
+    say = say || (() => {});
+    say('Контейнеры…');
+    const cs = await call(cfg, 'lis.container', 'search_read', [[]], { fields: ['name', 'code', 'short_name', 'color', 'container_id'], limit: 1000 });
+    say('Пробирки для анализов…');
+    const mp = await call(cfg, 'lis.biomaterial_container_map', 'search_read', [[]], { fields: ['product_id', 'bio_material_id', 'container_id'], limit: 20000 });
+    say('Цены…');
+    const pr = await call(cfg, 'product.product', 'search_read', [[['sale_ok', '=', true]]], { fields: ['name', 'lst_price'], limit: 20000 });
+    const num = (c) => { for (const v of [c.code, c.container_id, c.short_name]) { const m = String(v || '').trim().match(/^0*(\d{1,3})$/); if (m) return +m[1]; } return 0; };
+    const cont = {}; cs.forEach((c) => { cont[c.id] = { no: num(c), name: c.name || '', short: c.short_name || '', color: /^#[0-9a-f]{6}$/i.test(String(c.color || '')) ? c.color : '', code: String(c.code || '') }; });
+    const tubes = {}; mp.forEach((m) => { const pid = m2o(m.product_id).id, cid = m2o(m.container_id).id; if (!pid || !cid) return; const a = (tubes[pid] = tubes[pid] || []); if (!a.some((x) => x[0] === cid)) a.push([cid, m2o(m.bio_material_id).name]); });
+    const prod = {}; pr.forEach((x) => { prod[x.id] = [String(x.name || ''), Math.round(x.lst_price || 0)]; });
+    return { ts: Date.now(), cont, tubes, prod };
+  }
+
+  const api = { login, call, logout, discover, order, findPatient, catalog, AuroraError, _shape: shape, _dmy: dmy };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Aurora = api;
 })(typeof window !== 'undefined' ? window : globalThis);
