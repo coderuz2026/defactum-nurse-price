@@ -226,7 +226,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.54', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.55', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -1061,7 +1061,7 @@ function auToScan(r) {
     dbg.push((it ? '✓ ' : '— ') + l.name + ' · ' + l.total + (l.status ? ' · ' + l.status : '') + (it && it.price !== l.total ? ' (в прайсе ' + it.price + ')' : '') + (added ? ' · добавлена в прайс' : '') + (it ? ' · пробирки: ' + ks.map((k) => String(TUBES[k].no).padStart(2, '0')).join(', ') + (AUC && AUC.tubes[l.productId] ? ' (Aurora)' : ' (правила приложения)') : ''));
   });
   r.skipped.forEach((l) => dbg.push('пропущено (' + l.why + '): ' + l.name + ' · ' + l.total));
-  if (v) dbg.push('', 'визит №' + v.id + ' · ' + v.dateText + ' · ' + v.period + ' · ' + v.status);
+  if (v) dbg.push('', 'визит №' + v.id + ' · ' + v.dateText + ' · ' + v.period + ' · ' + v.status, 'даты в Aurora: ' + (v.raw || ''));
   (r.dbg || []).forEach((x) => dbg.push(x));
   const total = r.lines.reduce((a, l) => a + l.total, 0);
   const sheet = { last: pt.last, first: pt.first, middle: pt.middle, dob: pt.dob, sex: pt.sex, pid: pt.pid, phone: (v && v.phone) || pt.phone,

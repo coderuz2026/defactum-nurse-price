@@ -253,7 +253,7 @@
   const m2o = (v) => (Array.isArray(v) ? { id: v[0], name: String(v[1] || '') } : { id: 0, name: '' });
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const PAT_F = ['first_name', 'last_name', 'middle_name', 'full_name', 'phone_number', 'phone_number_2', 'gender', 'date', 'partner_id', 'home_visit_address', 'home_visit_comment', 'intercom_code', 'full_address'];
-  const VIS_F = ['date', 'visit_status', 'is_home_visit', 'home_visit_address', 'home_visit_period_id', 'phone_number', 'total_amount', 'sale_order_ids', 'comment', 'patient_comment', 'main_visit_id', 'scheduled_time'];
+  const VIS_F = ['date', 'visit_status', 'is_home_visit', 'home_visit_address', 'home_visit_period_id', 'phone_number', 'total_amount', 'sale_order_ids', 'comment', 'patient_comment', 'main_visit_id', 'scheduled_time', 'start_date_time', 'create_date'];
   const DET_F = ['service_id', 'price', 'total', 'quantity', 'status', 'pack_parent_line_id', 'pack_type', 'is_free', 'patient_visit_id', 'main_visit_id', 'list_of_bio_materials'];
 
   async function findPatient(cfg, id) {
@@ -276,12 +276,16 @@
     const base = [['patient_id', '=', patient.rid]];
     let v = await call(cfg, 'his.patient_visit', 'search_read', [base.concat([['is_home_visit', '=', true]])], { fields: VIS_F, limit: 30, order: 'date desc, id desc' });
     if (!v.length) v = await call(cfg, 'his.patient_visit', 'search_read', [base], { fields: VIS_F, limit: 6, order: 'date desc, id desc' });
+    // Дата вызова — как у диспетчера: назначенное время визита (в Aurora хранится по Гринвичу → переводим во время телефона).
+    // Поле «date» — день, когда заказ оформили; его берём, только если назначенного времени нет.
+    const loc = (dt) => { if (!dt) return ''; const d = new Date(String(dt).replace(' ', 'T') + 'Z'); return isNaN(d) ? '' : d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+    v.forEach((x) => { x._day = loc(x.scheduled_time) || loc(x.start_date_time) || x.date || ''; x._raw = 'date ' + (x.date || '—') + ' · назначено ' + (x.scheduled_time || '—') + ' · начало ' + (x.start_date_time || '—') + ' · создан ' + (x.create_date || '—'); });
     const t = today();
-    const up = v.filter((x) => x.date && x.date >= t).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : b.id - a.id));
-    const past = v.filter((x) => !x.date || x.date < t);
+    const up = v.filter((x) => x._day && x._day >= t).sort((a, b) => (a._day < b._day ? -1 : a._day > b._day ? 1 : b.id - a.id));
+    const past = v.filter((x) => !x._day || x._day < t).sort((a, b) => (a._day > b._day ? -1 : a._day < b._day ? 1 : b.id - a.id));
     // Под-визиты (отдельные услуги одного приезда) сводим к главному визиту
     const seen = {}, uniq = up.concat(past).filter((x) => { const root = m2o(x.main_visit_id).id || x.id; x._root = root; if (seen[root]) return false; seen[root] = 1; return true; });
-    return uniq.map((x) => ({ id: x._root, date: x.date || '', dateText: dmy(x.date), home: !!x.is_home_visit, status: x.visit_status || '', period: m2o(x.home_visit_period_id).name, address: x.home_visit_address || '', phone: String(x.phone_number || '').replace(/\D/g, '').slice(-9), total: x.total_amount || 0, orders: x.sale_order_ids || [], comment: [x.comment, x.patient_comment].filter(Boolean).join(' · ') }));
+    return uniq.map((x) => ({ id: x._root, date: x._day, dateText: dmy(x._day), raw: x._raw, home: !!x.is_home_visit, status: x.visit_status || '', period: m2o(x.home_visit_period_id).name, address: x.home_visit_address || '', phone: String(x.phone_number || '').replace(/\D/g, '').slice(-9), total: x.total_amount || 0, orders: x.sale_order_ids || [], comment: [x.comment, x.patient_comment].filter(Boolean).join(' · ') }));
   }
   // Строки заказа одного визита (вместе с под-визитами). Отменённые и составные части комплексов не берём.
   async function lines(cfg, visitId) {
