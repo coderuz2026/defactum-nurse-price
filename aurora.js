@@ -57,26 +57,46 @@
       catch (e) { throw new AuroraError('Нет связи с Aurora. Проверьте интернет и адрес.', 'net'); }
       let sc = ''; Object.keys(r.headers || {}).forEach((k) => { if (k.toLowerCase() === 'set-cookie') sc = String(r.headers[k]); });
       const all = sc.match(/session_id=([^;,\s]+)/g) || [];
-      return { status: r.status, text: typeof r.data === 'string' ? r.data : JSON.stringify(r.data || ''), cookie: all.length ? all[all.length - 1] : '' };
+      let loc = ''; Object.keys(r.headers || {}).forEach((k) => { if (k.toLowerCase() === 'location') loc = String(r.headers[k]); });
+      return { status: r.status, text: typeof r.data === 'string' ? r.data : JSON.stringify(r.data || ''), cookie: all.length ? all[all.length - 1] : '', location: loc };
     }
     let r;
-    try { r = await fetch(url, { method, headers: form ? { 'Content-Type': headers['Content-Type'] } : {}, body, credentials: 'include', redirect: 'manual' }); }
+    try { r = await fetch(url, { method, headers: form ? { 'Content-Type': headers['Content-Type'] } : {}, body, credentials: 'include', redirect: form ? 'manual' : 'follow' }); }
     catch (e) { throw new AuroraError('Нет связи с Aurora.', 'net'); }
-    return { status: r.status || 303, text: r.type === 'opaqueredirect' ? '' : await r.text().catch(() => ''), cookie: '' };
+    return { status: r.status || 303, text: r.type === 'opaqueredirect' ? '' : await r.text().catch(() => ''), cookie: '', location: '', finalUrl: r.url };
+  }
+  // Открыть страницу, сам проходя переадресации и сохраняя куки сеанса (как браузер)
+  async function page(url, cookie) {
+    const trail = [];
+    for (let i = 0; i < 6; i++) {
+      const g = await raw('GET', url, null, cookie);
+      if (g.cookie) cookie = g.cookie;
+      trail.push(g.status + ' ' + url.replace(/^https?:\/\/[^/]+/, ''));
+      if (g.status >= 300 && g.status < 400 && g.location) { url = /^https?:/.test(g.location) ? g.location : base({ url: url.match(/^https?:\/\/[^/]+/)[0] }) + (g.location[0] === '/' ? '' : '/') + g.location; continue; }
+      return { text: g.text || '', cookie, url: g.finalUrl || url, status: g.status, trail };
+    }
+    return { text: '', cookie, url, status: 310, trail };
   }
   const plain = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
   // Вход так же, как в браузере: открыть страницу входа, взять защитный код формы, отправить логин и пароль.
   // Нужен, когда у Aurora свой порядок входа и обычный вход для программ она отклоняет.
   async function formLogin(cfg) {
-    const u = base(cfg) + '/web/login' + (cfg.db ? '?db=' + encodeURIComponent(cfg.db) : '');
-    const g = await raw('GET', u);
-    const page = g.text || '';
-    const csrf = (page.match(/name="csrf_token"[^>]*value="([^"]+)"/) || page.match(/value="([^"]+)"[^>]*name="csrf_token"/) || page.match(/csrf_token:\s*"([^"]+)"/) || [])[1];
-    if (!csrf) throw new AuroraError('Страница входа Aurora не открылась как ожидалось (код ' + g.status + ')', 'url');
-    const names = (page.match(/<input[^>]*name="[^"]+"/g) || []).map((x) => (x.match(/name="([^"]+)"/) || [])[1]).filter((x, i, a) => a.indexOf(x) === i);
+    // Сначала без названия базы — как человек, открывший сайт: сервер сам выберет базу. Не вышло — с названием из настроек.
+    const csrfOf = (t) => (t.match(/name="csrf_token"[^>]*value="([^"]+)"/) || t.match(/value="([^"]+)"[^>]*name="csrf_token"/) || t.match(/csrf_token:\s*"([^"]+)"/) || [])[1];
+    let g = await page(base(cfg) + '/web/login'), trail = g.trail.slice();
+    if (!csrfOf(g.text) && cfg.db) { const g2 = await page(base(cfg) + '/web/login?db=' + encodeURIComponent(cfg.db), g.cookie); trail = trail.concat(g2.trail); if (csrfOf(g2.text)) g = g2; }
+    const html = g.text || '', csrf = csrfOf(html);
+    if (!csrf) {
+      // Страница выбора базы: покажем, какие базы предлагает сервер
+      const dbs = (html.match(/[?&]db=([^"'&\s]+)/g) || []).map((x) => decodeURIComponent(x.replace(/^.*db=/, ''))).filter((x, i, a) => a.indexOf(x) === i);
+      throw new AuroraError('страница входа не открылась (путь: ' + trail.join(' → ') + ')' + (dbs.length ? ' · сервер предлагает базы: ' + dbs.join(', ') : '') + ' · заголовок страницы: «' + plain((html.match(/<title>([\s\S]*?)<\/title>/) || [])[1]) + '»', 'url');
+    }
+    const u = g.url.indexOf('/web/login') >= 0 ? g.url : base(cfg) + '/web/login';
+    const names = (html.match(/<input[^>]*name="[^"]+"/g) || []).map((x) => (x.match(/name="([^"]+)"/) || [])[1]).filter((x, i, a) => a.indexOf(x) === i);
     const extra = names.filter((n) => !/^(csrf_token|login|password|redirect|db)$/.test(n));
     let cookie = g.cookie;
     const pr = await raw('POST', u, { csrf_token: csrf, login: cfg.login, password: cfg.password, redirect: '' }, cookie);
+    trail.push(pr.status + ' POST');
     if (pr.cookie) cookie = pr.cookie;
     const fields = 'поля формы: ' + names.join(', ');
     if (pr.status >= 300 && pr.status < 400 || pr.status === 0) {
@@ -86,7 +106,7 @@
       throw new AuroraError('Форма входа приняла данные, но сеанс не открылся (' + fields + ')', 'auth');
     }
     const alert = (pr.text.match(/<p[^>]*class="[^"]*alert[^"]*"[^>]*>([\s\S]*?)<\/p>/) || pr.text.match(/<div[^>]*class="[^"]*alert[^"]*"[^>]*>([\s\S]*?)<\/div>/) || [])[1];
-    throw new AuroraError('страница входа ответила: «' + (plain(alert) || 'без объяснения, код ' + pr.status) + '»' + (extra.length ? ' · на форме есть дополнительные поля: ' + extra.join(', ') : '') + ' (' + fields + ')', 'auth');
+    throw new AuroraError('страница входа ответила: «' + (plain(alert) || 'без объяснения, код ' + pr.status) + '» (путь: ' + trail.join(' → ') + ')' + (extra.length ? ' · на форме есть дополнительные поля: ' + extra.join(', ') : '') + ' (' + fields + ')', 'auth');
   }
 
   // Что за сервер и какие на нём базы — без входа. Нужно, чтобы при ошибке входа было видно причину.

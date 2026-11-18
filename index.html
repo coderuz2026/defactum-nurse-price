@@ -226,7 +226,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.48', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.49', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -951,7 +951,7 @@ function auCfg() { const f = document.querySelector('form[data-submit="aurora"]'
 function auSet(x) { UI.au = Object.assign(UI.au || {}, x); if (UI.view === 'aurora') { UI._keepScroll = true; render(); } }
 async function auLogin() {
   S.aurora = auCfg(); save(); auSet({ busy: 'login', err: '', ok: '' });
-  try { const r = await Aurora.login(S.aurora); auSet({ busy: '', ok: r.name + ' · Aurora ' + r.version + (r.via === 'form' ? ' · вход через страницу' : '') }); return true; }
+  try { const r = await Aurora.login(S.aurora); if (r.db && r.db !== S.aurora.db) { S.aurora.db = r.db; save(); } auSet({ busy: '', ok: r.name + ' · Aurora ' + r.version + (r.via === 'form' ? ' · вход через страницу' : '') }); return true; }
   catch (e) { auSet({ busy: '', err: e.message || String(e) }); return false; }
 }
 async function auReport() {
