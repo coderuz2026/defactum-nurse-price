@@ -243,6 +243,67 @@
     return out.join('\n');
   }
 
-  const api = { login, call, logout, discover, AuroraError, _shape: shape };
+  /* ---- Поиск пациента и его заказа на выезд по ID пациента.
+     Как устроено в этой Aurora (по отчёту структуры):
+       his.patient         — пациент; «ID пациента» на листе заказа = номер его карточки контакта (partner_id);
+       his.patient_visit   — визит (is_home_visit — вызов на дом: адрес, время, заказы);
+       his.order_detail    — строки заказа: услуга (product.product), цена, итог;
+       sale.order          — счёт; его номер — «ID счёта» на листе. ---- */
+  const dmy = (d) => { const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '.' + m[2] + '.' + m[1] : ''; };
+  const m2o = (v) => (Array.isArray(v) ? { id: v[0], name: String(v[1] || '') } : { id: 0, name: '' });
+  const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const PAT_F = ['first_name', 'last_name', 'middle_name', 'full_name', 'phone_number', 'phone_number_2', 'gender', 'date', 'partner_id', 'home_visit_address', 'home_visit_comment', 'intercom_code', 'full_address'];
+  const VIS_F = ['date', 'visit_status', 'is_home_visit', 'home_visit_address', 'home_visit_period_id', 'phone_number', 'total_amount', 'sale_order_ids', 'comment', 'patient_comment', 'main_visit_id', 'scheduled_time'];
+  const DET_F = ['service_id', 'price', 'total', 'quantity', 'status', 'pack_parent_line_id', 'pack_type', 'is_free', 'patient_visit_id', 'main_visit_id', 'list_of_bio_materials'];
+
+  async function findPatient(cfg, id) {
+    const n = +String(id || '').replace(/\D/g, '');
+    if (!n) throw new AuroraError('Введите ID пациента — только цифры', 'cfg');
+    let r = await call(cfg, 'his.patient', 'search_read', [[['partner_id', '=', n]]], { fields: PAT_F, limit: 1 });
+    if (!r.length) r = await call(cfg, 'his.patient', 'search_read', [[['id', '=', n]]], { fields: PAT_F, limit: 1 });
+    if (!r.length) throw new AuroraError('Пациент с ID ' + n + ' в Aurora не найден', 'notfound');
+    const p = r[0], g = String(p.gender || '').toLowerCase();
+    return {
+      rid: p.id, pid: String(m2o(p.partner_id).id || n),
+      last: p.last_name || '', first: p.first_name || '', middle: p.middle_name || '', full: p.full_name || '',
+      dob: dmy(p.date), sex: /^(m|муж|er)/.test(g) ? 'm' : /^(f|жен|ay)/.test(g) ? 'f' : '',
+      phone: String(p.phone_number || '').replace(/\D/g, '').slice(-9), phone2: String(p.phone_number_2 || '').replace(/\D/g, '').slice(-9),
+      address: p.home_visit_address || p.full_address || '', comment: [p.home_visit_comment, p.intercom_code ? 'домофон ' + p.intercom_code : ''].filter(Boolean).join(' · '),
+    };
+  }
+  // Визиты пациента: сначала вызовы на дом (сегодня и будущие — первыми), если их нет — последние обычные визиты
+  async function visits(cfg, patient) {
+    const base = [['patient_id', '=', patient.rid]];
+    let v = await call(cfg, 'his.patient_visit', 'search_read', [base.concat([['is_home_visit', '=', true]])], { fields: VIS_F, limit: 30, order: 'date desc, id desc' });
+    if (!v.length) v = await call(cfg, 'his.patient_visit', 'search_read', [base], { fields: VIS_F, limit: 6, order: 'date desc, id desc' });
+    const t = today();
+    const up = v.filter((x) => x.date && x.date >= t).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : b.id - a.id));
+    const past = v.filter((x) => !x.date || x.date < t);
+    // Под-визиты (отдельные услуги одного приезда) сводим к главному визиту
+    const seen = {}, uniq = up.concat(past).filter((x) => { const root = m2o(x.main_visit_id).id || x.id; x._root = root; if (seen[root]) return false; seen[root] = 1; return true; });
+    return uniq.map((x) => ({ id: x._root, date: x.date || '', dateText: dmy(x.date), home: !!x.is_home_visit, status: x.visit_status || '', period: m2o(x.home_visit_period_id).name, address: x.home_visit_address || '', phone: String(x.phone_number || '').replace(/\D/g, '').slice(-9), total: x.total_amount || 0, orders: x.sale_order_ids || [], comment: [x.comment, x.patient_comment].filter(Boolean).join(' · ') }));
+  }
+  // Строки заказа одного визита (вместе с под-визитами). Отменённые и составные части комплексов не берём.
+  async function lines(cfg, visitId) {
+    const d = await call(cfg, 'his.order_detail', 'search_read', [['|', ['patient_visit_id', '=', visitId], ['main_visit_id', '=', visitId]]], { fields: DET_F, limit: 200, order: 'id' });
+    const out = [], skipped = [];
+    d.forEach((x) => {
+      const svc = m2o(x.service_id), row = { id: x.id, productId: svc.id, name: svc.name.replace(/^\[[^\]]*\]\s*/, ''), price: Math.round(x.price || 0), total: Math.round(x.total || 0), qty: x.quantity || 1, status: String(x.status || ''), pack: x.pack_type || '', child: !!x.pack_parent_line_id, bio: x.list_of_bio_materials || '' };
+      if (/cancel|отмен|reject|refus/i.test(row.status)) { row.why = 'отменена'; skipped.push(row); }
+      else if (row.child) { row.why = 'часть комплекса'; skipped.push(row); }
+      else if (!svc.id) { row.why = 'без услуги'; skipped.push(row); }
+      else out.push(row);
+    });
+    return { lines: out, skipped };
+  }
+  async function order(cfg, id, visitId) {
+    const patient = await findPatient(cfg, id);
+    const vs = await visits(cfg, patient);
+    const visit = (visitId && vs.find((x) => x.id === visitId)) || vs[0] || null;
+    const l = visit ? await lines(cfg, visit.id) : { lines: [], skipped: [] };
+    return { patient, visits: vs, visit, lines: l.lines, skipped: l.skipped };
+  }
+
+  const api = { login, call, logout, discover, order, findPatient, AuroraError, _shape: shape, _dmy: dmy };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Aurora = api;
 })(typeof window !== 'undefined' ? window : globalThis);
