@@ -254,7 +254,7 @@
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const PAT_F = ['first_name', 'last_name', 'middle_name', 'full_name', 'phone_number', 'phone_number_2', 'gender', 'date', 'partner_id', 'home_visit_address', 'home_visit_comment', 'intercom_code', 'full_address'];
   const VIS_F = ['date', 'visit_status', 'is_home_visit', 'home_visit_address', 'home_visit_period_id', 'phone_number', 'total_amount', 'sale_order_ids', 'comment', 'patient_comment', 'main_visit_id', 'scheduled_time', 'start_date_time', 'create_date'];
-  const DET_F = ['service_id', 'price', 'total', 'quantity', 'status', 'pack_parent_line_id', 'pack_type', 'is_free', 'patient_visit_id', 'main_visit_id', 'list_of_bio_materials'];
+  const DET_F = ['service_id', 'price', 'total', 'quantity', 'status', 'pack_parent_line_id', 'pack_type', 'is_free', 'patient_visit_id', 'main_visit_id', 'list_of_bio_materials', 'scheduled_date'];
 
   async function findPatient(cfg, id) {
     const n = +String(id || '').replace(/\D/g, '');
@@ -298,7 +298,10 @@
       else if (!svc.id) { row.why = 'без услуги'; skipped.push(row); }
       else out.push(row);
     });
-    return { lines: out, skipped };
+    // На какой день назначены услуги заказа (самое частое значение) — это и есть дата вызова
+    const cnt = {}; d.forEach((x) => { if (x.scheduled_date && !/cancel/i.test(String(x.status || ''))) cnt[x.scheduled_date] = (cnt[x.scheduled_date] || 0) + 1; });
+    const sched = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0] || '';
+    return { lines: out, skipped, sched };
   }
   async function order(cfg, id, visitId) {
     const patient = await findPatient(cfg, id);
@@ -306,6 +309,16 @@
     const visit = (visitId && vs.find((x) => x.id === visitId)) || vs[0] || null;
     const l = visit ? await lines(cfg, visit.id) : { lines: [], skipped: [] };
     let dbg = [];
+    if (visit && l.sched && l.sched !== visit.date) { visit.raw += ' · услуги назначены на ' + l.sched; visit.date = l.sched; visit.dateText = dmy(l.sched); }
+    // Для проверки: все поля-даты этого визита, как они записаны в Aurora (видно в «строках заказа»)
+    if (visit) {
+      try {
+        const fg = await call(cfg, 'his.patient_visit', 'fields_get', [], { attributes: ['type', 'string'] });
+        const names = Object.keys(fg).filter((f) => /^(date|datetime)$/.test(fg[f].type) && !/^(write_date|__last_update|message_|activity_|my_activity)/.test(f));
+        const rec = await call(cfg, 'his.patient_visit', 'read', [[visit.id], names]);
+        if (rec && rec[0]) visit.raw += ' | все даты: ' + names.filter((f) => rec[0][f]).map((f) => f + '=' + rec[0][f]).join(', ');
+      } catch (e) { /* не критично */ }
+    }
     if (visit) { const so = await saleOrders(cfg, visit, patient, l.lines.reduce((a, x) => a + x.total, 0)); visit.orders = so.ids; dbg = so.dbg; }
     return { patient, visits: vs, visit, lines: l.lines, skipped: l.skipped, dbg };
   }

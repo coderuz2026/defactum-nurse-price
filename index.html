@@ -226,7 +226,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.55', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.56', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -701,7 +701,7 @@ function vVisit() {
         ${(p.extra || []).length ? `<div class="sub" style="margin-top:-4px">${p.extra.map((x) => esc(x.name) + ' · ' + fmt(x.price)).join('; ')}${p.pid ? ' · ID ' + esc(p.pid) : ''}</div>` : ''}
         ${tubes.length ? `<div class="chips">${tubes.map((x) => `<span class="chip" style="${x.missed ? 'opacity:.5;text-decoration:line-through' : ''}">${x.taken ? I.check('#0F6B3A', 12) : miniTube(x)}${esc(x.name.replace(/ \((ЭДТА|ПЦР)\)/, ''))}${x.no ? ' (' + String(x.no).padStart(2, '0') + ')' : ''}${x.tests.length > 1 ? ' ×' + x.tests.length : ''}</span>`).join('')}</div>` : ''}
         ${missed.length ? `<div class="note err" style="padding:9px 12px;font-size:12.5px"><span><b>Не взято:</b> ${missed.map((x) => esc(tubeTitle(x)) + ' — ' + esc(x.missed.toLowerCase())).join('; ')} · −${fmt(pMiss(p))}</span></div>` : ''}
-        ${p.au && (p.au.orderDate || p.au.callTime) ? `<div class="sub" style="margin-top:-4px"><b>Вызов: ${esc([p.au.orderDate, p.au.callTime].filter(Boolean).join(' · '))}</b>${p.order && p.aurora ? ' · счёт ' + esc(p.order) : ''}</div>` : ''}
+        ${p.au && (p.au.orderDate || p.au.callTime) ? `<div class="sub" style="margin-top:-4px"><b>Вызов: ${esc(p.au.orderDate || '')}${p.aurora ? auDayWord(p.au.orderDate) : ''}${p.au.callTime ? ' · ' + esc(p.au.callTime) : ''}</b>${p.order && p.aurora ? ' · счёт ' + esc(p.order) : ''}</div>` : ''}
         ${!p.aurora && prepList(p).length ? `<div class="note warn" style="padding:9px 12px;font-size:12.5px"><span><b>Подготовка:</b> <span>${prepList(p).map((x) => esc(x)).join('; ')}</span></span></div>` : ''}
         <div class="grid2">
           <button class="btn light small" data-act="catalog" data-v="${p.id}">${I.plus('#0F172A', 15)} Анализы</button>
@@ -1080,6 +1080,12 @@ async function auLookup(id, visitId) {
   }
   catch (e) { auFindAsk(e.message || String(e)); }
 }
+// «19.11.2026» → « (сегодня)» / « (завтра)»
+function auDayWord(dmyText) {
+  const m = String(dmyText || '').match(/^(\d{2})\.(\d{2})\.(\d{4})$/); if (!m) return '';
+  const k = m[3] + '-' + m[2] + '-' + m[1], t = new Date(), tm = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1);
+  return k === dayKey(t) ? ' (сегодня)' : k === dayKey(tm) ? ' (завтра)' : '';
+}
 function auProblems(sc) {
   if (sc.editId) return []; // карточка уже добавленного пациента — проверять нечего
   const sh = sc.sheet, m = sc.match, a = sc.au || {}, out = [];
@@ -1089,7 +1095,7 @@ function auProblems(sc) {
   else if (!m.items.length && !m.extra.length) err('В заказе от ' + sh.orderDate + ' нет услуг');
   else if (!m.items.length) err('В заказе нет анализов из прайса приложения');
   if (a.visit && !a.home) warn('Это не вызов на дом, а обычный визит от ' + sh.orderDate + ' — проверьте, тот ли заказ');
-  else if (a.visit && a.visit.date && a.visit.date !== dayKey(new Date())) warn('Заказ от ' + sh.orderDate + ' — не на сегодня. Проверьте, тот ли это заказ');
+  else if (a.visit && a.visit.date && a.visit.date < dayKey(new Date())) warn('Этот вызов был ' + sh.orderDate + ' — дата уже прошла. Проверьте, тот ли это заказ');
   m.extra.forEach((x) => { if (x.name !== 'Вызов на дом') warn('Нет в прайсе приложения: «' + x.name.slice(0, 44) + '» — пробирка для неё не определится'); });
   if (m.items.length && sc.sheetTotal !== sum) warn('В Aurora сумма заказа ' + fmt(sc.sheetTotal) + ', по прайсу приложения ' + fmt(sum) + ' — возможна скидка или другая цена');
   if (!sh.order) warn('В Aurora не найден номер счёта — впишите ID счёта с листа');
@@ -1585,7 +1591,7 @@ function vScan() {
   const unsure = m.items.filter((x) => !x.sure).length;
   const probs = scanProblems(sc), errs = probs.filter((x) => x.level === 'err'), warns = probs.filter((x) => x.level === 'warn');
   const nothing = !m.items.length && !sh.last, ED = !!sc.editId, AU = sc.src === 'aurora' || ED;
-  return header(ED ? 'Карточка пациента' : AU ? 'Заказ из Aurora' : 'Лист заказа', sh.orderDate ? 'Заказ от ' + esc(sh.orderDate) + (sh.callTime ? ' · ' + esc(sh.callTime) : '') : 'Проверьте распознанные данные', 'visit') + `
+  return header(ED ? 'Карточка пациента' : AU ? 'Заказ из Aurora' : 'Лист заказа', sh.orderDate ? (AU ? 'Вызов на ' : 'Заказ от ') + esc(sh.orderDate) + (AU ? auDayWord(sh.orderDate) : '') + (sh.callTime ? ' · ' + esc(sh.callTime) : '') : 'Проверьте распознанные данные', 'visit') + `
   <form class="body" data-submit="scan" style="padding-bottom:150px">
     ${scanTimeLine(sc.T)}
     ${errs.length ? `<div class="problems" role="alert">
