@@ -276,15 +276,19 @@
     const base = [['patient_id', '=', patient.rid]];
     let v = await call(cfg, 'his.patient_visit', 'search_read', [base.concat([['is_home_visit', '=', true]])], { fields: VIS_F, limit: 30, order: 'date desc, id desc' });
     if (!v.length) v = await call(cfg, 'his.patient_visit', 'search_read', [base], { fields: VIS_F, limit: 6, order: 'date desc, id desc' });
-    // Дата вызова — как у диспетчера: назначенное время визита (в Aurora хранится по Гринвичу → переводим во время телефона).
-    // Поле «date» — день, когда заказ оформили; его берём, только если назначенного времени нет.
+    // Заказ на выезд — это главный визит и его под-визиты (по одному на услугу). Дата вызова, как у диспетчера, записана
+    // в поле «date» ГЛАВНОГО визита; у под-визитов и у услуг стоит день оформления заказа — их даты не берём.
+    const rootIds = []; v.forEach((x) => { x._root = m2o(x.main_visit_id).id || x.id; if (rootIds.indexOf(x._root) < 0) rootIds.push(x._root); });
+    const have = {}; v.forEach((x) => { if (x.id === x._root) have[x.id] = x; });
+    const need = rootIds.filter((id) => !have[id]);
+    if (need.length) { try { (await call(cfg, 'his.patient_visit', 'read', [need, VIS_F])).forEach((x) => { x._root = x.id; have[x.id] = x; }); } catch (e) { /* нет доступа к главному визиту — останется под-визит */ } }
     const loc = (dt) => { if (!dt) return ''; const d = new Date(String(dt).replace(' ', 'T') + 'Z'); return isNaN(d) ? '' : d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-    v.forEach((x) => { x._day = loc(x.scheduled_time) || loc(x.start_date_time) || x.date || ''; x._raw = 'date ' + (x.date || '—') + ' · назначено ' + (x.scheduled_time || '—') + ' · начало ' + (x.start_date_time || '—') + ' · создан ' + (x.create_date || '—'); });
+    const roots = rootIds.map((id) => have[id] || v.find((x) => x._root === id));
+    roots.forEach((x) => { x._day = x.date || loc(x.scheduled_time) || loc(x.start_date_time) || ''; x._raw = 'date ' + (x.date || '—') + ' · назначено ' + (x.scheduled_time || '—') + ' · создан ' + (x.create_date || '—'); });
     const t = today();
-    const up = v.filter((x) => x._day && x._day >= t).sort((a, b) => (a._day < b._day ? -1 : a._day > b._day ? 1 : b.id - a.id));
-    const past = v.filter((x) => !x._day || x._day < t).sort((a, b) => (a._day > b._day ? -1 : a._day < b._day ? 1 : b.id - a.id));
-    // Под-визиты (отдельные услуги одного приезда) сводим к главному визиту
-    const seen = {}, uniq = up.concat(past).filter((x) => { const root = m2o(x.main_visit_id).id || x.id; x._root = root; if (seen[root]) return false; seen[root] = 1; return true; });
+    const up = roots.filter((x) => x._day && x._day >= t).sort((a, b) => (a._day < b._day ? -1 : a._day > b._day ? 1 : b.id - a.id));
+    const past = roots.filter((x) => !x._day || x._day < t).sort((a, b) => (a._day > b._day ? -1 : a._day < b._day ? 1 : b.id - a.id));
+    const uniq = up.concat(past);
     return uniq.map((x) => ({ id: x._root, date: x._day, dateText: dmy(x._day), raw: x._raw, home: !!x.is_home_visit, status: x.visit_status || '', period: m2o(x.home_visit_period_id).name, address: x.home_visit_address || '', phone: String(x.phone_number || '').replace(/\D/g, '').slice(-9), total: x.total_amount || 0, orders: x.sale_order_ids || [], comment: [x.comment, x.patient_comment].filter(Boolean).join(' · ') }));
   }
   // Строки заказа одного визита (вместе с под-визитами). Отменённые и составные части комплексов не берём.
@@ -309,7 +313,6 @@
     const visit = (visitId && vs.find((x) => x.id === visitId)) || vs[0] || null;
     const l = visit ? await lines(cfg, visit.id) : { lines: [], skipped: [] };
     let dbg = [];
-    if (visit && l.sched && l.sched !== visit.date) { visit.raw += ' · услуги назначены на ' + l.sched; visit.date = l.sched; visit.dateText = dmy(l.sched); }
     // Для проверки: все поля-даты этого визита, как они записаны в Aurora (видно в «строках заказа»)
     if (visit) {
       try {
