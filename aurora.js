@@ -39,11 +39,54 @@
     if (r.data.error) {
       const d = r.data.error.data || {}, name = String(d.name || ''), msg = String(d.message || r.data.error.message || 'Ошибка Aurora');
       if (/SessionExpired/i.test(name) || r.data.error.code === 100) throw new AuroraError('Сеанс Aurora истёк', 'session');
-      if (/AccessDenied/i.test(name)) throw new AuroraError('Aurora отклонила вход: неверный логин или пароль', 'auth');
+      if (/AccessDenied/i.test(name)) throw new AuroraError('Aurora отклонила вход: ' + (/^access denied$/i.test(msg.trim()) ? 'неверный логин или пароль' : msg.split('\n')[0]), 'auth');
       if (/AccessError/i.test(name)) throw new AuroraError('У этой учётной записи нет доступа: ' + msg.split('\n')[0], 'access');
       throw new AuroraError(msg.split('\n')[0], 'server');
     }
     return { result: r.data.result, cookie: r.cookie };
+  }
+
+  // Запрос «как браузер»: страница или форма. Возвращает { status, text, cookie }.
+  async function raw(method, url, form, cookie) {
+    const headers = {}; if (cookie) headers.Cookie = cookie;
+    let body;
+    if (form) { headers['Content-Type'] = 'application/x-www-form-urlencoded'; body = Object.keys(form).map((k) => encodeURIComponent(k) + '=' + encodeURIComponent(form[k])).join('&'); }
+    if (CH()) {
+      let r;
+      try { r = await CH().request({ url, method, headers, data: body, connectTimeout: 15000, readTimeout: 30000, responseType: 'text', disableRedirects: true }); }
+      catch (e) { throw new AuroraError('Нет связи с Aurora. Проверьте интернет и адрес.', 'net'); }
+      let sc = ''; Object.keys(r.headers || {}).forEach((k) => { if (k.toLowerCase() === 'set-cookie') sc = String(r.headers[k]); });
+      const all = sc.match(/session_id=([^;,\s]+)/g) || [];
+      return { status: r.status, text: typeof r.data === 'string' ? r.data : JSON.stringify(r.data || ''), cookie: all.length ? all[all.length - 1] : '' };
+    }
+    let r;
+    try { r = await fetch(url, { method, headers: form ? { 'Content-Type': headers['Content-Type'] } : {}, body, credentials: 'include', redirect: 'manual' }); }
+    catch (e) { throw new AuroraError('Нет связи с Aurora.', 'net'); }
+    return { status: r.status || 303, text: r.type === 'opaqueredirect' ? '' : await r.text().catch(() => ''), cookie: '' };
+  }
+  const plain = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
+  // Вход так же, как в браузере: открыть страницу входа, взять защитный код формы, отправить логин и пароль.
+  // Нужен, когда у Aurora свой порядок входа и обычный вход для программ она отклоняет.
+  async function formLogin(cfg) {
+    const u = base(cfg) + '/web/login' + (cfg.db ? '?db=' + encodeURIComponent(cfg.db) : '');
+    const g = await raw('GET', u);
+    const page = g.text || '';
+    const csrf = (page.match(/name="csrf_token"[^>]*value="([^"]+)"/) || page.match(/value="([^"]+)"[^>]*name="csrf_token"/) || page.match(/csrf_token:\s*"([^"]+)"/) || [])[1];
+    if (!csrf) throw new AuroraError('Страница входа Aurora не открылась как ожидалось (код ' + g.status + ')', 'url');
+    const names = (page.match(/<input[^>]*name="[^"]+"/g) || []).map((x) => (x.match(/name="([^"]+)"/) || [])[1]).filter((x, i, a) => a.indexOf(x) === i);
+    const extra = names.filter((n) => !/^(csrf_token|login|password|redirect|db)$/.test(n));
+    let cookie = g.cookie;
+    const pr = await raw('POST', u, { csrf_token: csrf, login: cfg.login, password: cfg.password, redirect: '' }, cookie);
+    if (pr.cookie) cookie = pr.cookie;
+    const fields = 'поля формы: ' + names.join(', ');
+    if (pr.status >= 300 && pr.status < 400 || pr.status === 0) {
+      const r = await rpc(cfg, '/web/session/get_session_info', {}, cookie);
+      const si = r.result || {};
+      if (si.uid) return { cookie, uid: si.uid, name: si.name || si.username || cfg.login, version: si.server_version || '', db: si.db || cfg.db || '' };
+      throw new AuroraError('Форма входа приняла данные, но сеанс не открылся (' + fields + ')', 'auth');
+    }
+    const alert = (pr.text.match(/<p[^>]*class="[^"]*alert[^"]*"[^>]*>([\s\S]*?)<\/p>/) || pr.text.match(/<div[^>]*class="[^"]*alert[^"]*"[^>]*>([\s\S]*?)<\/div>/) || [])[1];
+    throw new AuroraError('страница входа ответила: «' + (plain(alert) || 'без объяснения, код ' + pr.status) + '»' + (extra.length ? ' · на форме есть дополнительные поля: ' + extra.join(', ') : '') + ' (' + fields + ')', 'auth');
   }
 
   // Что за сервер и какие на нём базы — без входа. Нужно, чтобы при ошибке входа было видно причину.
@@ -61,6 +104,11 @@
     try { r = await rpc(cfg, '/web/session/authenticate', { db: cfg.db || '', login: cfg.login, password: cfg.password }); }
     catch (e) {
       if (e.kind === 'net') throw e;
+      // Обычный вход отклонён — пробуем войти так же, как браузер (через страницу входа)
+      let formErr = '';
+      try { const f = await formLogin(cfg); sess = Object.assign({ key: keyOf(cfg), via: 'form' }, f); return sess; }
+      catch (e2) { if (e2.kind === 'net') throw e2; formErr = e2.message; }
+      e.message += '. Вход как в браузере тоже не прошёл: ' + formErr;
       const p = await probe(cfg).catch(() => ({}));
       const extra = [p.version ? 'сервер Odoo ' + p.version : 'сервер не похож на Aurora/Odoo', p.dbs ? 'базы: ' + (p.dbs.join(', ') || 'нет') : 'список баз закрыт'].join(' · ');
       const hint = p.dbs && p.dbs.length && p.dbs.indexOf(cfg.db) < 0 ? ' Базы «' + cfg.db + '» на сервере нет — впишите одну из списка.' : '';
