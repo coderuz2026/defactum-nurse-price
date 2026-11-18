@@ -226,7 +226,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.46', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.47', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -930,7 +930,8 @@ function vAurora() {
       <label class="field"><span>Адрес Aurora</span><input class="input" name="url" value="${esc(c.url)}" inputmode="url" autocapitalize="none" autocomplete="off" required></label>
       <label class="field"><span>База</span><input class="input" name="db" value="${esc(c.db)}" autocapitalize="none" autocomplete="off"></label>
       <label class="field"><span>Логин Aurora</span><input class="input" name="login" value="${esc(c.login)}" autocapitalize="none" autocomplete="off" required></label>
-      <label class="field"><span>Пароль</span><input class="input" name="password" type="password" value="${esc(c.password)}" autocomplete="off" required></label>
+      <label class="field"><span>Пароль</span><input class="input" name="password" type="${st.show ? 'text' : 'password'}" value="${esc(c.password)}" autocomplete="off" autocapitalize="none" required></label>
+      <label class="row" style="gap:8px;font-size:14px"><input type="checkbox" data-act="auShow" ${st.show ? 'checked' : ''} style="width:18px;height:18px"> Показать пароль</label>
       <div class="sub">Логин и пароль хранятся только на этом телефоне. Приложение только читает данные и ничего не меняет в Aurora.</div>
       <button class="btn" ${st.busy ? 'disabled' : ''}>${st.busy === 'login' ? 'Проверяем…' : 'Сохранить и проверить подключение'}</button>
       ${st.ok ? `<div class="note ok">Подключено: ${esc(st.ok)}</div>` : ''}
@@ -1006,6 +1007,7 @@ document.addEventListener('click', (e) => {
     case 'authMode': UI.authMode = UI.authMode === 'reg' ? 'login' : 'reg'; UI.err = ''; render(); break;
     case 'branch': UI.regBranch = v; keepForm(); break;
     case 'go': go(v); break;
+    case 'auShow': S.aurora = auCfg(); auSet({ show: !(UI.au || {}).show }); break;
     case 'auReport': auReport(); break;
     case 'auShare': auShare(); break;
     case 'auCopy': if ((UI.au || {}).report) copyText(UI.au.report); break;

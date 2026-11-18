@@ -39,18 +39,38 @@
     if (r.data.error) {
       const d = r.data.error.data || {}, name = String(d.name || ''), msg = String(d.message || r.data.error.message || 'Ошибка Aurora');
       if (/SessionExpired/i.test(name) || r.data.error.code === 100) throw new AuroraError('Сеанс Aurora истёк', 'session');
-      if (/AccessDenied/i.test(name)) throw new AuroraError('Неверный логин или пароль Aurora', 'auth');
+      if (/AccessDenied/i.test(name)) throw new AuroraError('Aurora отклонила вход: неверный логин или пароль', 'auth');
       if (/AccessError/i.test(name)) throw new AuroraError('У этой учётной записи нет доступа: ' + msg.split('\n')[0], 'access');
       throw new AuroraError(msg.split('\n')[0], 'server');
     }
     return { result: r.data.result, cookie: r.cookie };
   }
 
+  // Что за сервер и какие на нём базы — без входа. Нужно, чтобы при ошибке входа было видно причину.
+  async function probe(cfg) {
+    const info = { version: '', dbs: null, raw: '' };
+    try { const r = await rpc(cfg, '/web/webclient/version_info', {}); info.version = (r.result && r.result.server_version) || ''; }
+    catch (e) { info.raw = 'версия: ' + e.message; }
+    try { const r = await rpc(cfg, '/web/database/list', {}); if (Array.isArray(r.result)) info.dbs = r.result; }
+    catch (e) { /* список баз закрыт — это нормально */ }
+    return info;
+  }
   async function login(cfg) {
     if (!base(cfg) || !cfg.login || !cfg.password) throw new AuroraError('Заполните адрес, логин и пароль Aurora', 'cfg');
-    const r = await rpc(cfg, '/web/session/authenticate', { db: cfg.db || '', login: cfg.login, password: cfg.password });
+    let r;
+    try { r = await rpc(cfg, '/web/session/authenticate', { db: cfg.db || '', login: cfg.login, password: cfg.password }); }
+    catch (e) {
+      if (e.kind === 'net') throw e;
+      const p = await probe(cfg).catch(() => ({}));
+      const extra = [p.version ? 'сервер Odoo ' + p.version : 'сервер не похож на Aurora/Odoo', p.dbs ? 'базы: ' + (p.dbs.join(', ') || 'нет') : 'список баз закрыт'].join(' · ');
+      const hint = p.dbs && p.dbs.length && p.dbs.indexOf(cfg.db) < 0 ? ' Базы «' + cfg.db + '» на сервере нет — впишите одну из списка.' : '';
+      throw new AuroraError(e.message + '.' + hint + ' [' + extra + ']', e.kind);
+    }
     const s = r.result || {};
-    if (!s.uid) throw new AuroraError('Неверный логин или пароль Aurora', 'auth');
+    if (!s.uid) {
+      const p = await probe(cfg).catch(() => ({}));
+      throw new AuroraError('Aurora не впустила: сервер ответил без пользователя. Возможно, у учётной записи включён вход по коду (двухфакторный) или нужен другой логин. [' + (p.version ? 'Odoo ' + p.version : 'версия неизвестна') + (p.dbs ? ' · базы: ' + p.dbs.join(', ') : '') + ']', 'auth');
+    }
     sess = { key: keyOf(cfg), cookie: r.cookie, uid: s.uid, name: s.name || s.username || cfg.login, version: s.server_version || '', db: s.db || cfg.db || '' };
     return sess;
   }
