@@ -186,6 +186,8 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 .cam-flash.on{opacity:.85;transition:none}
 .cam-focus{position:absolute;width:70px;height:70px;margin:-35px 0 0 -35px;border:2px solid #FACC15;border-radius:12px;pointer-events:none;animation:camf .8s ease-out forwards}
 @keyframes camf{0%{transform:scale(1.4);opacity:1}70%{transform:scale(1);opacity:1}100%{opacity:0}}
+.lock{position:fixed;inset:0;z-index:900;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px;text-align:center}
+.lock .input{max-width:240px;text-align:center;font-size:26px;font-weight:800;letter-spacing:8px}
 .ovl{position:fixed;inset:0;z-index:300;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:24px}
 .ovl>div{width:100%;max-width:340px;background:#fff;border-radius:24px;padding:24px 22px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
 .bar{width:100%;height:8px;border-radius:4px;background:var(--line);overflow:hidden}.bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#A9D046,#2FA98C,#0A93B2);border-radius:4px;transition:width .3s}
@@ -225,11 +227,12 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <div class="app" id="app"></div>
 <div id="install"></div>
 <div id="overlay"></div>
+<div id="lock"></div>
 <input type="file" id="scanCam" accept="image/*" capture="environment" hidden>
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.58', APP_DATE = '17.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.59', APP_DATE = '18.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -1296,6 +1299,8 @@ document.addEventListener('click', (e) => {
     case 'scanSex': scanKeep(); UI.scan.sheet.sex = v; UI._keepScroll = true; render(); break;
     case 'scanText': scanKeep(); UI.scan.showText = !UI.scan.showText; UI._keepScroll = true; render(); break;
     case 'logout': S.me = null; save(); UI.authMode = 'login'; go('auth'); break;
+    case 'lockGo': lockTry(); break;
+    case 'lockOut': if (!ask('Выйти из аккаунта? Выезды и пациенты на телефоне сохранятся, войти можно будет заново или зарегистрироваться.')) break; lockOn = false; document.getElementById('lock').innerHTML = ''; S.me = null; save(); UI.authMode = 'login'; go('auth'); break;
   }
 });
 function formObj(f) { const o = {}; if (f) new FormData(f).forEach((val, k) => { o[k] = String(val).trim(); }); return o; }
@@ -1900,7 +1905,42 @@ document.addEventListener('click', async (e) => {
 // Куда ведёт «Назад» с каждого экрана. null — выходить некуда (главный экран).
 const BACK = { history: 'visit', patient: 'visit', catalog: 'visit', tubes: 'visit', client: 'visit', profile: 'visit', scan: 'visit', printer: 'profile', aurora: 'profile' };
 // Возвращает true, если «Назад» обработано внутри приложения
+/* ---------- Блокировка PIN-кодом ----------
+   Приложение было свёрнуто или закрыто дольше LOCK_MIN минут — при возврате спрашиваем PIN.
+   Время ухода хранится на телефоне, поэтому блокировка срабатывает и после закрытия приложения. */
+const LOCK_MIN = 5, LOCK_KEY = LS + '_away';
+let lockOn = false, lockTries = 0, lockUntil = 0;
+function lockAway() { try { localStorage.setItem(LOCK_KEY, String(Date.now())); } catch (e) {} }
+function lockCheck() {
+  if (lockOn || !S.me || !S.me.pin) return;
+  let t = 0; try { t = +localStorage.getItem(LOCK_KEY) || 0; } catch (e) {}
+  if (t && Date.now() - t > LOCK_MIN * 60e3) lockShow();
+}
+function lockShow(msg) {
+  lockOn = true; if (typeof Cam !== 'undefined' && Cam.isOpen()) Cam.close();
+  const wait = Math.ceil((lockUntil - Date.now()) / 1000);
+  document.getElementById('lock').innerHTML = `<div class="lock" role="dialog" aria-modal="true" aria-label="Приложение заблокировано">
+    ${MARK(52)}<b style="font-size:20px">Введите PIN-код</b><span class="sub">${esc(S.me.name)} · приложение было закрыто дольше ${LOCK_MIN} минут</span>
+    <input class="input" id="lockPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••" ${wait > 0 ? 'disabled' : ''}>
+    ${msg ? `<div class="sub" style="color:var(--bad);font-weight:600">${esc(msg)}</div>` : ''}
+    <button class="btn" data-act="lockGo" style="max-width:240px;width:100%" ${wait > 0 ? 'disabled' : ''}>${wait > 0 ? 'Подождите ' + wait + ' с' : 'Войти'}</button>
+    <button class="linkbtn" data-act="lockOut" style="margin-top:6px">Забыли PIN? Выйти из аккаунта</button></div>`;
+  if (wait > 0) setTimeout(() => lockOn && lockShow(), 1000);
+  setTimeout(() => { const i = document.getElementById('lockPin'); if (i && !i.disabled) { i.focus(); i.onkeydown = (e) => { if (e.key === 'Enter') lockTry(); }; i.oninput = () => { if (i.value.length === String(S.me.pin).length) lockTry(); }; } }, 60);
+}
+function lockTry() {
+  const i = document.getElementById('lockPin'); if (!i || Date.now() < lockUntil) return;
+  if (i.value === String(S.me.pin)) { lockOn = false; lockTries = 0; lockAway(); document.getElementById('lock').innerHTML = ''; return; }
+  lockTries++;
+  if (lockTries >= 5) { lockTries = 0; lockUntil = Date.now() + 30e3; lockShow('5 неверных попыток'); return; }
+  lockShow('Неверный PIN, осталось попыток: ' + (5 - lockTries));
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) lockAway(); else lockCheck(); });
+window.addEventListener('pagehide', () => { if (!document.hidden) lockAway(); }); // закрыли открытое приложение; если оно уже было свёрнуто — время ухода не трогаем
+setInterval(() => { if (!document.hidden && !lockOn) lockAway(); }, 30e3); // пока приложение открыто — отметка «я здесь»
+
 function goBack() {
+  if (lockOn) return true; // на экране блокировки «Назад» не работает
   if (Cam.isOpen()) { Cam.close(); return true; }
   const ov = document.getElementById('overlay'), inst = document.getElementById('install');
   if (ov && ov.querySelector && ov.querySelector('.ovl')) { if (document.getElementById('scanBar') || /Не закрывайте приложение/.test(ov.textContent)) return true; overlay(''); return true; } // во время распознавания и обновления «Назад» ничего не делает
@@ -1987,6 +2027,7 @@ S.visits.forEach((v) => { v.homeFee = 0; }); // поле «Выезд на до�
 if (S.me) UI.view = 'visit';
 render();
 auCatInit();
+lockCheck(); // приложение открыли после долгого перерыва — сначала PIN
 loadPrices(false);
 // Справочник Aurora обновляется в фоне после запуска, чтобы первый поиск по ID не ждал его
 setTimeout(() => { if (navigator.onLine !== false) auCatLoad(false).catch(() => {}); }, 6000);
