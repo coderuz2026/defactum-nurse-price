@@ -274,7 +274,7 @@
   // Визиты пациента: сначала вызовы на дом (сегодня и будущие — первыми), если их нет — последние обычные визиты
   async function visits(cfg, patient) {
     const base = [['patient_id', '=', patient.rid]];
-    let v = await call(cfg, 'his.patient_visit', 'search_read', [base.concat([['is_home_visit', '=', true]])], { fields: VIS_F, limit: 30, order: 'date desc, id desc' });
+    let v = await call(cfg, 'his.patient_visit', 'search_read', [base.concat([['is_home_visit', '=', true]])], { fields: VIS_F, limit: 80, order: 'date desc, id desc' });
     if (!v.length) v = await call(cfg, 'his.patient_visit', 'search_read', [base], { fields: VIS_F, limit: 6, order: 'date desc, id desc' });
     // Заказ на выезд — это главный визит и его под-визиты (по одному на услугу). Дата вызова, как у диспетчера, записана
     // в поле «date» ГЛАВНОГО визита; у под-визитов и у услуг стоит день оформления заказа — их даты не берём.
@@ -311,25 +311,19 @@
     const patient = await findPatient(cfg, id);
     const vs = await visits(cfg, patient);
     const visit = (visitId && vs.find((x) => x.id === visitId)) || vs[0] || null;
-    const l = visit ? await lines(cfg, visit.id) : { lines: [], skipped: [] };
-    let dbg = [];
-    // Для проверки: все поля-даты этого визита, как они записаны в Aurora (видно в «строках заказа»)
-    if (visit) {
-      try {
-        const fg = await call(cfg, 'his.patient_visit', 'fields_get', [], { attributes: ['type', 'string'] });
-        const names = Object.keys(fg).filter((f) => /^(date|datetime)$/.test(fg[f].type) && !/^(write_date|__last_update|message_|activity_|my_activity)/.test(f));
-        const rec = await call(cfg, 'his.patient_visit', 'read', [[visit.id], names]);
-        if (rec && rec[0]) visit.raw += ' | все даты: ' + names.filter((f) => rec[0][f]).map((f) => f + '=' + rec[0][f]).join(', ');
-      } catch (e) { /* не критично */ }
-    }
-    if (visit) { const so = await saleOrders(cfg, visit, patient, l.lines.reduce((a, x) => a + x.total, 0)); visit.orders = so.ids; dbg = so.dbg; }
-    return { patient, visits: vs, visit, lines: l.lines, skipped: l.skipped, dbg };
+    if (!visit) return { patient, visits: vs, visit: null, lines: [], skipped: [], dbg: [] };
+    // Строки заказа и счёт запрашиваем одновременно — так быстрее на мобильном интернете
+    const lp = lines(cfg, visit.id);
+    const [l, so] = await Promise.all([lp, saleOrders(cfg, visit, patient, () => lp.then((x) => x.lines.reduce((a, r) => a + r.total, 0)))]);
+    visit.orders = so.ids;
+    return { patient, visits: vs, visit, lines: l.lines, skipped: l.skipped, dbg: so.dbg };
   }
+
 
   // Счёт (sale.order) визита: его номер — «ID счёта» на листе заказа. Ищем по визиту и его под-визитам.
   // Счёт (sale.order) визита: его номер — «ID счёта» на листе заказа.
   // Ищем по визиту и под-визитам; если там пусто — среди счетов этого пациента (ближайший по дате к визиту, лучше с той же суммой).
-  async function saleOrders(cfg, visit, patient, total) {
+  async function saleOrders(cfg, visit, patient, totalOf) {
     const dbg = [], F = ['name', 'state', 'amount_total', 'date_order', 'patient_visit_id', 'patient_invoice_number'];
     const show = (x) => '№' + x.id + ' ' + (x.name || '') + ' · ' + String(x.date_order || '').slice(0, 10) + ' · ' + Math.round(x.amount_total || 0) + ' · ' + (x.state || '') + (x.patient_invoice_number ? ' · счёт пациента ' + x.patient_invoice_number : '') + (x.patient_visit_id ? ' · визит ' + x.patient_visit_id[0] : '');
     let ids = (visit.orders || []).slice();
@@ -348,6 +342,7 @@
         const day = (x) => Math.abs((Date.parse(String(x.date_order || '').slice(0, 10)) - Date.parse(visit.date)) / 864e5);
         // подходит счёт, созданный не раньше чем за 7 дней до визита; среди них — с той же суммой, иначе самый новый
         const near = live.filter((x) => visit.date && day(x) <= 7);
+        const total = near.length > 1 ? await totalOf() : 0;
         const pick = near.find((x) => Math.round(x.amount_total || 0) === total) || near[0];
         if (pick) { ids = [pick.id]; dbg.push('взят счёт №' + pick.id + ' (по пациенту и дате)'); }
       } catch (e) { dbg.push('счета пациента: ошибка — ' + e.message); }
@@ -356,14 +351,19 @@
   }
   /* Справочник из Aurora: услуги с ценами и какие контейнеры (пробирки) нужны каждой услуге.
      lis.container — виды контейнеров; lis.biomaterial_container_map — услуга → биоматериал → контейнер. */
-  async function catalog(cfg, say) {
+  // names — названия услуг прайса приложения: цены берём только для них и для услуг, у которых в Aurora есть пробирка.
+  // Так справочник в десятки раз меньше: быстрее грузится по мобильному интернету и не забивает память телефона.
+  async function catalog(cfg, say, names) {
     say = say || (() => {});
-    say('Контейнеры…');
-    const cs = await call(cfg, 'lis.container', 'search_read', [[]], { fields: ['name', 'code', 'short_name', 'color', 'container_id'], limit: 1000 });
-    say('Пробирки для анализов…');
-    const mp = await call(cfg, 'lis.biomaterial_container_map', 'search_read', [[]], { fields: ['product_id', 'bio_material_id', 'container_id'], limit: 20000 });
+    say('Контейнеры и пробирки…');
+    const [cs, mp] = await Promise.all([
+      call(cfg, 'lis.container', 'search_read', [[]], { fields: ['name', 'code', 'short_name', 'color', 'container_id'], limit: 1000 }),
+      call(cfg, 'lis.biomaterial_container_map', 'search_read', [[]], { fields: ['product_id', 'bio_material_id', 'container_id'], limit: 20000 }),
+    ]);
     say('Цены…');
-    const pr = await call(cfg, 'product.product', 'search_read', [[['sale_ok', '=', true]]], { fields: ['name', 'lst_price'], limit: 20000 });
+    const ids = []; mp.forEach((m) => { const pid = m2o(m.product_id).id; if (pid && ids.indexOf(pid) < 0) ids.push(pid); });
+    const dom = names && names.length ? ['|', ['id', 'in', ids], ['name', 'in', names]] : [['sale_ok', '=', true]];
+    const pr = await call(cfg, 'product.product', 'search_read', [dom], { fields: ['name', 'lst_price'], limit: 20000 });
     const num = (c) => { for (const v of [c.code, c.container_id, c.short_name]) { const m = String(v || '').trim().match(/^0*(\d{1,3})$/); if (m) return +m[1]; } return 0; };
     const cont = {}; cs.forEach((c) => { cont[c.id] = { no: num(c), name: c.name || '', short: c.short_name || '', color: /^#[0-9a-f]{6}$/i.test(String(c.color || '')) ? c.color : '', code: String(c.code || '') }; });
     const tubes = {}; mp.forEach((m) => { const pid = m2o(m.product_id).id, cid = m2o(m.container_id).id; if (!pid || !cid) return; const a = (tubes[pid] = tubes[pid] || []); if (!a.some((x) => x[0] === cid)) a.push([cid, m2o(m.bio_material_id).name]); });

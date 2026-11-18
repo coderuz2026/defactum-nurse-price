@@ -140,3 +140,8 @@ jobs:
             exit 0
           fi
           gh release create "$TAG" defactum-nurse.apk defactum-nurse-web.zip --latest --title "de factum ${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})" --notes-file notes.md
+          # рабочая версия вышла — тестовые телефоны тоже получают её и сами переходят на рабочий канал
+          if gh release view test-channel >/dev/null 2>&1; then
+            gh release upload test-channel defactum-nurse.apk defactum-nurse-web.zip --clobber
+            gh release upload test-channel version.txt --clobber
+          fi
