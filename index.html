@@ -232,7 +232,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.59', APP_DATE = '18.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.60', APP_DATE = '18.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -431,6 +431,7 @@ async function loadPrices(force) {
 // Дата прайса в привычном виде: 2026-11-10 → 10.11.2026
 const priceDate = () => String(P.version || '').split('-').reverse().join('.');
 function setPrices(d) {
+  bakeTubes(d.auTubes);
   d = auMergePrices(d);
   P.version = d.version; P.cats = d.categories; P.items = d.items; P.byId = {}; P.catById = {};
   d.categories.forEach((c) => { P.catById[c.id] = c; c.n = 0; });
@@ -967,17 +968,48 @@ function auIndex(c) {
   // Контейнер Aurora → пробирка приложения по номеру контейнера; незнакомые контейнеры добавляются как новые виды пробирок
   c.key = {};
   const mats = {}; Object.keys(c.tubes).forEach((pid) => c.tubes[pid].forEach((r) => { if (r[1] && !mats[r[0]]) mats[r[0]] = r[1]; })); // биоматериал контейнера
-  Object.keys(c.cont).forEach((cid) => {
-    const x = c.cont[cid]; if (!x.no) return;
-    const look = auLook(x.name + ' ' + (mats[cid] || ''));
-    const known = Object.keys(TUBES).find((k) => TUBES[k].no === x.no && !/^au\d/.test(k));
-    // Номер совпал с пробиркой приложения, и по названию это тот же вид посуды — берём её; иначе рисуем по названию из Aurora
-    if (known && (!look.kind || look.kind === (ART_KIND[known] || 'tube') || (look.kind === 'tube' && ART_KIND[known] === 'gel'))) { c.key[cid] = known; return; }
-    const k = 'au' + x.no; c.key[cid] = k;
-    TUBES[k] = { no: x.no, name: x.name || ('Контейнер ' + x.no), cap: x.color || look.cap || '#64748B', mat: mats[cid] || '', an: '' };
-    ART_KIND[k] = look.kind || 'tube'; if (look.fill) ART_FILL[k] = look.fill;
-  });
+  c.mats = mats;
+  Object.keys(c.cont).forEach((cid) => { const k = contKey(c.cont[cid], mats[cid]); if (k) c.key[cid] = k; });
   return c;
+}
+// Контейнер Aurora (номер, название, цвет) → пробирка приложения. Тот же номер и тот же вид посуды — пробирка приложения;
+// иначе заводится новая пробирка с названием и значком по названию из Aurora.
+function contKey(x, mat) {
+  if (!x || !x.no) return '';
+  const look = auLook(x.name + ' ' + (mat || ''));
+  const known = Object.keys(TUBES).find((k) => TUBES[k].no === x.no && !/^au\d/.test(k));
+  if (known && (!look.kind || look.kind === (ART_KIND[known] || 'tube') || (look.kind === 'tube' && ART_KIND[known] === 'gel'))) return known;
+  const k = 'au' + x.no;
+  TUBES[k] = { no: x.no, name: x.name || ('Контейнер ' + x.no), cap: x.color || look.cap || '#64748B', mat: mat || '', an: '' };
+  ART_KIND[k] = look.kind || 'tube'; if (look.fill) ART_FILL[k] = look.fill;
+  return k;
+}
+// Таблица «анализ → пробирки», выгруженная из Aurora и вшитая в прайс (data/prices.json, ключ auTubes):
+// работает у всех медсестёр, даже без входа в Aurora
+let BAKED = null;
+function bakeTubes(t) {
+  BAKED = null; if (!t || !t.cont || !t.items) return;
+  const key = {}; Object.keys(t.cont).forEach((cid) => { const k = contKey(t.cont[cid], t.cont[cid].mat); if (k) key[cid] = k; });
+  BAKED = {}; Object.keys(t.items).forEach((id) => { const ks = []; t.items[id].forEach((cid) => { const k = key[cid]; if (k && ks.indexOf(k) < 0) ks.push(k); }); if (ks.length) BAKED[id] = ks; });
+}
+// Выгрузка для разработчика: какие пробирки Aurora назначает анализам прайса (без данных пациентов)
+function auTubeExport() {
+  if (!AUC) return null;
+  const items = {}, used = {}, diff = [];
+  P.items.forEach((it) => {
+    if (it.id < 0) return;
+    for (const pid of auProdIds(it)) {
+      const rows = AUC.tubes[pid]; if (!rows || !rows.length) continue;
+      items[it.id] = rows.map((r) => r[0]).filter((cid, i, a) => a.indexOf(cid) === i);
+      items[it.id].forEach((cid) => { used[cid] = 1; });
+      const au = items[it.id].map((cid) => (AUC.cont[cid] || {}).no).filter(Boolean).sort((a, b) => a - b).join('+');
+      const app = tubesFor(it, (P.catById[it.cat] || {}).name).map((k) => TUBES[k].no).sort((a, b) => a - b).join('+');
+      if (au !== app) diff.push(it.name.slice(0, 60) + ': приложение ' + app + ' → Aurora ' + au);
+      break;
+    }
+  });
+  const cont = {}; Object.keys(used).forEach((cid) => { const x = AUC.cont[cid] || {}; cont[cid] = { no: x.no, name: x.name, color: x.color || '', mat: AUC.mats[cid] || '' }; });
+  return { json: JSON.stringify({ v: 1, at: new Date().toISOString(), cont, items }), n: Object.keys(items).length, all: P.items.filter((x) => x.id > 0).length, diff };
 }
 function auCatInit() { try { AUC = auIndex(JSON.parse(localStorage.getItem(LS + '_aucat'))); } catch (e) { AUC = null; } }
 let auCatBusy = null;
@@ -1012,12 +1044,13 @@ function auProdIds(it, p) {
 }
 // Пробирки для анализа: сначала по справочнику Aurora, если там пусто — по правилам приложения
 function itemTubes(it, p) {
-  const ids = auProdIds(it, p);
+  const ids = AUC ? auProdIds(it, p) : [];
   for (const id of ids) {
     const rows = AUC.tubes[id]; if (!rows) continue;
     const ks = []; rows.forEach((r) => { const k = AUC.key[r[0]]; if (k && ks.indexOf(k) < 0) ks.push(k); });
     if (ks.length) return ks;
   }
+  if (BAKED && BAKED[it.id]) return BAKED[it.id];
   return tubesFor(it, (P.catById[it.cat] || {}).name);
 }
 // Цены из Aurora поверх прайса приложения + услуги, добавленные из заказов. Цена меняется, только если в Aurora она одна для этого названия.
@@ -1144,6 +1177,8 @@ function vAurora() {
       <div class="sub">${AUC ? 'Обновлено ' + new Date(AUC.ts).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + ' · услуг: ' + Object.keys(AUC.prod).length + ' · с пробирками: ' + Object.keys(AUC.tubes).length + ' · контейнеров: ' + Object.keys(AUC.cont).length : 'Ещё не загружено. Загрузится само при первом поиске по ID.'}</div>
       ${AUC ? `<div class="sub">Контейнеры (номер · название): ${esc(Object.keys(AUC.cont).map((k) => AUC.cont[k]).filter((x) => Object.keys(AUC.tubes).some((pid) => AUC.tubes[pid].some((r) => AUC.cont[r[0]] === x))).sort((a, b) => a.no - b.no).slice(0, 40).map((x) => (x.no ? String(x.no).padStart(2, '0') : '?? [' + x.code + ']') + ' · ' + x.name).join('; '))}</div>` : ''}
       ${AUC && (UI.auPriceCh || []).length ? `<div class="sub"><b>Цены из Aurora отличаются от прайса приложения (${UI.auPriceCh.length}):</b><br>${UI.auPriceCh.slice(0, 30).map((x) => esc(x.name.slice(0, 46)) + ': ' + fmt(x.was) + ' → ' + fmt(x.now)).join('<br>')}${UI.auPriceCh.length > 30 ? '<br>… и ещё ' + (UI.auPriceCh.length - 30) : ''}</div>` : ''}
+      ${AUC ? `<button type="button" class="btn light" data-act="auTubes">Выгрузить пробирки для всех медсестёр</button>
+      <div class="sub">Файл со списком «анализ → пробирка» из Aurora (без данных пациентов). Отправьте его разработчику — пробирки обновятся у всех, даже без входа в Aurora.</div>` : ''}
       <button type="button" class="btn light" data-act="auCat" ${st.busy ? 'disabled' : ''}>${st.busy === 'cat' ? esc(st.say || 'Загружаем…') : 'Обновить цены и пробирки из Aurora'}</button>
     </div>
     <div class="card pad" style="display:flex;flex-direction:column;gap:12px">
@@ -1234,6 +1269,11 @@ document.addEventListener('click', (e) => {
     case 'auReport': auReport(); break;
     case 'auShare': auShare(); break;
     case 'auCopy': if ((UI.au || {}).report) copyText(UI.au.report); break;
+    case 'auTubes': (async () => {
+      const x = auTubeExport(); if (!x) { toast('Сначала обновите цены и пробирки из Aurora'); return; }
+      const txt = x.json + '\n\n# Анализов с пробиркой в Aurora: ' + x.n + ' из ' + x.all + '\n# Расходится с правилами приложения: ' + x.diff.length + '\n' + x.diff.map((d) => '# ' + d).join('\n');
+      try { if (IS_APK && LP() && UI.shell && UI.shell.native >= 5) { await LP().share({ title: 'Пробирки из Aurora', files: [{ name: 'aurora-tubes.txt', data: btoa(unescape(encodeURIComponent(txt))) }] }); return; } } catch (e) { /* не вышло файлом */ }
+      copyText(txt); })(); break;
     case 'newPatient': UI.editPatient = null; go('patient'); break;
     case 'editPatient': UI.editPatient = { ...patient(v) }; go('patient'); break;
     case 'delPatient': { const dp = patient(v); if (dp && ask('Удалить пациента ' + dp.last + ' ' + dp.first + ' и его анализы?')) { vis.patients = vis.patients.filter((p) => p.id !== v); save(); UI._keepScroll = UI.view === 'visit'; go('visit'); toast('Пациент удалён'); } break; }
