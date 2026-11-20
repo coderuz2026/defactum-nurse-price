@@ -1,0 +1,47 @@
+name: Синхронизация с Aurora
+
+# Каждые 2 часа берёт из Aurora цены и пробирки («услуга → контейнер») и обновляет data/prices.json.
+# Приложение медсестёр подхватывает прайс само — обновлять приложение не нужно.
+# Читаются только справочники, без данных пациентов. Логин и пароль Aurora — в секретах репозитория.
+
+on:
+  schedule:
+    - cron: '17 */2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aurora-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Связь с Aurora
+        run: |
+          U="${{ secrets.AURORA_URL }}"; U="${U:-https://mis.defactum.uz}"
+          code=$(curl -s -o /dev/null -w '%{http_code}' -m 30 "$U/web/login" || true)
+          echo "Aurora отвечает: HTTP $code"
+          [ "$code" != "000" ] || { echo "::error::Aurora недоступна из GitHub (сервер не отвечает или закрыт для зарубежных адресов)"; exit 1; }
+      - name: Цены и пробирки из Aurora
+        env:
+          AURORA_URL: ${{ secrets.AURORA_URL }}
+          AURORA_DB: ${{ secrets.AURORA_DB }}
+          AURORA_LOGIN: ${{ secrets.AURORA_LOGIN }}
+          AURORA_PASSWORD: ${{ secrets.AURORA_PASSWORD }}
+        run: python3 tools/aurora_sync.py
+      - name: Сохранить прайс
+        run: |
+          git diff --quiet -- data/prices.json && { echo "Без изменений"; exit 0; }
+          git config user.name "aurora-sync"
+          git config user.email "aurora-sync@users.noreply.github.com"
+          git add data/prices.json
+          git commit -m "Прайс: цены и пробирки из Aurora ($(date -u +%F' '%H:%M) UTC)"
+          git push
