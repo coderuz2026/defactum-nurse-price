@@ -64,7 +64,9 @@ p1.items.push(oak.id);
 eq('у другого пациента свои штрихкоды', A.groupTubes(p2).some((x) => A.groupTubes(p1).map((y) => y.code).includes(x.code)), false);
 // каждая услуга прайса попадает хотя бы в один известный контейнер
 eq('у всех 618 услуг есть контейнер', prices.items.every((it) => { const k = A.tubesFor(it, A.P.catById[it.cat].name); return k.length && k.every((x) => A.TUBES[x]); }), true);
-eq('номера контейнеров не повторяются', new Set(Object.values(A.TUBES).map((x) => x.no)).size, Object.keys(A.TUBES).length);
+{ const nums = Object.values(A.TUBES).map((x) => x.no).filter((n) => n > 0); // 0 — контейнер без номера в Aurora
+  eq('номера контейнеров не повторяются', new Set(nums).size, nums.length); }
+eq('ВИЧ — отдельная сиреневая пробирка', A.tubesFor({ name: 'ВИЧ– подтверждающий тест (HIVAg+Ab)' }, 'Инфекции'), ['hiv']);
 // адрес из ответа геокодера
 eq('адрес: улица, дом, район', A.formatAddress({ address: { road: 'улица Авлиё-Ота', house_number: '1', city_district: 'Мирабадский район', city: 'Ташкент' } }), 'улица Авлиё-Ота, 1, Мирабадский район');
 eq('адрес: только махалля', A.formatAddress({ address: { neighbourhood: 'махалля Олмазор', city: 'Ташкент' } }), 'махалля Олмазор');

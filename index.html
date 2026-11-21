@@ -232,7 +232,7 @@ mark{background:var(--tint);color:var(--brand-deep);font-weight:800;border-radiu
 <input type="file" id="scanPick" accept="image/*" hidden>
 <script>
 'use strict';
-const APP_VERSION = '1.60', APP_DATE = '18.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
+const APP_VERSION = '1.62', APP_DATE = '18.11.2026'; // менять при каждом обновлении (и номер кэша в sw.js)
 const BRAND = '#0B7F90';
 // Приложение может работать как сайт (PWA) или внутри APK (оболочка Capacitor)
 const IS_APK = typeof window !== 'undefined' && (!!window.Capacitor || (location.protocol === 'https:' && location.hostname === 'localhost'));
@@ -264,6 +264,7 @@ const TUBES = {
   bak:    { no: 21, name: 'Контейнер со средой для б/п', cap: '#22A55B', mat: 'Мазок',       an: 'Бактериология' },
   glass:  { no: 14, name: 'Предметное стекло',         cap: '#CBD5E1', mat: 'Мазок',         an: 'Микроскопия' },
   gen:    { no: 53, name: 'Сиреневая крышка-Ген',      cap: '#8E5CC9', mat: 'Цельная кровь', an: 'Генетика' },
+  hiv:    { no: 0,  name: 'Сиреневая крышка_ВИЧ',      cap: '#8E5CC9', mat: 'Цельная кровь', an: 'Snibe X3' }, // в Aurora так и называется, без номера
   check:  { no: 0,  name: 'Набор пробирок (уточнить)', cap: '#64748B', mat: 'По составу',    an: 'Чек-ап' }
 };
 /* ---------- Рисунки контейнеров ---------- */
@@ -271,7 +272,7 @@ const shade = (hex, t) => { // t > 0 — светлее, t < 0 — темнее
   const n = hex.replace('#', ''), to = t > 0 ? 255 : 0, k = Math.abs(t);
   return '#' + [0, 2, 4].map((i) => Math.round(parseInt(n.slice(i, i + 2), 16) * (1 - k) + to * k).toString(16).padStart(2, '0')).join('');
 };
-const ART_KIND = { edta: 'tube', serum: 'gel', bio: 'gel', citr: 'tube', gen: 'tube', check: 'tube', urine: 'cup', feces: 'jar', saliva: 'cup', sperm: 'cup', pcr: 'swab', bak: 'swab', glass: 'slide' };
+const ART_KIND = { edta: 'tube', hiv: 'tube', serum: 'gel', bio: 'gel', citr: 'tube', gen: 'tube', check: 'tube', urine: 'cup', feces: 'jar', saliva: 'cup', sperm: 'cup', pcr: 'swab', bak: 'swab', glass: 'slide' };
 const ART_FILL = { urine: '#F2CB3A', saliva: '#DCEBF5', sperm: '#EEF0E6', feces: '#8A5A33', pcr: '#F7C6D0', bak: '#F3D98B', check: '#B8C2CC' };
 // Подробный рисунок контейнера: пробирка (с гелем или без), баночка, пробирка с тампоном, предметное стекло
 // Маленький значок в карточке пациента: пробирка, баночка (моча, кал, слюна), пробирка с тампоном или стекло — по виду контейнера
@@ -343,6 +344,7 @@ function tubeArt(t) {
 }
 function tubesFor(item, catName) {
   const n = item.name.toLowerCase(), c = (catName || '').toLowerCase();
+  if (/вич|hiv/.test(n)) return ['hiv']; // в Aurora: Сиреневая крышка_ВИЧ, Snibe X3 — отдельная пробирка
   if (/homa/.test(n)) return ['bio', 'serum'];
   if (/свободный т4|free t4/.test(n)) return ['bio']; // в Aurora: Жёлтая крышка (Биохимия) (35), Atelica CI
   if (/гематолог/.test(c)) return ['edta'];
